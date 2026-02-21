@@ -1,0 +1,112 @@
+{
+	"layer": "top",
+	"modules-left": [
+		"tray",
+		"hyprland/workspaces",
+		"hyprland/window"
+	],
+	"modules-center": [
+		"custom/startup",
+		"cpu",
+		"memory",
+		"custom/gpu",
+		"network",
+		"custom/nix-updates"
+	],
+	"modules-right": [
+		"pulseaudio",
+		"hyprland/language",
+		"clock"
+		// "custom/power",
+	],
+	"hyprland/language": {
+		"format": "{}",
+		"format-en": "US",
+		"format-ru": "RU"
+	},
+	"hyprland/window": {
+		"format": "{}",
+		"rewrite": {
+			"(.*)": ""
+		},
+		"separate-outputs": true,
+		"icon": true
+	},
+	"clock": {
+		"tooltip-format": "{:%d-%m-%Y}"
+	},
+	"cpu": {
+		"interval": 5,
+		"format": "cpu:{usage}% ",
+		"max-length": 9,
+		"min-length": 9
+	},
+	"custom/gpu": {
+		"format": "{}",
+		"exec": "~/.config/waybar/scripts/gp.sh",
+		"interval": 10,
+		"tooltip": false,
+		"min-length": 14,
+		"max-length": 14
+	},
+	"custom/startup": {
+		"format": " ",
+		"exec": "~/.config/waybar/scripts/startup-time.sh",
+		"tooltip": true,
+		"tooltip-format": "{text}",
+		"return-type": "json"
+  },
+  "custom/nix-updates": {
+    "return-type": "json",
+
+    "exec": "~/.config/waybar/scripts/nix-updates-view.sh",
+    "signal": 10,
+
+    "on-click": "~/.config/waybar/scripts/check-nix-updates.sh && pkill -RTMIN+10 waybar",
+
+    "tooltip": true
+  },
+  "memory": {
+		"interval": 5,
+		"format": "ram:{used} swap:{swapUsed} ",
+		"min-length": 19,
+		"max-length": 19
+	},
+	"network": {
+		"format": "{ifname}",
+		"format-wifi": "{wifi} ({signalStrength}%) ",
+		"format-ethernet": "{bandwidthDownBytes:>}⬇️ {bandwidthUpBytes:>}⬆️ ",
+		"format-disconnected": "x", //An empty format will hide the module.
+		"interval": 5,
+		"tooltip-format": "{ifname}",
+		"tooltip-format-wifi": "{essid} ({signalStrength}%) ",
+		"tooltip-format-ethernet": "{ifname} ",
+		"tooltip-format-disconnected": "Disconnected"
+	},
+	"pulseaudio": {
+		"format": "{volume}% {icon} {format_source}",
+		"format-bluetooth": "{volume}% {icon} {format_source}",
+		"format-bluetooth-muted": " {icon} {format_source}",
+		"format-muted": "{volume}%   {format_source}",
+		"format-source": "{volume}% ",
+		"format-source-muted": "",
+		"format-icons": {
+			"headphone": "",
+			"hands-free": "",
+			"headset": "",
+			"phone": "",
+			"portable": "",
+			"car": "",
+			"default": [
+				"",
+				"",
+				""
+			]
+		},
+		"on-click": "pwvucontrol"
+	},
+	"tray": {
+		"icon-size": 21,
+		"spacing": 10
+	}
+}

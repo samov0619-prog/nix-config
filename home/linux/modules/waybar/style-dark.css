@@ -1,0 +1,120 @@
+@import url("./style.css");
+
+window#waybar {
+	background-color: rgba(43, 48, 59, 0.5);
+	border-bottom: 1px solid rgba(100, 114, 125, 0.5);
+	color: #ffffff;
+}
+
+window#waybar.fullscreen {
+	background-color: rgba(0, 77, 64, 0.5);
+}
+
+window#waybar.termite {
+	background-color: #3f3f3f;
+}
+
+window#waybar.chromium {
+	background-color: #000000;
+}
+
+#workspaces button {
+	color: #ffffff;
+}
+
+#workspaces button.focused {
+	background-color: #64727d;
+}
+
+#mode {
+	background-color: #64727d;
+	box-shadow: inset 0 -3px #ffffff;
+}
+
+#clock,
+#battery,
+#cpu,
+#memory,
+#disk,
+#temperature,
+#backlight,
+#language,
+#network,
+#pulseaudio,
+#wireplumber,
+#custom-media,
+#tray,
+#mode,
+#idle_inhibitor,
+#scratchpad,
+#power-profiles-daemon,
+#mpd,
+#custom-gpu,
+#custom-pacman,
+#custom-vpn {
+	color: #ffffff;
+}
+
+label:focus {
+	background-color: #000000;
+}
+
+#backlight {
+	background-color: #90b1b1;
+}
+
+#custom-media {
+	background-color: #66cc99;
+}
+
+#custom-media.custom-spotify {
+	background-color: #66cc99;
+}
+
+#custom-media.custom-vlc {
+	background-color: #ffa000;
+}
+
+#temperature {
+	background-color: #f0932b;
+}
+
+#idle_inhibitor {
+	background-color: #2d3436;
+}
+
+#idle_inhibitor.activated {
+	background-color: #ecf0f1;
+}
+
+#mpd {
+	background-color: #66cc99;
+}
+
+#mpd.stopped {
+	background-color: #90b1b1;
+}
+
+#mpd.paused {
+	background-color: #51a37a;
+}
+
+#keyboard-state {
+	background: #97e1ad;
+}
+
+#privacy-item {
+	color: white;
+}
+
+#privacy-item.screenshare {
+	background-color: #cf5700;
+}
+
+#privacy-item.audio-in {
+	background-color: #1ca000;
+}
+
+#privacy-item.audio-out {
+	background-color: #0069d4;
+}
