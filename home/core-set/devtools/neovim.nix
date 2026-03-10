@@ -10,7 +10,6 @@
     defaultEditor = true;
     viAlias = true;
     vimAlias = true;
-    # withNodeJs = true;
     plugins = [
       {
         plugin = pkgs.vimPlugins.nvim-treesitter.withPlugins (p: [
@@ -53,13 +52,11 @@
         ]);
       }
       pkgs.vimPlugins.nvim-treesitter-textobjects
-      pkgs.vimPlugins.coc-nvim
     ];
     extraPackages = with pkgs; [
       bash-language-server
       vscode-langservers-extracted
-      # css_variables
-      # cssmodules_ls
+      gopls
       hyprls
       lua-language-server
       stylelint-lsp
@@ -67,7 +64,6 @@
       lemminx
       beautysh
       jdt-language-server
-      # ts_ls
       vtsls
       vue-language-server
       prettier

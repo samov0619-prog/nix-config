@@ -8,5 +8,7 @@
     git-filter-repo
     ueberzugpp
     packwiz
+    go
+    gcc
   ];
 }

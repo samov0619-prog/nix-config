@@ -36,12 +36,9 @@
       };
 
       pkgsFor =
-        system:
+        system: overlays:
         import nixpkgs {
-          inherit system;
-          overlays = (if system == systems.linux then [ self.overlays.filemanager1-common ] else [ ]) ++ [
-            freesm.overlays.default
-          ];
+          inherit system overlays;
         };
 
       pkgsUnstableFor =
@@ -52,16 +49,15 @@
 
       mkHM =
         {
-          system,
+          pkgs,
           username,
           modules,
         }:
         home-manager.lib.homeManagerConfiguration {
-          pkgs = pkgsFor system;
-          inherit modules;
+          inherit pkgs modules;
           extraSpecialArgs = {
             inherit username nvim-config;
-            pkgsUnstable = pkgsUnstableFor system;
+            pkgsUnstable = pkgsUnstableFor pkgs.stdenv.hostPlatform.system;
           };
         };
 
@@ -89,11 +85,21 @@
             ./hosts/desktop
           ];
         };
+
+        server = mkNixos {
+          system = systems.linux;
+          modules = [
+            ./hosts/server
+          ];
+        };
       };
 
       homeConfigurations = {
         samov-desktop = mkHM {
-          system = systems.linux;
+          pkgs = pkgsFor systems.linux [
+            self.overlays.filemanager1-common
+            freesm.overlays.default
+          ];
           username = "samov";
           modules = [
             ./home/users/samov
@@ -106,8 +112,18 @@
           ];
         };
 
+        samov-server = mkHM {
+          pkgs = pkgsFor systems.linux [ ];
+          username = "samov";
+          modules = [
+            ./home/users/samov
+
+            ./home/core-set
+          ];
+        };
+
         samov-mac = mkHM {
-          system = systems.mac;
+          pkgs = pkgsFor systems.mac [ ];
           username = "samov";
           modules = [
             ./home/users/samov
