@@ -10,5 +10,10 @@
     packwiz
     go
     gcc
+    nodejs
+    python3
+    unzip
+    gnumake
+    tree-sitter
   ];
 }

@@ -98,6 +98,17 @@
     ];
   };
 
+  programs.nix-ld = {
+    enable = true;
+    libraries = with pkgs; [
+      stdenv.cc.cc.lib # libstdc++ — нужна большинству LSP бинарей
+      zlib
+      openssl
+      curl
+      glib
+    ];
+  };
+
   # Set your time zone.
   # time.timeZone = "Europe/Amsterdam";
 
