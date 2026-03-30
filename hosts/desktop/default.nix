@@ -4,6 +4,7 @@
 
 {
   pkgs,
+  pkgsUnstable,
   ...
 }:
 
@@ -19,9 +20,7 @@
   # boot.loader.grub.efiInstallAsRemovable = true;
   # boot.loader.efi.efiSysMountPoint = "/boot/efi";
   # Define on which hard drive you want to install Grub.
-  boot.loader.grub.device = "/dev/sda"; # or "nodev" for efi only
-
-  services.automatic-timezoned.enable = true;
+  boot.loader.grub.device = "/dev/sda"; # or "nodev" for efi only services.automatic-timezoned.enable = true;
 
   # Configure network connections interactively with nmcli or nmtui.
   networking = {
@@ -32,6 +31,11 @@
   services.v2raya = {
     enable = true;
     cliPackage = pkgs.xray;
+  };
+
+  programs.amnezia-vpn = {
+    enable = true;
+    package = pkgsUnstable.amnezia-vpn;
   };
 
   nixpkgs.config.allowUnfree = true;

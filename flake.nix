@@ -68,6 +68,9 @@
         }:
         lib.nixosSystem {
           inherit system;
+          specialArgs = {
+            pkgsUnstable = pkgsUnstableFor system;
+          };
           modules = modules ++ [
             home-manager.nixosModules.home-manager
           ];
