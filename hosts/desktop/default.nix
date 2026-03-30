@@ -83,7 +83,7 @@
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.samov = {
     isNormalUser = true;
-    extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
+    extraGroups = [ "wheel" "adbusers" ]; # Enable ‘sudo’ for the user.
     initialPassword = "changeme";
   };
 
