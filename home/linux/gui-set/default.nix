@@ -23,6 +23,7 @@
     ardour
     audacious
     wl-clipboard
+    freefilesync
   ];
 
   qt = {
