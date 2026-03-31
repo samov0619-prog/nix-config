@@ -15,6 +15,7 @@
       url = "github:FreesmTeam/FreesmLauncher";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nix-gc-env.url = "github:Julow/nix-gc-env";
   };
 
   outputs =
@@ -25,6 +26,7 @@
       home-manager,
       nvim-config,
       freesm,
+      nix-gc-env,
       ...
     }:
     let
@@ -73,6 +75,7 @@
           };
           modules = modules ++ [
             home-manager.nixosModules.home-manager
+              nix-gc-env.nixosModules.default
           ];
         };
     in

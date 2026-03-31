@@ -22,6 +22,13 @@
   # Define on which hard drive you want to install Grub.
   boot.loader.grub.device = "/dev/sda"; # or "nodev" for efi only services.automatic-timezoned.enable = true;
 
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "";
+    delete_generations = "+5";
+  };
+
   # Configure network connections interactively with nmcli or nmtui.
   networking = {
     networkmanager.enable = true;
@@ -83,7 +90,10 @@
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.samov = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "adbusers" ]; # Enable ‘sudo’ for the user.
+    extraGroups = [
+      "wheel"
+      "adbusers"
+    ]; # Enable ‘sudo’ for the user.
     initialPassword = "changeme";
   };
 
