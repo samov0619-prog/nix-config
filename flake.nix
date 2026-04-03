@@ -75,13 +75,15 @@
           };
           modules = modules ++ [
             home-manager.nixosModules.home-manager
-              nix-gc-env.nixosModules.default
+            nix-gc-env.nixosModules.default
           ];
         };
     in
     {
-      overlays.filemanager1-common = final: prev: {
-        filemanager1-common = final.callPackage ./pkgs/filemanager1-common { };
+      overlays = {
+        filemanager1-common = final: prev: {
+          filemanager1-common = final.callPackage ./pkgs/filemanager1-common { };
+        };
       };
 
       nixosConfigurations = {

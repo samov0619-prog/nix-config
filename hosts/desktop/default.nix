@@ -70,10 +70,14 @@
   services.udisks2.enable = true;
   security.polkit.enable = true;
 
-  nix.settings.experimental-features = [
-    "nix-command"
-    "flakes"
-  ];
+  nix.settings = {
+    max-substitution-jobs = 64;
+    http-connections = 256;
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+  };
 
   programs.bash = {
     enable = true;
