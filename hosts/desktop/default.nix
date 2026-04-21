@@ -128,6 +128,10 @@
     ];
   };
 
+  environment.sessionVariables = {
+    LIBVA_DRIVER_NAME = "nvidia";
+  };
+
   # Set your time zone.
   # time.timeZone = "Europe/Amsterdam";
 
