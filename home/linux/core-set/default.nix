@@ -4,6 +4,7 @@
     xray
     adbfs-rootless
     android-tools
+    btop
   ];
 
   programs.fish.shellAliases = {
