@@ -67,13 +67,13 @@ in
           fi
 
           choice=$(
-            printf "Reboot\nPoweroff\n" \
+            printf "Poweroff\nReboot\n" \
             | tofi --prompt-text="󰐥"
           ) || exit 0
 
           case "$choice" in
-          Reboot) systemctl reboot ;;
           Poweroff) systemctl poweroff ;;
+          Reboot) systemctl reboot ;;
           *) exit 0 ;;
           esac
         '')
