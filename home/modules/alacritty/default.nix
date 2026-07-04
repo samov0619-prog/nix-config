@@ -67,7 +67,7 @@ in
           family = "NotoSansM Nerd Font Mono";
           style = "Medium";
         };
-        size = 14;
+        size = lib.mkDefault 14;
       };
     };
   };

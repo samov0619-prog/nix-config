@@ -120,6 +120,23 @@
           ];
         };
 
+        samov-laptop = mkHM {
+          pkgs = pkgsFor systems.linux [
+            self.overlays.filemanager1-common
+            freesm.overlays.default
+          ];
+          username = "samov";
+          modules = [
+            ./home/users/samov
+
+            ./home/core-set
+            ./home/gui-set
+            ./home/personal-set
+
+            ./home/linux/laptop
+          ];
+        };
+
         samov-server = mkHM {
           pkgs = pkgsFor systems.linux [ ];
           username = "samov";
