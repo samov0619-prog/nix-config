@@ -94,6 +94,13 @@
           ];
         };
 
+        laptop = mkNixos {
+          system = systems.linux;
+          modules = [
+            ./hosts/laptop
+          ];
+        };
+
         server = mkNixos {
           system = systems.linux;
           modules = [
