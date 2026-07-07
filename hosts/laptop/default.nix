@@ -122,6 +122,8 @@
     '';
   };
 
+  environment.systemPackages = with pkgs; [ brightnessctl ];
+
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.samov = {
     isNormalUser = true;
