@@ -26,6 +26,10 @@
 
   hardware.enableRedistributableFirmware = true;
 
+  # Нужно для xremap (evdev/uinput доступ без sudo): грузит модуль uinput
+  # и даёт группе input права на /dev/uinput. Пользователь добавлен в input ниже.
+  hardware.uinput.enable = true;
+
   zramSwap = {
     enable = true;
     memoryPercent = 50;          # ~3.8 ГБ RAM под сжатый своп, вместит фактически 8–12 ГБ вкладок
@@ -130,6 +134,7 @@
     extraGroups = [
       "wheel"
       "adbusers"
+      "input" # доступ к устройствам ввода для xremap
     ]; # Enable ‘sudo’ for the user.
     initialPassword = "changeme";
   };

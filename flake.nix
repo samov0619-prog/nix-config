@@ -11,6 +11,10 @@
     };
 
     nvim-config.url = "github:samov0619-prog/nvim";
+    xremap-flake = {
+      url = "github:xremap/nix-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     freesm = {
       url = "github:FreesmTeam/FreesmLauncher";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -27,6 +31,7 @@
       nvim-config,
       freesm,
       nix-gc-env,
+      xremap-flake,
       ...
     }:
     let
@@ -58,7 +63,7 @@
         home-manager.lib.homeManagerConfiguration {
           inherit pkgs modules;
           extraSpecialArgs = {
-            inherit username nvim-config;
+            inherit username nvim-config xremap-flake;
             pkgsUnstable = pkgsUnstableFor pkgs.stdenv.hostPlatform.system;
           };
         };
