@@ -15,22 +15,6 @@
         "type": "github"
       }
     },
-    "flake-compat": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1767039857,
-        "narHash": "sha256-vNpUSpF5Nuw8xvDLj2KCwwksIbjua2LZCqhV1LNRDns=",
-        "owner": "edolstra",
-        "repo": "flake-compat",
-        "rev": "5edf11c44bc78a0d334f6334cdaf7d60d732daab",
-        "type": "github"
-      },
-      "original": {
-        "owner": "edolstra",
-        "repo": "flake-compat",
-        "type": "github"
-      }
-    },
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": "nixpkgs-lib"
@@ -51,7 +35,6 @@
     },
     "freesm": {
       "inputs": {
-        "flake-compat": "flake-compat",
         "libnbtplusplus": "libnbtplusplus",
         "nix-filter": "nix-filter",
         "nixpkgs": [
@@ -59,11 +42,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1771171817,
-        "narHash": "sha256-ojPUTna3u5fR/Zuu2KPDOXC+mLO9B8MZM/mz/Bu9gvc=",
+        "lastModified": 1781648727,
+        "narHash": "sha256-0u8DV4nGzbv2qUFBtN2TcbcHYHtmtHpvYP+epOwNaKk=",
         "owner": "FreesmTeam",
         "repo": "FreesmLauncher",
-        "rev": "58e04b1aef1fb8bca295d9f1ec9365e3e43734b1",
+        "rev": "910b6f63f4d623b173503d861858c8d238eae33b",
         "type": "github"
       },
       "original": {
@@ -96,11 +79,11 @@
     "libnbtplusplus": {
       "flake": false,
       "locked": {
-        "lastModified": 1744811532,
-        "narHash": "sha256-qhmjaRkt+O7A+gu6HjUkl7QzOEb4r8y8vWZMG2R/C6o=",
+        "lastModified": 1772016279,
+        "narHash": "sha256-7itkptyjoRcXfGLwg1/jxajetZ3a4mDc66+w4X6yW8s=",
         "owner": "FreesmTeam",
         "repo": "libnbtplusplus",
-        "rev": "531449ba1c930c98e0bcf5d332b237a8566f9d78",
+        "rev": "687e43031df0dc641984b4256bcca50d5b3f7de3",
         "type": "github"
       },
       "original": {
@@ -184,11 +167,11 @@
     },
     "nvim-config": {
       "locked": {
-        "lastModified": 1773687871,
-        "narHash": "sha256-cKWsj9PcuPiyF3fCNf8EEnZws6KNMYcZmiPWztcFTK8=",
+        "lastModified": 1783590167,
+        "narHash": "sha256-LoxIxdPb55UnSzLyXiHZTOhcsbfTkJSHmG4rn4MQSCA=",
         "owner": "samov0619-prog",
         "repo": "nvim",
-        "rev": "ee27680aef05dc43a2cbf7eaff3645a65074a383",
+        "rev": "1b818efe00fd3ca2b9380ffc9773944c9b36f627",
         "type": "github"
       },
       "original": {
