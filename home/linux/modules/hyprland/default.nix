@@ -1,4 +1,5 @@
 {
+  lib,
   config,
   ...
 }:
@@ -8,6 +9,7 @@
     systemd.enable = false;
     package = null;
     portalPackage = null;
+    configType = lib.mkIf (lib.versionOlder config.home.stateVersion "26.05") "hyprlang";
   };
 
   xdg.configFile."uwsm/env".source =

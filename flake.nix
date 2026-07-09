@@ -1,3 +1,57 @@
+# ── Новый хост на 26.05 (свежие стейты) ──────────────────────────────
+# Fresh-инсталл ≠ бамп stateVersion на старом хосте: легаси-стейта нет,
+# мигрировать нечего. stateVersion — PER-HOST, новый 26.05-хост спокойно
+# живёт рядом с desktop/laptop на 25.11, совпадать им не нужно.
+#
+# Чек-лист при заведении нового ноута:
+#
+# 1. system.stateVersion — уже per-host (в hosts/<host>/default.nix).
+#    В новом hosts/<newlaptop>/default.nix поставить "26.05".
+#
+# 2. home.stateVersion — СЕЙЧАС захардкожен ОБЩИМ в
+#    home/users/samov/default.nix = "25.11" → новый хост унаследует
+#    25.11, а не 26.05. Фикс (один раз):
+#      а) в home/users/samov:  home.stateVersion = lib.mkDefault "25.11";
+#      б) в модулях нового homeConfiguration добавить инлайн-оверрайд:
+#           { home.stateVersion = "26.05"; }
+#    Старые хосты без инлайна остаются на 25.11 (mkDefault не мешает).
+#    Без mkDefault пришлось бы mkForce — грязно.
+#
+# 3. Пины yazi/firefox/hyprland-configType гейтятся по
+#    (lib.versionOlder config.home.stateVersion "26.05") — на 26.05
+#    условие ложно, пины НЕ применяются, хост берёт нативные дефолты
+#    (y / lua / XDG-firefox). Трогать ничего не надо. Firefox сразу
+#    стартует в $XDG_CONFIG_HOME/mozilla/firefox с чистого профиля —
+#    переносить нечего, это fresh-инсталл.
+#
+# 4. hardware-configuration.nix генерить НА самой машине
+#    (nixos-generate-config), НЕ копировать с laptop.
+#
+# 5. Общие модули (core-set/gui-set/linux/*) переиспользуются как есть.
+#    freesm/extra-cmake-modules-блокер к stateVersion отношения не имеет
+#    (если всплывёт — тот же фикс, что на laptop).
+#
+# Скелет нового блока:
+#   nixosConfigurations.<newlaptop> = mkNixos {
+#     system = systems.linux;
+#     modules = [ ./hosts/<newlaptop> ];   # внутри: system.stateVersion = "26.05"
+#   };
+#   homeConfigurations.samov-<newlaptop> = mkHM {
+#     pkgs = pkgsFor systems.linux [
+#       self.overlays.filemanager1-common
+#       freesm.overlays.default
+#     ];
+#     username = "samov";
+#     modules = [
+#       ./home/users/samov
+#       { home.stateVersion = "26.05"; }   # оверрайд mkDefault-а 25.11
+#       ./home/core-set
+#       ./home/gui-set
+#       ./home/personal-set
+#       ./home/linux/<newlaptop>           # свой leaf или переиспользовать laptop
+#     ];
+#   };
+# ─────────────────────────────────────────────────────────────────────
 {
   description = "NixOS & stanadalone home-manager flake";
 

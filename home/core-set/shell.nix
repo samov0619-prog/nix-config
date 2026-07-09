@@ -1,4 +1,4 @@
-{ pkgsUnstable, ... }:
+{ pkgsUnstable, lib, config, ... }:
 {
   programs.fish = {
     enable = true;
@@ -62,6 +62,7 @@
           return info
       end, 1500, Header.RIGHT)
     '';
+    shellWrapperName = lib.mkIf (lib.versionOlder config.home.stateVersion "26.05") "yy";
   };
   programs.direnv = {
     enable = true;
