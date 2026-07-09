@@ -3,7 +3,7 @@
   home.packages = with pkgs; [
     ripgrep
     fd
-    nixfmt-rfc-style
+    nixfmt
     nixd
     git-filter-repo
     ueberzugpp
