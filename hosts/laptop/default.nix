@@ -139,6 +139,8 @@
     initialPassword = "changeme";
   };
 
+  nix.settings.trusted-users = [ "root" "samov" ];
+
   services.getty.autologinUser = "samov";
   services.getty.autologinOnce = true;
 

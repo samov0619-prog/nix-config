@@ -63,4 +63,8 @@
       end, 1500, Header.RIGHT)
     '';
   };
+  programs.direnv = {
+    enable = true;
+    nix-direnv.enable = true;
+  };
 }

@@ -15,5 +15,6 @@
     unzip
     gnumake
     tree-sitter
+    devenv
   ];
 }
