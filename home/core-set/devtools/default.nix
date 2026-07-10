@@ -1,6 +1,7 @@
 { pkgs, ... }:
 {
   imports = [
+    ./opencode
     ./neovim.nix
   ];
 
@@ -18,4 +19,8 @@
       commit-language = "en";
     };
   };
+
+  # programs.opencode = {
+  #   enable = true;
+  # };
 }
