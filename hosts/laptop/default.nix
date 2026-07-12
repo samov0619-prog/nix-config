@@ -34,6 +34,10 @@
   # и даёт группе input права на /dev/uinput. Пользователь добавлен в input ниже.
   hardware.uinput.enable = true;
 
+  # --- гибернация в /swapfile (ext4, /dev/sda2, без шифрования) ---
+  boot.resumeDevice = "/dev/disk/by-uuid/161d4aca-e781-4585-b223-3584ec052444";
+  boot.kernelParams = [ "resume_offset=6955008" ];
+
   zramSwap = {
     enable = true;
     memoryPercent = 50;          # ~3.8 ГБ RAM под сжатый своп, вместит фактически 8–12 ГБ вкладок
