@@ -55,7 +55,7 @@
   # Configure network connections interactively with nmcli or nmtui.
   networking = {
     networkmanager.enable = true;
-    hostName = "desktop";
+    hostName = "laptop";
   };
   systemd.services.NetworkManager-wait-online.enable = false;
 
