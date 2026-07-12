@@ -24,6 +24,10 @@
   services.automatic-timezoned.enable = true;
   boot.loader.grub.useOSProber = true;
 
+  systemd.tpm2.enable = false;
+  boot.initrd.systemd.enable = true; # если уже включён где-то — эту строку не дублируй
+  boot.initrd.systemd.tpm2.enable = false; # вот это и убирает 90с ожидания /dev/tpm0
+
   hardware.enableRedistributableFirmware = true;
 
   # Нужно для xremap (evdev/uinput доступ без sudo): грузит модуль uinput
@@ -53,6 +57,7 @@
     networkmanager.enable = true;
     hostName = "desktop";
   };
+  systemd.services.NetworkManager-wait-online.enable = false;
 
   services.v2raya = {
     enable = true;
