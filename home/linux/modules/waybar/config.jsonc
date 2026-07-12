@@ -52,6 +52,7 @@
 	"custom/startup": {
 		"format": " ",
 		"exec": "~/.config/waybar/scripts/startup-time.sh",
+		"interval": "once",
 		"tooltip": true,
 		"tooltip-format": "{text}",
 		"return-type": "json"
