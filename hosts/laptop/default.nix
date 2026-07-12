@@ -28,26 +28,27 @@
   boot.initrd.systemd.enable = true; # если уже включён где-то — эту строку не дублируй
   boot.initrd.systemd.tpm2.enable = false; # вот это и убирает 90с ожидания /dev/tpm0
 
+  # --- гибернация в /swapfile (ext4, /dev/sda2, без шифрования) ---
+  boot.resumeDevice = "/dev/disk/by-uuid/161d4aca-e781-4585-b223-3584ec052444";
+  boot.kernelParams = [ "resume_offset=6955008" ];
+
   hardware.enableRedistributableFirmware = true;
 
   # Нужно для xremap (evdev/uinput доступ без sudo): грузит модуль uinput
   # и даёт группе input права на /dev/uinput. Пользователь добавлен в input ниже.
   hardware.uinput.enable = true;
 
-  # --- гибернация в /swapfile (ext4, /dev/sda2, без шифрования) ---
-  boot.resumeDevice = "/dev/disk/by-uuid/161d4aca-e781-4585-b223-3584ec052444";
-  boot.kernelParams = [ "resume_offset=6955008" ];
-
   zramSwap = {
     enable = true;
-    memoryPercent = 50;          # ~3.8 ГБ RAM под сжатый своп, вместит фактически 8–12 ГБ вкладок
+    memoryPercent = 50; # ~3.8 ГБ RAM под сжатый своп, вместит фактически 8–12 ГБ вкладок
   };
   swapDevices = [
-    { device = "/swapfile"; size = 16 * 1024; }   # страховка от OOM на тяжёлых линковках
+    {
+      device = "/swapfile";
+      size = 16 * 1024;
+    } # страховка от OOM на тяжёлых линковках
   ];
   boot.kernel.sysctl."vm.swappiness" = 10;
-
-  systemd.tpm2.enable = false;
 
   nix.gc = {
     automatic = true;
@@ -68,7 +69,9 @@
     cliPackage = pkgs.xray;
   };
 
-  programs.amnezia-vpn = { enable = true; package = pkgsUnstable.amnezia-vpn;
+  programs.amnezia-vpn = {
+    enable = true;
+    package = pkgsUnstable.amnezia-vpn;
   };
 
   nixpkgs.config.allowUnfree = true;
@@ -76,7 +79,10 @@
   powerManagement.cpuFreqGovernor = "performance";
   services.thermald.enable = true;
 
-  services.xserver.videoDrivers = [ "modesetting" "nvidia" ];
+  services.xserver.videoDrivers = [
+    "modesetting"
+    "nvidia"
+  ];
 
   hardware.graphics = {
     enable = true;
@@ -92,8 +98,8 @@
     prime = {
       offload.enable = true;
       offload.enableOffloadCmd = true;
-      intelBusId  = "PCI:0:2:0";   # подтверждено твоим hardware.nix (00:02.0)
-      nvidiaBusId = "PCI:1:0:0";   # подтверждено (01:00.0)
+      intelBusId = "PCI:0:2:0"; # подтверждено твоим hardware.nix (00:02.0)
+      nvidiaBusId = "PCI:1:0:0"; # подтверждено (01:00.0)
     };
   };
 
@@ -151,7 +157,10 @@
     initialPassword = "changeme";
   };
 
-  nix.settings.trusted-users = [ "root" "samov" ];
+  nix.settings.trusted-users = [
+    "root"
+    "samov"
+  ];
 
   services.getty.autologinUser = "samov";
   services.getty.autologinOnce = true;
