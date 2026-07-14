@@ -26,4 +26,9 @@
     source = ./scripts/toggle-theme.sh;
     executable = true;
   };
+
+  xdg.configFile."hypr/scripts/terminal-layout-en.sh" = {
+    source = ./scripts/terminal-layout-en.sh;
+    executable = true;
+  };
 }

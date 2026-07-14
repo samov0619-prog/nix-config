@@ -16,5 +16,6 @@
     gnumake
     tree-sitter
     devenv
+    socat
   ];
 }
