@@ -25,6 +25,7 @@
     wl-clipboard
     freefilesync
     qbittorrent
+    libnotify
   ];
 
   qt = {

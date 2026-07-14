@@ -5,7 +5,6 @@
   };
 
   xdg.configFile = {
-    "waybar/config.jsonc".source = ./config.jsonc;
     "waybar/style-dark.css".source = ./style-dark.css;
     "waybar/style-light.css".source = ./style-light.css;
     "waybar/style.css".source = ./style.css;
