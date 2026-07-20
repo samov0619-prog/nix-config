@@ -94,7 +94,7 @@ in
 
     settings = {
       autoupdate = false; # пакет иммутабелен (Nix) — не качать апдейты
-      autoshare = false;
+      share = "disabled";
       permission = {
         edit = "ask";
         bash = "ask";
@@ -109,6 +109,11 @@ in
       #   model = "openai/gpt-5.5";                 # OPENAI_API_KEY
       # small_model — заголовки/суммаризация (и sub-модель RLM, если пинишь её в плагине):
       #   small_model = "anthropic/claude-haiku-4-5";
+      # small_model = "opencode/deepseek-v4-flash-free";
+      # Основная модель: код, рефакторинг, отладка, агентные задачи.
+      model = "openai/gpt-5.6-terra";
+
+      # Лёгкие служебные задачи выполняются бесплатной моделью.
       small_model = "opencode/deepseek-v4-flash-free";
     };
 
