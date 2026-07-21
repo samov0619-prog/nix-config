@@ -180,7 +180,9 @@
 
             ./home/core-set
             ./home/gui-set
-            ./home/personal-set
+            ./home/modules/minecraft/server
+            ./home/apps/minecraft
+            ./home/apps/creative.nix
 
             ./home/linux/desktop
           ];
@@ -197,7 +199,9 @@
 
             ./home/core-set
             ./home/gui-set
-            ./home/personal-set
+            ./home/modules/minecraft/server
+            ./home/apps/minecraft
+            ./home/apps/creative.nix
 
             ./home/linux/laptop
           ];
@@ -210,6 +214,8 @@
             ./home/users/samov
 
             ./home/core-set
+            ./home/modules/minecraft/server
+            ./home/linux/server
           ];
         };
 
