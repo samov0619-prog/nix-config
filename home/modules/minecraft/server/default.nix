@@ -19,24 +19,24 @@ let
   };
 in
 {
-  options.minecraft.server = {
-    enable = lib.mkEnableOption "User Minecraft Fabric server";
-
-    packwizDir = lib.mkOption {
-      type = lib.types.str;
-    };
-
-    serverDir = lib.mkOption {
-      type = lib.types.str;
-    };
-
-    memory = lib.mkOption {
-      type = lib.types.str;
-      default = "20G";
-    };
+  options.minecraft.server = lib.mkOption {
+    type = lib.types.nullOr (
+      lib.types.submodule {
+        options = {
+          packwizDir = lib.mkOption { type = lib.types.str; };
+          serverDir = lib.mkOption { type = lib.types.str; };
+          memory = lib.mkOption {
+            type = lib.types.str;
+            default = "20G";
+          };
+        };
+      }
+    );
+    default = null;
+    description = "Minecraft Fabric server instance, or null to leave the stack inactive.";
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf (cfg != null) {
 
     ################################
     # user systemd target
@@ -111,6 +111,20 @@ in
       };
 
       Install.WantedBy = [ "minecraft.target" ];
+    };
+
+    systemd.user.paths.ftb-backups-fabric-1214 = {
+      Unit.Description = "Watch Minecraft 1.21.4 Fabric Backups folder for changes";
+      Path.PathModified = "${cfg.serverDir}/backups/";
+      Install.WantedBy = [ "default.target" ];
+    };
+
+    systemd.user.services.ftb-backups-fabric-1214 = {
+      Unit.Description = "Sync Minecraft 1.21.4 Fabric Backups to Google Drive";
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${pkgs.rclone}/bin/rclone sync ${cfg.serverDir}/backups/ gd-backups:minecraft_backups_fabric_1.21.4 --bwlimit 2200k --quiet";
+      };
     };
   };
 }

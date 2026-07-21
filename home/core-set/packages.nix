@@ -6,8 +6,6 @@
     nixfmt
     nixd
     git-filter-repo
-    ueberzugpp
-    packwiz
     go
     gcc
     nodejs
@@ -15,7 +13,7 @@
     unzip
     gnumake
     tree-sitter
-    devenv
     socat
+    devenv
   ];
 }

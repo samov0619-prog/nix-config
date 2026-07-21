@@ -1,9 +1,30 @@
-{ ... }:
 {
-  imports = [ ./hardware.nix ];
+  lib,
+  pkgs,
+  ...
+}:
+let
+  serverSettings = import ./settings.nix;
+in
+{
+  imports = [
+    ./hardware.nix
+    ./vpn.nix
+    ./adguard.nix
+    ./proxy.nix
+    ./sftp.nix
+  ];
 
-  boot.loader.grub.enable = true;
-  boot.loader.grub.device = "/dev/sda";
+  _module.args = { inherit serverSettings; };
+
+  # First installation: generate hardware.nix on the VPS with
+  # `nixos-generate-config --root /mnt`, set settings.nix, then run
+  # `nixos-install --flake .#server`. Subsequent updates use
+  # `sudo nixos-rebuild switch --flake .#server`.
+  boot.loader.grub = {
+    enable = true;
+    device = "/dev/sda";
+  };
 
   time.timeZone = "Europe/Moscow";
 
@@ -12,18 +33,31 @@
     useDHCP = true;
     firewall = {
       enable = true;
-      allowedTCPPorts = [
-        22
-        443
-        25565
-      ];
+      allowedTCPPorts = [ 22 ];
+      interfaces.awg0 = {
+        allowedTCPPorts = [ 53 ];
+        allowedUDPPorts = [ 53 ];
+      };
     };
   };
 
-  nix.settings.experimental-features = [
-    "nix-command"
-    "flakes"
-  ];
+  nix = {
+    gc = {
+      automatic = true;
+      dates = "weekly";
+      options = "--delete-older-than 14d";
+    };
+    settings = {
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
+      trusted-users = [
+        "root"
+        "samov"
+      ];
+    };
+  };
 
   users.users.samov = {
     isNormalUser = true;
@@ -37,11 +71,24 @@
     enable = true;
     settings = {
       PasswordAuthentication = false;
+      KbdInteractiveAuthentication = false;
       PermitRootLogin = "prohibit-password";
     };
   };
 
-  programs.bash.enable = true;
+  programs = {
+    bash.enable = true;
+    nix-ld = {
+      enable = true;
+      libraries = with pkgs; [
+        stdenv.cc.cc.lib
+        zlib
+        openssl
+        curl
+      ];
+    };
+  };
 
-  system.stateVersion = "25.11";
+  # Fresh VPS: no state from the 25.11-era configuration exists to preserve.
+  system.stateVersion = "26.05";
 }
