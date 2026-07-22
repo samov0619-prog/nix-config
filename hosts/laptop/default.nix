@@ -3,6 +3,7 @@
 # https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
 
 {
+  config,
   pkgs,
   pkgsUnstable,
   ...
@@ -91,7 +92,7 @@
 
   hardware.nvidia = {
     # при апгрейде на 26.05 — вернуть
-    # package = config.boot.kernelPackages.nvidiaPackages.legacy_580;
+    package = config.boot.kernelPackages.nvidiaPackages.legacy_580;
 
     open = false;
     modesetting.enable = true;
