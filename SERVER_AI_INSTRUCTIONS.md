@@ -45,17 +45,15 @@
 
 ## VPS Installation
 
-1. Boot a NixOS installer and mount the target system at `/mnt`.
-2. Run `nixos-generate-config --root /mnt` and commit the generated
-   `hosts/server/hardware.nix`; never copy hardware configuration from another
-   host.
-3. Set the domain, ACME email, AWG port, WAN interface, and SFTP public key in
-   `hosts/server/default.nix` before building.
-4. Install with `nixos-install --flake .#server`.
-5. Apply Home Manager using `home-manager switch --flake .#samov-server`.
-6. Access initial AdGuard setup only through
+1. Boot the VPS provider rescue system and confirm its target disk with `lsblk`.
+2. Set the disk, domain, ACME email, AWG port, WAN interface, and SFTP public
+   key in `hosts/server/settings.nix`.
+3. From this repository on another machine, install with
+   `nix run github:nix-community/nixos-anywhere -- --flake .#server root@<vps-ip>`.
+4. Apply Home Manager using `home-manager switch --flake .#samov-server`.
+5. Access initial AdGuard setup only through
    `ssh -L 8008:127.0.0.1:8008 samov@<server>`.
-7. Generate profiles with the installed AWG and Naive client helper commands,
+6. Generate profiles with the installed AWG and Naive client helper commands,
    then download them through SFTP.
 
 ## Validation

@@ -22,6 +22,10 @@
       url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     nvim-config.url = "github:samov0619-prog/nvim";
     xremap-flake = {
@@ -41,6 +45,7 @@
       nixpkgs,
       nixpkgs-unstable,
       home-manager,
+      disko,
       nvim-config,
       freesm,
       nix-gc-env,
@@ -122,7 +127,24 @@
         server = mkNixos {
           system = systems.linux;
           modules = [
+            disko.nixosModules.disko
             ./hosts/server
+          ];
+        };
+
+        laptop-next = mkNixos {
+          system = systems.linux;
+          modules = [
+            disko.nixosModules.disko
+            ./hosts/laptop-next
+          ];
+        };
+
+        desktop-next = mkNixos {
+          system = systems.linux;
+          modules = [
+            disko.nixosModules.disko
+            ./hosts/desktop-next
           ];
         };
       };

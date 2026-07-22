@@ -67,10 +67,23 @@ hosts/server/
 ├── adguard.nix                  # private DNS and imported filter set
 ├── proxy.nix                    # Caddy + NaiveProxy plugin + Karing profiles
 └── sftp.nix                     # one-key, chrooted profile download account
+
+hosts/
+├── disko/                        # reusable GPT/EFI/ext4/(swap) layouts and docs
+├── laptop/                       # current laptop + legacy swapfile/resume config
+├── desktop/                      # current desktop + existing storage config
+├── laptop-next/                  # fresh 26.05 laptop target with Disko swap partition
+├── desktop-next/                 # EFI Disko template; verify hardware before use
+└── server/                       # fresh 26.05 VPS target with Disko
 ```
 
 `flake.nix` is the source of truth for host composition: a feature exists on a
 host only when its module is listed in that host's `modules` array.
+
+Disko is imported directly by fresh `server`, `laptop-next`, and `desktop-next`
+targets. It runs only through an explicit Disko/nixos-anywhere command, never
+through `nixos-rebuild switch`. Current `laptop` and `desktop` intentionally do
+not import Disko.
 
 ## Ключевые паттерны и gotchas
 
@@ -154,6 +167,14 @@ host only when its module is listed in that host's `modules` array.
 - AdGuard DNS доступен только через `awg0` и localhost; UI — через SSH tunnel на `127.0.0.1:8008`.
 - Caddy/NaiveProxy включается после заполнения domain и ACME email; Caddy собран с pinned `forwardproxy` plugin.
 
+### Disko + nixos-anywhere
+
+- `disko` pinned as a flake input; shared layouts live in `hosts/disko/layouts.nix`.
+- Remote VPS install uses `nix run github:nix-community/nixos-anywhere -- --flake .#server root@<vps-ip>` from another machine in provider rescue mode.
+- `root@<vps-ip>` is SSH syntax for the remote rescue host. A local laptop/desktop install needs no IP: boot a NixOS installer USB, run Disko locally, then `nixos-install --flake .#laptop-next`.
+- Before any destructive install, replace every `REPLACE_ME` after checking `lsblk`; future desktop must also confirm BIOS vs EFI with `efibootmgr -v`.
+- Current laptop retains `/swapfile` plus `resume_offset`; `laptop-next` uses a swap partition with `resumeDevice = true`, so the two schemes never coexist on one host.
+
 ## Полезные команды
 
 ```bash
@@ -161,6 +182,9 @@ host only when its module is listed in that host's `modules` array.
 sudo nixos-rebuild switch --flake .#laptop
 sudo nixos-rebuild switch --flake .#desktop
 sudo nixos-rebuild switch --flake .#server
+
+# Fresh remote VPS (provider rescue mode)
+nix run github:nix-community/nixos-anywhere -- --flake .#server root@<vps-ip>
 
 # Home Manager
 home-manager switch --flake .#samov-laptop
@@ -176,5 +200,5 @@ nix eval .#nixosConfigurations.laptop.config.system.build.toplevel --no-build 2>
 
 - **laptop**: эталон, максимально актуален. HP i7 + Intel/NVIDIA, ext4, GRUB EFI, Hibernate/zram.
 - **desktop**: старше laptop. AMD + NVIDIA, два монитора (DVI 1680x1050 + HDMI 3840x2160@3x). Нет Bluetooth/uinput/xremap/hibernate.
-- **server**: модульный VPS stack без Docker. До первой установки нужно сгенерировать `hosts/server/hardware.nix` на VPS и заполнить `hosts/server/settings.nix`; без `hardware.nix` NixOS-конфиг намеренно не вычисляется.
+- **server**: модульный VPS stack без Docker, Disko и generic virtio hardware modules. До первой установки заполнить `hosts/server/settings.nix` по данным rescue environment.
 - **mac**: только standalone HM (users + core-set). Без nix-darwin, без GUI, без проверки совместимости Linux-пакетов.

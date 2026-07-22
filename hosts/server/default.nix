@@ -9,6 +9,7 @@ in
 {
   imports = [
     ./hardware.nix
+    ./disko.nix
     ./vpn.nix
     ./adguard.nix
     ./proxy.nix
@@ -17,13 +18,15 @@ in
 
   _module.args = { inherit serverSettings; };
 
-  # First installation: generate hardware.nix on the VPS with
-  # `nixos-generate-config --root /mnt`, set settings.nix, then run
-  # `nixos-install --flake .#server`. Subsequent updates use
-  # `sudo nixos-rebuild switch --flake .#server`.
+  # First installation: set the disk and service values in settings.nix, boot
+  # the provider rescue system, then run nixos-anywhere with `.#server`.
+  # `root@<vps-ip>` is only needed to reach that remote rescue machine.
   boot.loader.grub = {
     enable = true;
-    device = "/dev/sda";
+    efiSupport = true;
+    efiInstallAsRemovable = true;
+    # The hybrid Disko layout contains both BIOS and EFI boot partitions.
+    device = serverSettings.diskDevice;
   };
 
   time.timeZone = "Europe/Moscow";
@@ -46,6 +49,7 @@ in
       automatic = true;
       dates = "weekly";
       options = "--delete-older-than 14d";
+      delete_generations = "+5";
     };
     settings = {
       experimental-features = [
