@@ -15,14 +15,12 @@
 #    programs.opencode.tools: тот принял бы derivation за attrs и развалился.
 #    @opencode-ai/plugin НЕ импортируем — tool() это passthrough, а tool.schema=zod.
 #
-# 2. small_model = deepseek-v4-flash-free (НЕ дефолт):
+# 2. small_model = OpenAI GPT-5.4 mini (НЕ дефолт):
 #    дефолт для провайдера opencode захардкожен в gpt-5-nano (issue #8609),
 #    а он платный на zen → 401 CreditsError на титулах/суммаризации. Явный
 #    small_model перебивает эту ветку (getSmallModel: `if (cfg.small_model)`).
-#    ВАЖНО: при смене main-модели на non-opencode провайдер — обязательно задать
-#    и small_model на тот же залогиненный провайдер, иначе титулы утекут на zen.
-#    NB: -free тиры на zen нестабильны; если titles/subquery начнут 401/молчать —
-#    сперва проверь живость id: `opencode models | grep deepseek`.
+#    RLM subquery берёт именно small_model: mini достаточно силён для Python
+#    срезов и семантической агрегации, не тратя лимит основной Terra-модели.
 #
 # 3. package override — фикс file-watcher (libstdc++ через LD_LIBRARY_PATH).
 #    Подробности — в комменте у самого override ниже.
@@ -99,6 +97,7 @@ in
         edit = "ask";
         bash = "ask";
       };
+      instructions = [ "${./rlm-instructions.md}" ];
 
       # ─── МОДЕЛИ ───────────────────────────────────────────────────────────
       # Не заданы → дефолт opencode zen (big-pickle и пр.). Переключить декларативно:
@@ -107,14 +106,13 @@ in
       #   model = "anthropic/claude-sonnet-4-5";   # ANTHROPIC_API_KEY
       #   model = "deepseek/deepseek-chat";        # DEEPSEEK_API_KEY  ("deepseek-reasoner" — reasoning)
       #   model = "openai/gpt-5.5";                 # OPENAI_API_KEY
-      # small_model — заголовки/суммаризация (и sub-модель RLM, если пинишь её в плагине):
+      # small_model — заголовки, суммаризация и RLM subquery.
       #   small_model = "anthropic/claude-haiku-4-5";
-      # small_model = "opencode/deepseek-v4-flash-free";
       # Основная модель: код, рефакторинг, отладка, агентные задачи.
       model = "openai/gpt-5.6-terra";
 
-      # Лёгкие служебные задачи выполняются бесплатной моделью.
-      small_model = "opencode/deepseek-v4-flash-free";
+      # Лёгкие служебные и изолированные RLM-задачи выполняет coding-capable mini.
+      small_model = "openai/gpt-5.4-mini";
     };
 
     extraPackages = with pkgs; [

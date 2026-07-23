@@ -10,7 +10,8 @@ export default {
 		"RLM REPL. For files/dirs too large to read into context. Loads `path` as a Python " +
 		"variable `ctx` (str for a file; dict{relpath: text} for a dir), then runs your `code` " +
 		"against it. print() ONLY the relevant slice — that is all that enters the conversation. " +
-		"Prefer this over grep+read loops on big inputs; token cost stays flat regardless of size.",
+		"MUST use this before repeated read/grep/glob calls over logs, directories, repositories, " +
+		"unknown-size files, or more than two related files; token cost stays flat regardless of size.",
 	args: {
 		path: z
 			.string()
