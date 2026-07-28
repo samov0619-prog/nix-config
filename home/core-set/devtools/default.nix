@@ -11,6 +11,7 @@
       core.editor = "nvim";
     };
   };
+  programs.gh.enable = true;
   programs.aider-chat = {
     enable = true;
     package = pkgs.aider-chat-full;
