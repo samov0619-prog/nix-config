@@ -33,7 +33,7 @@ in
         height = "70%";
         outline-width = 0;
         border-width = 0;
-        terminal = "alacritty -e";
+        terminal = "kitty --";
       };
     })
     (lib.mkIf (cfg.enable && cfg.passmenu.enable) {

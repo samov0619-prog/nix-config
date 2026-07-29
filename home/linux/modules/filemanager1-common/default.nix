@@ -52,15 +52,10 @@ in
 
     terminalCommand = lib.mkOption {
       type = lib.types.str;
-      default = "${pkgs.alacritty}/bin/alacritty -e";
-      defaultText = lib.literalExpression ''"''${pkgs.alacritty}/bin/alacritty -e"'';
+      default = "${pkgs.kitty}/bin/kitty --";
+      defaultText = lib.literalExpression ''"''${pkgs.kitty}/bin/kitty --"'';
       example = lib.literalExpression ''
-        # Для alacritty:
-        "''${pkgs.alacritty}/bin/alacritty -e"
-
         # Для kitty:
-        "''${pkgs.kitty}/bin/kitty -e"
-        # или (новые версии):
         "''${pkgs.kitty}/bin/kitty --"
 
         # Для wezterm:
@@ -73,8 +68,7 @@ in
         Terminal emulator command including the execution flag.
 
         IMPORTANT: This should include the flag needed to execute commands:
-        - alacritty uses -e
-        - kitty uses -e or -- (depending on version)
+        - kitty uses --
         - wezterm uses -- after "start"
         - foot uses -e
 

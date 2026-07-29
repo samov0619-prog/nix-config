@@ -21,7 +21,7 @@
   xdg.desktopEntries.yazi-xdg = {
     name = "Yazi (XDG)";
     terminal = false;
-    exec = "alacritty -e yazi %f";
+    exec = "kitty -- yazi %f";
     type = "Application";
     mimeType = [ "inode/directory" ];
   };
