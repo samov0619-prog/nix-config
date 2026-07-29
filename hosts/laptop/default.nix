@@ -78,6 +78,17 @@
   nixpkgs.config.allowUnfree = true;
 
   powerManagement.cpuFreqGovernor = "performance";
+  services.logind.settings.Login = {
+    # Закрытие крышки ничего не делает
+    HandleLidSwitch = "ignore";
+    HandleLidSwitchExternalPower = "ignore";
+    HandleLidSwitchDocked = "ignore";
+
+    # Случайные нажатия аппаратных кнопок ничего не делают
+    HandlePowerKey = "ignore";
+    HandleSuspendKey = "ignore";
+    HandleHibernateKey = "ignore";
+  };
   services.thermald.enable = true;
 
   services.xserver.videoDrivers = [
