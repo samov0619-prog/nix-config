@@ -36,7 +36,7 @@ in
     useDHCP = true;
     firewall = {
       enable = true;
-      allowedTCPPorts = [ 22 ];
+      allowedTCPPorts = [ 17431 ];
       interfaces.awg0 = {
         allowedTCPPorts = [ 53 ];
         allowedUDPPorts = [ 53 ];
@@ -67,12 +67,13 @@ in
     isNormalUser = true;
     extraGroups = [ "wheel" ];
     openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIONlBwdPsaKnSQk2Fb3570EOQNJ65nscEZ0i2XLSKOsg samov0619.s@gmail.com"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINTAdj6jWH+V9+USI7Gq4efjABJr9nmQ06lJozBBXHPe samov0619.s.rutest"
     ];
   };
 
   services.openssh = {
     enable = true;
+    ports = [ 17431 ];
     settings = {
       PasswordAuthentication = false;
       KbdInteractiveAuthentication = false;
@@ -92,6 +93,9 @@ in
       ];
     };
   };
+
+  # Make remote terminals such as Kitty usable without missing-terminfo errors.
+  environment.enableAllTerminfo = true;
 
   # Fresh VPS: no state from the 25.11-era configuration exists to preserve.
   system.stateVersion = "26.05";
