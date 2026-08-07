@@ -40,7 +40,10 @@
       menu = "nested";
     };
   };
-  services.mako.enable = true;
+  services.mako = {
+    enable = true;
+    settings.default-timeout = 60000;
+  };
   services.filemanager1-common = {
     enable = true;
     # fileManager = "yazi"; # или ranger/nnn/lf/custom
