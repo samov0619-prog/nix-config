@@ -1,11 +1,11 @@
 # VPS-specific values. Replace every null before enabling the corresponding service.
 {
-  # Set from `lsblk` in the provider rescue environment before nixos-anywhere.
-  diskDevice = "/dev/disk/by-id/REPLACE_ME";
+  # Confirmed in the provider rescue environment with `lsblk`.
+  diskDevice = "/dev/vda";
   domain = null;
   acmeEmail = null;
-  publicEndpoint = null;
-  wanInterface = "eth0";
+  publicEndpoint = "94.103.3.166";
+  wanInterface = "ens3";
   awgPort = 51820;
   sftpAuthorizedKey = null;
 }
