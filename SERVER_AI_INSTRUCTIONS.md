@@ -11,7 +11,14 @@
 ## Service Layout
 
 - `hosts/server/default.nix` imports the hardware, VPN, AdGuard, Caddy, and
-  SFTP modules and owns the host-wide firewall, SSH, Nix, and boot settings.
+  SFTP modules and owns the host-wide firewall, static WAN network, SSH, Nix,
+  boot settings, and the `samov` sudo policy.
+- `hosts/server/hardware.nix` loads `virtio_pci` and `virtio_net` in the
+  initrd. Keep both for VirtIO-based VPSes: the WAN interface must exist before
+  the normal system can configure its address.
+- `hosts/server/settings.nix` contains all provider-specific network values:
+  disk, public endpoint, WAN interface, address, prefix, gateway, DNS, and
+  optional proxy/SFTP values. Do not hardcode these in `default.nix`.
 - `hosts/server/vpn.nix` owns forwarding, NAT, and the AmneziaWG interface.
 - `hosts/server/adguard.nix` declares AdGuard filters based on
   `adguardhome-backup-2026-07-20-231323.tar.gz`. Do not import its old Docker
@@ -45,21 +52,77 @@
 
 ## VPS Installation
 
-1. Boot the VPS provider rescue system and confirm its target disk with `lsblk`.
-2. Set the disk, domain, ACME email, AWG port, WAN interface, and SFTP public
-   key in `hosts/server/settings.nix`.
-3. From this repository on another machine, install with
-   `nix run github:nix-community/nixos-anywhere -- --flake .#server root@<vps-ip>`.
-4. Apply Home Manager using `home-manager switch --flake .#samov-server`.
-5. Access initial AdGuard setup only through
-   `ssh -L 8008:127.0.0.1:8008 samov@<server>`.
-6. Generate profiles with the installed AWG and Naive client helper commands,
+1. Boot the provider rescue system and confirm the disk, WAN interface, address,
+   prefix, gateway, and DNS with `lsblk` and `ip route`.
+2. Set all provider-specific values in `hosts/server/settings.nix`. Example for
+   the installed VPS: `/dev/vda`, `ens3`, `94.103.3.166/24`, and gateway
+   `94.103.3.1`. These values are examples, not defaults for a different VPS.
+3. Configure rescue SSH to use the same port and key expected by the target.
+   Keep its session open until the target system accepts `samov` login.
+4. Build and validate locally before destructive deployment:
+
+   ```bash
+   nix build .#nixosConfigurations.server.config.system.build.toplevel --no-link
+   nix flake check --no-build 'path:.'
+   ```
+
+5. From this repository on another machine, install with:
+
+   ```bash
+   nix run github:nix-community/nixos-anywhere -- \
+     --flake .#server root@<rescue-host>
+   ```
+
+   This erases `settings.nix.diskDevice`. Do not interrupt after Disko begins.
+
+6. After the final reboot, log in as `samov` using its SSH key. SSH listens on
+   port `17431`; password and keyboard-interactive authentication are disabled.
+   `samov` has declarative passwordless sudo to support remote deployments.
+7. Apply the standalone Home Manager profile from an up-to-date checkout:
+
+   ```bash
+   home-manager switch --flake .#samov-server
+   ```
+
+8. Access initial AdGuard setup only through:
+
+   ```bash
+   ssh -p 17431 -L 8008:127.0.0.1:8008 samov@<server>
+   ```
+
+9. Generate profiles with the installed AWG and Naive client helper commands,
    then download them through SFTP.
+
+## Remote Updates And Recovery
+
+- Deploy a server configuration from the workstation with:
+
+  ```bash
+  nixos-rebuild switch --flake .#server --target-host samov@<server> --sudo
+  ```
+
+- A healthy post-reboot check is:
+
+  ```bash
+  ssh samov@<server> \
+    'ip -br address; ip route; lsmod | grep -E "virtio_(pci|net)"; systemctl is-active sshd'
+  ```
+
+- Expected state for a VirtIO VPS: the configured WAN interface is `UP` with
+  its static address, its configured gateway is the default route, both VirtIO
+  modules are loaded, and `sshd` is `active`.
+- If a new provider uses another NIC driver or network layout, update
+  `hardware.nix` and `settings.nix` before installing. Do not use DHCP as an
+  unverified fallback for the static target configuration.
+- The provider VNC/GRUB console is an out-of-band recovery path, not a normal
+  administration method. Do not persist ad-hoc commands, temporary SSH daemons,
+  or modified `/etc/sudoers`; represent permanent behavior in Nix instead.
 
 ## Validation
 
 - Run `nix flake check` and evaluate both server configurations before deploy.
-- Confirm `wg-quick-awg0`, `adguardhome`, `caddy`, and `sshd` are healthy.
+- Confirm `wg-quick-awg0`, `adguardhome`, and `sshd` are healthy. Confirm
+  `caddy` only after both `domain` and `acmeEmail` are set.
 - Confirm public DNS and the AdGuard UI are unreachable.
 - Confirm AmneziaVPN imports and handshakes the AWG profile.
 - Confirm Karing imports and uses the Naive profile.
