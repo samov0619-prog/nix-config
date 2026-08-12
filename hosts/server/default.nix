@@ -33,7 +33,15 @@ in
 
   networking = {
     hostName = "hommy";
-    useDHCP = true;
+    useDHCP = false;
+    interfaces.${serverSettings.wanInterface}.ipv4.addresses = [
+      {
+        address = serverSettings.wanAddress;
+        prefixLength = serverSettings.wanPrefixLength;
+      }
+    ];
+    defaultGateway = serverSettings.wanGateway;
+    nameservers = serverSettings.nameservers;
     firewall = {
       enable = true;
       allowedTCPPorts = [ 17431 ];
@@ -70,6 +78,18 @@ in
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINTAdj6jWH+V9+USI7Gq4efjABJr9nmQ06lJozBBXHPe samov0619.s.rutest"
     ];
   };
+
+  security.sudo.extraRules = [
+    {
+      users = [ "samov" ];
+      commands = [
+        {
+          command = "ALL";
+          options = [ "NOPASSWD" ];
+        }
+      ];
+    }
+  ];
 
   services.openssh = {
     enable = true;

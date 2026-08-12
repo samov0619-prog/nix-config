@@ -32,7 +32,6 @@ let
             config=${stateDir}/${interface}.conf
             profile=${profileDir}/$name.conf
             qr=${profileDir}/$name.txt
-            clientDir=${stateDir}/clients
 
             if [ ! -f "$config" ]; then
               echo "${interface} has not been initialized" >&2
