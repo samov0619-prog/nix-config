@@ -73,6 +73,7 @@ in
 
   users.users.samov = {
     isNormalUser = true;
+    shell = pkgs.fish;
     extraGroups = [ "wheel" ];
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINTAdj6jWH+V9+USI7Gq4efjABJr9nmQ06lJozBBXHPe samov0619.s.rutest"
@@ -103,6 +104,7 @@ in
 
   programs = {
     bash.enable = true;
+    fish.enable = true;
     nix-ld = {
       enable = true;
       libraries = with pkgs; [
