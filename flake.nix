@@ -160,6 +160,7 @@
             ./home/users/samov
 
             ./home/core-set
+            ./home/apps/aider
             ./home/apps/opencode
             ./home/gui-set
             ./home/modules/minecraft/server
@@ -180,6 +181,7 @@
             ./home/users/samov
 
             ./home/core-set
+            ./home/apps/aider
             ./home/apps/opencode
             ./home/gui-set
             ./home/modules/minecraft/server

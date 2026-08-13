@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ ... }:
 {
   imports = [ ./neovim.nix ];
 
@@ -9,14 +9,6 @@
     };
   };
   programs.gh.enable = true;
-  programs.aider-chat = {
-    enable = true;
-    package = pkgs.aider-chat-full;
-    settings = {
-      chat-language = "ru";
-      commit-language = "en";
-    };
-  };
 
   # programs.opencode = {
   #   enable = true;
