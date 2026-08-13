@@ -1,9 +1,6 @@
 { pkgs, ... }:
 {
-  imports = [
-    ./opencode
-    ./neovim.nix
-  ];
+  imports = [ ./neovim.nix ];
 
   programs.git = {
     enable = true;
