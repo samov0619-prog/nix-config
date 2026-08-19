@@ -27,6 +27,11 @@
   plugin and ACME TLS.
 - `hosts/server/sftp.nix` exposes `/srv/vpn-download/files` through a
   chrooted, SFTP-only account with exactly one configured SSH key.
+- `home/core-set` provides the shared shell and CLI foundation, including Fish,
+  Atuin, Zoxide, Yazi, Git, and development tools.
+- `home/apps/opencode` and `home/apps/aider` are optional desktop/laptop apps.
+  They are intentionally excluded from `samov-server`: OpenCode's Node build
+  and Aider's full dependency set consume unnecessary VPS disk space.
 - `home/linux/server/default.nix` supplies the server development environment.
 - `flake.nix` imports the reusable Minecraft server module on every Linux
   host. Only desktop and laptop additionally import `home/apps/minecraft`.
@@ -84,6 +89,11 @@
    home-manager switch --flake .#samov-server
    ```
 
+   The server's initial NixOS closure contains no Git or Home Manager command.
+   Bootstrap them with `nix-shell -p git --run 'git clone <url> ~/nix-config'`
+   and `nix run github:nix-community/home-manager/release-26.05 -- ...`.
+   Do not add OpenCode or Aider to the server profile just to bootstrap it.
+
 8. Access initial AdGuard setup only through:
 
    ```bash
@@ -98,13 +108,29 @@
 - Deploy a server configuration from the workstation with:
 
   ```bash
-  nixos-rebuild switch --flake .#server --target-host samov@<server> --sudo
+  nixos-rebuild switch --flake .#server --target-host samov@<server>:17431 --sudo
   ```
+
+- This remote NixOS deployment builds on the workstation, transfers the
+  closure over SSH, and activates it through `samov`'s declarative
+  passwordless sudo. It avoids using VPS disk space for a system build.
+- For Home Manager, update the VPS checkout and run the activation on the VPS:
+
+  ```bash
+  cd ~/nix-config
+  git pull
+  nix run github:nix-community/home-manager/release-26.05 -- \
+    switch --flake .#samov-server
+  ```
+
+- New `samov` SSH sessions use Fish. Home Manager supplies the Fish
+  integration for Atuin and Zoxide, so `z <directory>` is available after its
+  activation. Reconnect after changing the login shell or Home Manager profile.
 
 - A healthy post-reboot check is:
 
   ```bash
-  ssh samov@<server> \
+  ssh -p 17431 samov@<server> \
     'ip -br address; ip route; lsmod | grep -E "virtio_(pci|net)"; systemctl is-active sshd'
   ```
 
