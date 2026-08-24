@@ -211,6 +211,7 @@
           modules = [
             ./home/users/samov
             ./home/core-set
+            ./home/modules/voice-dictate
           ];
         };
       };
