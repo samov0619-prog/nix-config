@@ -177,6 +177,13 @@ not import Disko.
 
 ## Полезные команды
 
+## Применение конфигурации
+
+**Никогда не запускай `nixos-rebuild switch` или `home-manager switch`.**
+Пользователь применяет системную и Home Manager-конфигурацию самостоятельно
+после личной проверки. Для проверки агент может выполнять только evaluation
+или build без активации, например `nix eval` или `nix build`.
+
 ```bash
 # NixOS
 sudo nixos-rebuild switch --flake .#laptop
