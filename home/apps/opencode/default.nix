@@ -37,7 +37,7 @@
 # на deepseek-…-free без 401, file.watcher backend=inotify без ERROR.
 # ─────────────────────────────────────────────────────────────────────────────
 
-{ pkgs, lib, ... }:
+{ pkgs, lib, config, ... }:
 let
   # ─── ПЕРЕКЛЮЧАТЕЛЬ RLM ──────────────────────────────────────────────────
   # false → только tool `rlm` (depth-0). true → + plugin-tool `rlm_subquery` (рекурсия).
@@ -60,6 +60,12 @@ let
       tar xf ${zodTgz} -C "$out/node_modules/zod" --strip-components=1
       cp ${file} "$out/${name}.ts"
     '';
+  pluginDirectory = pkgs.runCommand "opencode-plugins" { } ''
+    mkdir -p "$out/node_modules/zod"
+    tar xf ${zodTgz} -C "$out/node_modules/zod" --strip-components=1
+    cp ${./rlm-plugin.ts} "$out/rlm.ts"
+    cp ${./permission-stats.ts} "$out/permission-stats.ts"
+  '';
 in
 {
   programs.opencode = {
@@ -94,8 +100,28 @@ in
       autoupdate = false; # пакет иммутабелен (Nix) — не качать апдейты
       share = "disabled";
       permission = {
+        # Read-only project exploration does not require confirmation. Access outside
+        # the current project remains guarded by external_directory below.
+        read = "allow";
+        glob = "allow";
+        grep = "allow";
+        list = "allow";
+        external_directory = "ask";
         edit = "ask";
-        bash = "ask";
+        bash = {
+          "*" = "ask";
+          "git status*" = "allow";
+          "git log*" = "allow";
+          "git diff*" = "allow";
+          "git show*" = "allow";
+          "git branch --show-current*" = "allow";
+          "git remote*" = "allow";
+          "git merge-base*" = "allow";
+          "git rev-list*" = "allow";
+          "git rev-parse*" = "allow";
+          "git ls-files*" = "allow";
+          "git config --get*" = "allow";
+        };
       };
       instructions = [ "${./rlm-instructions.md}" ];
 
@@ -130,6 +156,28 @@ in
   # он ошибочно примет за attrs и развалится.
   xdg.configFile."opencode/tools".source = withZod "rlm" ./rlm-tool.ts;
   xdg.configFile."opencode/plugin" = lib.mkIf rlmRecursive {
-    source = withZod "rlm" ./rlm-plugin.ts;
+    source = pluginDirectory;
   };
+
+  home.packages = [
+    (pkgs.writeShellApplication {
+      name = "opencode-permission-stats";
+      runtimeInputs = with pkgs; [ coreutils gawk jq ];
+      text = ''
+        history="${config.xdg.stateHome}/opencode/permission-history.jsonl"
+        if test ! -s "$history"; then
+          printf '%s\n' "No recorded permission decisions yet."
+          exit 0
+        fi
+
+        printf '%s\n' "Permission decisions by operation, pattern, and response:"
+        jq -rs '
+          group_by([.permission, (.patterns | join("\u001f")), .response])[]
+          | [.[0].permission, (.[0].patterns | join(", ")), .[0].response, length]
+          | @tsv
+        ' "$history" | sort -t $'\t' -k1,1 -k2,2 -k4,4nr \
+          | awk -F '\t' 'BEGIN { print "PERMISSION\tPATTERNS\tRESPONSE\tCOUNT" } { print }'
+      '';
+    })
+  ];
 }
