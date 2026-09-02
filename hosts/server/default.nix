@@ -117,10 +117,12 @@ in
 
   nix = {
     gc = {
+      # nix-gc-env applies this retention to system, user, and Home Manager
+      # profiles. Two generations fit the VPS disk while preserving rollback.
       automatic = true;
-      dates = "weekly";
-      options = "--delete-older-than 14d";
-      delete_generations = "+5";
+      dates = "daily";
+      options = "--delete-older-than 7d";
+      delete_generations = "+2";
     };
     settings = {
       experimental-features = [

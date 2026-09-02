@@ -146,7 +146,8 @@ wrong disk.
 - `awg-add-client` and `naive-add-client` currently create credentials only.
   There is no supported list, revocation, or expiry helper yet; add that
   lifecycle before issuing profiles to multiple people.
-- The server retains five NixOS generations for up to 14 days. Updates are
+- The server runs daily GC and keeps two generations of every Nix profile,
+  including NixOS and Home Manager, through `nix-gc-env`. Updates are
   deliberately manual: evaluate locally, deploy through the SSH alias, check
   `wg-quick-awg0`, AdGuard, and SSH, then retain an off-host backup before
   relying on a rollback.
