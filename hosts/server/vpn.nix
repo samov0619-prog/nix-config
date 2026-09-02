@@ -42,7 +42,7 @@ let
               exit 1
             fi
 
-            last_octet=$(awk -F '[./]' '/^AllowedIPs = ${network}\\.[0-9]+\\/32$/ { print $3 }' "$config" | sort -n | tail -n1)
+            last_octet=$(awk -v prefix="${network}." '$1 == "AllowedIPs" && $2 == "=" && index($3, prefix) == 1 && substr($3, length($3) - 2) == "/32" { split($3, address, "[./]"); print address[4] }' "$config" | sort -n | tail -n1)
             last_octet=''${last_octet:-1}
             address=$((last_octet + 1))
             if [ "$address" -gt 254 ]; then
@@ -53,17 +53,21 @@ let
             umask 077
             client_private=$(awg genkey)
             client_public=$(printf '%s' "$client_private" | awg pubkey)
-            server_private=$(awk -F ' = ' '/^PrivateKey = / { print $2; exit }' "$config")
+            config_value() {
+              awk -F ' = ' -v key="$1" '$1 ~ "^[[:space:]]*" key "$" { print $2; exit }' "$config"
+            }
+
+            server_private=$(config_value PrivateKey)
             server_public=$(printf '%s' "$server_private" | awg pubkey)
-            jc=$(awk -F ' = ' '/^Jc = / { print $2; exit }' "$config")
-            jmin=$(awk -F ' = ' '/^Jmin = / { print $2; exit }' "$config")
-            jmax=$(awk -F ' = ' '/^Jmax = / { print $2; exit }' "$config")
-            s1=$(awk -F ' = ' '/^S1 = / { print $2; exit }' "$config")
-            s2=$(awk -F ' = ' '/^S2 = / { print $2; exit }' "$config")
-            h1=$(awk -F ' = ' '/^H1 = / { print $2; exit }' "$config")
-            h2=$(awk -F ' = ' '/^H2 = / { print $2; exit }' "$config")
-            h3=$(awk -F ' = ' '/^H3 = / { print $2; exit }' "$config")
-            h4=$(awk -F ' = ' '/^H4 = / { print $2; exit }' "$config")
+            jc=$(config_value Jc)
+            jmin=$(config_value Jmin)
+            jmax=$(config_value Jmax)
+            s1=$(config_value S1)
+            s2=$(config_value S2)
+            h1=$(config_value H1)
+            h2=$(config_value H2)
+            h3=$(config_value H3)
+            h4=$(config_value H4)
 
             cat >> "$config" <<EOF
 

@@ -108,12 +108,15 @@
 - Deploy a server configuration from the workstation with:
 
   ```bash
-  nixos-rebuild switch --flake .#server --target-host samov@<server>:17431 --sudo
+  nixos-rebuild switch --flake .#server --target-host samov@<server-ssh-alias> --sudo
   ```
 
 - This remote NixOS deployment builds on the workstation, transfers the
   closure over SSH, and activates it through `samov`'s declarative
   passwordless sudo. It avoids using VPS disk space for a system build.
+- Configure `<server-ssh-alias>` in `~/.ssh/config` with the server hostname,
+  port `17431`, the `samov` user, and its matching identity file. Do not pass
+  `host:port` to `--target-host`: `nix-copy-closure` does not use that port.
 - For Home Manager, update the VPS checkout and run the activation on the VPS:
 
   ```bash
