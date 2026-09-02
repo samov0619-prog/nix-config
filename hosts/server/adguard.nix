@@ -1,4 +1,8 @@
-{ ... }:
+{ lib, serverSettings, ... }:
+let
+  ipv6 = serverSettings.network.ipv6;
+  awgEnabled = serverSettings.publicEndpoint != null;
+in
 {
   services.adguardhome = {
     enable = true;
@@ -7,10 +11,13 @@
     mutableSettings = true;
     settings = {
       dns = {
+        # The VPN addresses exist only when AWG is enabled. Keep AdGuard
+        # localhost-only otherwise so the no-VPN branch still starts cleanly.
         bind_hosts = [
           "127.0.0.1"
-          "10.66.0.1"
-        ];
+        ]
+        ++ lib.optional awgEnabled "10.66.0.1"
+        ++ lib.optional (awgEnabled && ipv6 != null) "${ipv6.vpnNetwork}::1";
         port = 53;
         anonymize_client_ip = true;
         refuse_any = true;

@@ -6,6 +6,9 @@
 }:
 let
   enabled = serverSettings.publicEndpoint != null;
+  ipv4 = serverSettings.network.ipv4;
+  ipv6 = serverSettings.network.ipv6;
+  ipv6Enabled = ipv6 != null;
   interface = "awg0";
   network = "10.66.0";
   stateDir = "/var/lib/amneziawg";
@@ -42,7 +45,7 @@ let
               exit 1
             fi
 
-            last_octet=$(awk -v prefix="${network}." '$1 == "AllowedIPs" && $2 == "=" && index($3, prefix) == 1 && substr($3, length($3) - 2) == "/32" { split($3, address, "[./]"); print address[4] }' "$config" | sort -n | tail -n1)
+            last_octet=$(awk -v prefix="${network}." '$1 == "AllowedIPs" && $2 == "=" { split($3, ips, ","); address = ips[1]; if (index(address, prefix) == 1 && substr(address, length(address) - 2) == "/32") { split(address, octets, "[./]"); print octets[4] } }' "$config" | sort -n | tail -n1)
             last_octet=''${last_octet:-1}
             address=$((last_octet + 1))
             if [ "$address" -gt 254 ]; then
@@ -74,13 +77,13 @@ let
       [Peer]
       # $name
       PublicKey = $client_public
-      AllowedIPs = ${network}.$address/32
+      AllowedIPs = ${network}.$address/32${lib.optionalString ipv6Enabled ", ${ipv6.vpnNetwork}::$address/128"}
       EOF
-            awg set ${interface} peer "$client_public" allowed-ips "${network}.$address/32"
+            awg set ${interface} peer "$client_public" allowed-ips "${network}.$address/32${lib.optionalString ipv6Enabled ",${ipv6.vpnNetwork}::$address/128"}"
 
             cat > "$profile" <<EOF
       [Interface]
-      Address = ${network}.$address/32
+      Address = ${network}.$address/32${lib.optionalString ipv6Enabled ", ${ipv6.vpnNetwork}::$address/128"}
       PrivateKey = $client_private
       DNS = ${network}.1
       Jc = $jc
@@ -96,7 +99,9 @@ let
       [Peer]
       PublicKey = $server_public
       Endpoint = ${serverSettings.publicEndpoint}:${toString serverSettings.awgPort}
-      AllowedIPs = 0.0.0.0/0
+      # Keep a full tunnel here. AmneziaVPN applies its supported split
+      # tunneling rules locally; server-side profiles cannot route by process.
+      AllowedIPs = 0.0.0.0/0${lib.optionalString ipv6Enabled ", ::/0"}
       PersistentKeepalive = 25
       EOF
             qrencode -t ANSIUTF8 < "$profile" > "$qr"
@@ -108,12 +113,11 @@ let
 in
 {
   config = lib.mkIf enabled {
-    boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
-
     networking = {
       nat = {
         enable = true;
-        externalInterface = serverSettings.wanInterface;
+        enableIPv6 = ipv6Enabled && ipv6.egress == "nat66";
+        externalInterface = ipv4.interface;
         internalInterfaces = [ interface ];
       };
       firewall.allowedUDPPorts = [ serverSettings.awgPort ];
@@ -150,7 +154,7 @@ in
                           h4=$(od -An -N4 -tu4 /dev/urandom | tr -d ' ')
                           cat > ${stateDir}/${interface}.conf <<EOF
                 [Interface]
-                Address = ${network}.1/24
+                Address = ${network}.1/24${lib.optionalString ipv6Enabled ", ${ipv6.vpnNetwork}::1/${toString ipv6.vpnPrefixLength}"}
                 ListenPort = ${toString serverSettings.awgPort}
                 PrivateKey = $private_key
                 Jc = 5

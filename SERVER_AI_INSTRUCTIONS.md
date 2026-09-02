@@ -45,6 +45,111 @@
 - Generate Karing/sing-box JSON for NaiveProxy.
 - Publish copies only to `/srv/vpn-download/files`; the SFTP user cannot get a
   shell, forward ports, or access any other path.
+- The SFTP key is an operator credential, not a per-client delivery mechanism:
+  it can read every generated profile in that directory. Remove downloaded
+  profiles promptly or introduce separate credentials and directories before
+  sharing access with anyone else.
+
+## Client Routing And DNS
+
+- `awg-add-client` emits a full IPv4 tunnel (`AllowedIPs = 0.0.0.0/0`). This
+  is intentional: AmneziaVPN implements split tunneling on the client; an
+  AmneziaWG server transports packets and cannot identify a desktop or mobile
+  application after encryption.
+- The supported split-tunneling matrix is maintained in the
+  [AmneziaVPN documentation](https://docs.amnezia.org/documentation/instructions/vpn-split-tunneling):
+  Android supports IP and app allow/bypass lists; Windows supports both IP
+  modes and app bypass; Linux, macOS, and iOS support only both IP modes.
+  Use client settings rather than editing the generated server profile.
+- Amnezia IP rules are IPv4-only. Domain entries are resolved once to IPv4
+  addresses and are not refreshed automatically. Do not add a subnet containing
+  the configured `publicEndpoint` to a client split list or the VPN handshake
+  can be routed outside the tunnel.
+- DNS for AWG clients is AdGuard Home at `10.66.0.1`. Keep AmneziaDNS disabled
+  and set `10.66.0.1` as the connection's custom primary DNS server in
+  AmneziaVPN. On Linux, confirm `resolvectl status` shows that address on
+  `amn0`, then test with `resolvectl query example.com`.
+
+## Configuration Branches
+
+Every branch is selected in `hosts/server/settings.nix` or by an explicitly
+nullable setting. The NixOS evaluation does not probe a live VPS: run the
+preflight checklist first, record verified facts, then select a branch.
+
+| Choice | Select when | Effect | Trade-off |
+| --- | --- | --- | --- |
+| `network.ipv4.mode = "static"` | The provider gave a fixed IPv4 address, prefix, and gateway. | Declares the address and route exactly. | Most predictable, but a provider network change requires a config update. |
+| `network.ipv4.mode = "dhcp"` | The provider explicitly supports DHCP on the target NIC. | Lets DHCP set IPv4 address, route, and DNS. | Portable across changing leases, but unsuitable for an unverified static VPS setup. |
+| `network.ipv6 = null` | No global IPv6 address and default route are present. | Server and generated profiles remain IPv4-only. | Safest when IPv6 is unavailable, but dual-stack clients can bypass the VPN over IPv6. |
+| `network.ipv6 = { ...; egress = "nat66"; }` | The VPS has a global WAN IPv6 but no provider-routed client prefix. | Clients use private ULA IPv6; server translates it to its WAN IPv6. | Works with a single WAN address, but NAT66 obscures client IPv6 addresses and is less direct. |
+| `network.ipv6 = { ...; egress = "routed"; }` | The provider routes `vpnNetwork` to this VPS. | Clients use that routed prefix without translation. | Preserves end-to-end IPv6, but requires a provider-confirmed route; selecting it without one breaks IPv6 egress. |
+| `publicEndpoint = null` | AWG must be intentionally absent. | Disables AWG interface, NAT, client generator, and UDP listener. | Reduces attack surface, but no VPN or AWG DNS access exists. |
+| `publicEndpoint = "<IPv4>"` | The VPS has a reachable public IPv4 endpoint. | Enables AWG, NAT, and `awg-add-client`. | Requires provider firewall and NixOS UDP port access. |
+| `domain = null` or `acmeEmail = null` | NaiveProxy is not ready. | Leaves Caddy, ACME, TCP 80/443, and `naive-add-client` disabled. | Safe default; no NaiveProxy connection is available. |
+| Both `domain` and `acmeEmail` set | DNS A/AAAA records already point at the VPS and an ACME email is available. | Enables Caddy and NaiveProxy with ACME TLS. | Public HTTP/HTTPS exposure; certificate issuance and profile connection need validation. |
+| `sftpAuthorizedKey = null` | SFTP delivery is intentionally not configured. | The SFTP account has no login key. | No profile download access until a key is added. |
+| `sftpAuthorizedKey = "ssh-..."` | One trusted operator must download generated profiles. | Enables that key for the restricted SFTP account. | This principal can read every profile in the shared directory, not only its own. |
+
+The Disko layout is deliberately not a branch: it creates both BIOS and EFI
+boot partitions, so it is portable across those firmware modes. `diskDevice`
+is always a manual confirmation because choosing it automatically can erase the
+wrong disk.
+
+## IPv6 Policy
+
+- The current server and generated profiles are IPv4-only. A dual-stack client
+  can therefore reach IPv6 destinations outside this VPN. This is a privacy
+  gap for a full-tunnel connection, not an Amnezia IP-split feature.
+- Do not add `::/0` to profiles until the VPS has a routed IPv6 prefix and the
+  server has IPv6 forwarding, firewall, DNS, and egress configured. Without an
+  IPv6 uplink it would blackhole IPv6 rather than provide IPv6 VPN access.
+- Before implementing IPv6, record the provider allocation on the VPS with
+  `ip -6 -br address` and `ip -6 route`. The design must assign an AWG ULA
+  subnet, route or NAT66 it through the provider prefix, expose AdGuard on its
+  IPv6 AWG address, and then add IPv6 client addresses and `::/0` to new
+  profiles.
+
+### Dual-Stack Settings
+
+- `settings.nix` selects networking explicitly. Keep `network.ipv6 = null` for
+  an IPv4-only provider. After preflight confirms a global address and route,
+  replace it with a verified static allocation:
+
+  ```nix
+  network.ipv6 = {
+    wanAddress = "2001:db8:100::2";
+    wanPrefixLength = 64;
+    gateway = "fe80::1";
+    vpnNetwork = "fd42:1234:5678:1";
+    vpnPrefixLength = 64;
+    egress = "nat66";
+  };
+  ```
+
+  `vpnNetwork` is a `/64` without the trailing `::` or CIDR suffix. Use
+  `egress = "nat66"` when the provider supplies only WAN IPv6; use
+  `egress = "routed"` only when the provider routes `vpnNetwork` to this VPS.
+  Static IPv6 is deliberately explicit because DHCPv6 and router-advertisement
+  provider setups need their own tested branch.
+- Existing AWG runtime state is mutable and never rewritten automatically.
+  When changing an installed server from IPv4-only to dual-stack, reissue and
+  replace all client profiles; they need IPv6 addresses and `::/0`. A future
+  migration helper must update both the persistent AWG config and live peers
+  before it can safely automate that transition.
+
+## Operations And Recovery
+
+- Back up and restore-test mutable server state off-host: `/var/lib/amneziawg`,
+  `/srv/vpn-download/files`, `/var/lib/private/AdGuardHome`, and, when enabled,
+  `/var/lib/naiveproxy`. Those paths contain credentials or settings that are
+  intentionally outside Git and the Nix store.
+- `awg-add-client` and `naive-add-client` currently create credentials only.
+  There is no supported list, revocation, or expiry helper yet; add that
+  lifecycle before issuing profiles to multiple people.
+- The server retains five NixOS generations for up to 14 days. Updates are
+  deliberately manual: evaluate locally, deploy through the SSH alias, check
+  `wg-quick-awg0`, AdGuard, and SSH, then retain an off-host backup before
+  relying on a rollback.
 
 ## Minecraft
 
@@ -57,21 +162,44 @@
 
 ## VPS Installation
 
-1. Boot the provider rescue system and confirm the disk, WAN interface, address,
-   prefix, gateway, and DNS with `lsblk` and `ip route`.
-2. Set all provider-specific values in `hosts/server/settings.nix`. Example for
+### Preflight Checklist
+
+1. Boot the provider rescue system and run the read-only inventory from the
+   workstation checkout:
+
+   ```bash
+   ssh root@<rescue-host> 'sh -s' < hosts/server/preflight.sh
+   ```
+
+   The installed server also provides the same `server-preflight` command.
+   It reports disks, NICs, IPv4, and IPv6 but deliberately never writes
+   `settings.nix` or selects a target disk.
+2. Confirm the installation disk manually from the `Block devices` section.
+   Never infer it from its name: `/dev/vda`, `/dev/sda`, and NVMe names vary by
+   provider and rescue image.
+3. Record the NIC, public IPv4 address/prefix, default IPv4 gateway, and DNS
+   from the IPv4 sections. Confirm them with the provider control panel when
+   the rescue configuration is DHCP or NAT-based.
+4. Record global IPv6 addresses, routed prefixes, and the default IPv6 route.
+   Link-local `fe80::/64` alone is not usable for an IPv6 VPN egress. Leave
+   IPv6 disabled in the server configuration when no routed allocation exists.
+5. Verify a second rescue SSH connection with the intended key before any
+   destructive command. Keep the first rescue shell open until the installed
+   system accepts the `samov` login.
+
+1. Set all provider-specific values in `hosts/server/settings.nix`. The probe
+   can identify candidates but cannot safely automate this step across
+   providers. Example for
    the installed VPS: `/dev/vda`, `ens3`, `94.103.3.166/24`, and gateway
    `94.103.3.1`. These values are examples, not defaults for a different VPS.
-3. Configure rescue SSH to use the same port and key expected by the target.
-   Keep its session open until the target system accepts `samov` login.
-4. Build and validate locally before destructive deployment:
+2. Build and validate locally before destructive deployment:
 
    ```bash
    nix build .#nixosConfigurations.server.config.system.build.toplevel --no-link
    nix flake check --no-build 'path:.'
    ```
 
-5. From this repository on another machine, install with:
+3. From this repository on another machine, install with:
 
    ```bash
    nix run github:nix-community/nixos-anywhere -- \
@@ -80,10 +208,10 @@
 
    This erases `settings.nix.diskDevice`. Do not interrupt after Disko begins.
 
-6. After the final reboot, log in as `samov` using its SSH key. SSH listens on
+4. After the final reboot, log in as `samov` using its SSH key. SSH listens on
    port `17431`; password and keyboard-interactive authentication are disabled.
    `samov` has declarative passwordless sudo to support remote deployments.
-7. Apply the standalone Home Manager profile from an up-to-date checkout:
+5. Apply the standalone Home Manager profile from an up-to-date checkout:
 
    ```bash
    home-manager switch --flake .#samov-server
@@ -94,13 +222,13 @@
    and `nix run github:nix-community/home-manager/release-26.05 -- ...`.
    Do not add OpenCode or Aider to the server profile just to bootstrap it.
 
-8. Access initial AdGuard setup only through:
+6. Access initial AdGuard setup only through:
 
    ```bash
    ssh -p 17431 -L 8008:127.0.0.1:8008 samov@<server>
    ```
 
-9. Generate profiles with the installed AWG and Naive client helper commands,
+7. Generate profiles with the installed AWG and Naive client helper commands,
    then download them through SFTP.
 
 ## Remote Updates And Recovery
