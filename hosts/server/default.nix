@@ -9,6 +9,10 @@ let
   ipv4 = network.ipv4;
   ipv6 = network.ipv6;
   ipv6Enabled = ipv6 != null;
+  samovProfiles = [
+    "/home/samov/.local/state/nix/profiles/home-manager"
+    "/home/samov/.local/state/nix/profiles/profile"
+  ];
   serverPreflight = pkgs.writeShellApplication {
     name = "server-preflight";
     runtimeInputs = [
@@ -125,6 +129,9 @@ in
       delete_generations = "+2";
     };
     settings = {
+      # Deduplicate identical files across store paths as they are added.
+      # This saved 531 MiB on the current 20 GiB VPS during the first run.
+      auto-optimise-store = true;
       experimental-features = [
         "nix-command"
         "flakes"
@@ -134,6 +141,26 @@ in
         "samov"
       ];
     };
+  };
+
+  # nix-gc-env cleans profiles below /nix/var/nix/profiles. Home Manager and
+  # nix profile use per-user paths, so clean them as samov before the store GC.
+  systemd.services.samov-profile-gc = {
+    description = "Remove old samov Nix profile generations";
+    wantedBy = [ "nix-gc.service" ];
+    before = [ "nix-gc.service" ];
+    path = [ pkgs.nix ];
+    serviceConfig = {
+      Type = "oneshot";
+      User = "samov";
+    };
+    script = ''
+      for profile in ${lib.escapeShellArgs samovProfiles}; do
+        if [ -L "$profile" ]; then
+          nix-env --profile "$profile" --delete-generations +2
+        fi
+      done
+    '';
   };
 
   users.users.samov = {
