@@ -185,21 +185,6 @@
         "type": "indirect"
       }
     },
-    "nvim-config": {
-      "locked": {
-        "lastModified": 1783590167,
-        "narHash": "sha256-LoxIxdPb55UnSzLyXiHZTOhcsbfTkJSHmG4rn4MQSCA=",
-        "owner": "samov0619-prog",
-        "repo": "nvim",
-        "rev": "1b818efe00fd3ca2b9380ffc9773944c9b36f627",
-        "type": "github"
-      },
-      "original": {
-        "owner": "samov0619-prog",
-        "repo": "nvim",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "disko": "disko",
@@ -208,7 +193,6 @@
         "nix-gc-env": "nix-gc-env",
         "nixpkgs": "nixpkgs",
         "nixpkgs-unstable": "nixpkgs-unstable",
-        "nvim-config": "nvim-config",
         "xremap-flake": "xremap-flake"
       }
     },

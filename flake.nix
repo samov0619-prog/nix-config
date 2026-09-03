@@ -27,7 +27,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nvim-config.url = "github:samov0619-prog/nvim";
+    # Reserved for a future declarative Neovim deployment. Server Neovim is
+    # manual today, so keep this input disabled to avoid fetching it.
+    # nvim-config.url = "github:samov0619-prog/nvim";
+
     xremap-flake = {
       url = "github:xremap/nix-flake";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -46,7 +49,7 @@
       nixpkgs-unstable,
       home-manager,
       disko,
-      nvim-config,
+      # nvim-config,
       freesm,
       nix-gc-env,
       xremap-flake,
@@ -81,7 +84,8 @@
         home-manager.lib.homeManagerConfiguration {
           inherit pkgs modules;
           extraSpecialArgs = {
-            inherit username nvim-config xremap-flake;
+            # To re-enable declarative Neovim, also pass nvim-config here.
+            inherit username xremap-flake;
             pkgsUnstable = pkgsUnstableFor pkgs.stdenv.hostPlatform.system;
           };
         };
@@ -160,6 +164,14 @@
             ./home/users/samov
 
             ./home/core-set
+            ./home/core-set/nix-authoring.nix
+            ./home/core-set/go.nix
+            ./home/core-set/node.nix
+            ./home/core-set/python.nix
+            ./home/core-set/devenv.nix
+            ./home/core-set/native-build.nix
+            ./home/core-set/treesitter.nix
+            ./home/core-set/devtools/github.nix
             ./home/apps/aider
             ./home/apps/opencode
             ./home/gui-set
@@ -181,6 +193,14 @@
             ./home/users/samov
 
             ./home/core-set
+            ./home/core-set/nix-authoring.nix
+            ./home/core-set/go.nix
+            ./home/core-set/node.nix
+            ./home/core-set/python.nix
+            ./home/core-set/devenv.nix
+            ./home/core-set/native-build.nix
+            ./home/core-set/treesitter.nix
+            ./home/core-set/devtools/github.nix
             ./home/apps/aider
             ./home/apps/opencode
             ./home/gui-set
@@ -200,6 +220,8 @@
             ./home/users/samov/state-26.05.nix
 
             ./home/core-set
+            ./home/core-set/native-build.nix
+            ./home/core-set/treesitter.nix
             ./home/modules/minecraft/server
             ./home/linux/server
           ];
@@ -211,6 +233,14 @@
           modules = [
             ./home/users/samov
             ./home/core-set
+            ./home/core-set/nix-authoring.nix
+            ./home/core-set/go.nix
+            ./home/core-set/node.nix
+            ./home/core-set/python.nix
+            ./home/core-set/devenv.nix
+            ./home/core-set/native-build.nix
+            ./home/core-set/treesitter.nix
+            ./home/core-set/devtools/github.nix
             ./home/modules/voice-dictate
           ];
         };

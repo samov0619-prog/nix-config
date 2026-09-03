@@ -1,9 +1,8 @@
 { pkgs, ... }:
 {
   home.packages = with pkgs; [
-    ripgrep
-    fd
-    unzip
-    socat
+    nixfmt
+    nixd
+    git-filter-repo
   ];
 }

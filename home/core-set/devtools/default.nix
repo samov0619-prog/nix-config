@@ -8,7 +8,6 @@
       core.editor = "nvim";
     };
   };
-  programs.gh.enable = true;
 
   # programs.opencode = {
   #   enable = true;

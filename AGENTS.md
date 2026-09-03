@@ -12,7 +12,7 @@ NixOS и HM управляются раздельно: NixOS через `nixosCo
 - Системы: `x86_64-linux`, `aarch64-darwin`.
 - Хелперы: `pkgsFor`, `pkgsUnstableFor`, `mkHM`, `mkNixos`.
 - Overlays: `filemanager1-common` + `freesm` — только для desktop/laptop HM.
-- `nvim-config` и `xremap-flake` передаются в `extraSpecialArgs`.
+- `xremap-flake` передаётся в `extraSpecialArgs`.
 
 ### NixOS-хосты
 
@@ -155,7 +155,9 @@ not import Disko.
 ### Neovim
 
 - Сейчас ставится только `neovim-unwrapped` из nixpkgs без конфигурации.
-- Server дополнительно подключает `nvim-config` через `xdg.configFile."nvim"`; Lazy/Mason собирают пользовательские компоненты вне Nix store.
+- Server хранит Neovim repo, Lazy/Mason и Tree-sitter parsers вручную вне Nix
+  store. Home Manager намеренно не подключает `~/.config/nvim` через
+  `xdg.configFile`; для VPS используется ручная ветка `server-build`.
 - Git editor и алиасы vi/vim → nvim.
 
 ### Server services

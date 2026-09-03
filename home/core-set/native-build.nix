@@ -1,9 +1,7 @@
 { pkgs, ... }:
 {
   home.packages = with pkgs; [
-    ripgrep
-    fd
-    unzip
-    socat
+    gcc
+    gnumake
   ];
 }

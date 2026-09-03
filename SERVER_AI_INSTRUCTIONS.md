@@ -32,7 +32,9 @@
 - `home/apps/opencode` and `home/apps/aider` are optional desktop/laptop apps.
   They are intentionally excluded from `samov-server`: OpenCode's Node build
   and Aider's full dependency set consume unnecessary VPS disk space.
-- `home/linux/server/default.nix` supplies the server development environment.
+- `home/linux/server/default.nix` supplies server diagnostics and the
+  Tree-sitter parser build toolchain. It deliberately does not install language
+  runtimes or deploy a Neovim configuration.
 - `flake.nix` imports the reusable Minecraft server module on every Linux
   host. Only desktop and laptop additionally import `home/apps/minecraft`.
 
@@ -69,6 +71,25 @@
   and set `10.66.0.1` as the connection's custom primary DNS server in
   AmneziaVPN. On Linux, confirm `resolvectl status` shows that address on
   `amn0`, then test with `resolvectl query example.com`.
+
+## Server Neovim
+
+- Home Manager installs only `neovim-unwrapped`. The Neovim repository, its
+  `server-build` branch, Lazy plugins, Tree-sitter parsers, and any Mason state
+  are manual user state under `~/.config/nvim` and `~/.local/share/nvim`.
+- Keep the server on the lightweight `server-build` branch. Do not add the
+  repository as a flake input or deploy it through `xdg.configFile`: plugin and
+  language-server installation is intentionally outside the Nix store.
+- After Home Manager activation on a fresh VPS, clone that branch manually and
+  then initialize Lazy and any manually managed editor state as needed:
+
+  ```bash
+  git clone --branch server-build https://github.com/samov0619-prog/nvim ~/.config/nvim
+  nvim
+  ```
+- Tree-sitter parser builds require `gcc`, `tree-sitter`, `curl`, and `tar`.
+  They do not require Node, JDK, Go, Python, or GNU Make. The server Home
+  Manager profile includes the required parser tools explicitly.
 
 ## Configuration Branches
 
@@ -146,11 +167,17 @@ wrong disk.
 - `awg-add-client` and `naive-add-client` currently create credentials only.
   There is no supported list, revocation, or expiry helper yet; add that
   lifecycle before issuing profiles to multiple people.
-- The server runs daily GC and keeps two generations of every Nix profile,
-  including NixOS and Home Manager, through `nix-gc-env`. Updates are
-  deliberately manual: evaluate locally, deploy through the SSH alias, check
-  `wg-quick-awg0`, AdGuard, and SSH, then retain an off-host backup before
-  relying on a rollback.
+- The server runs daily GC and keeps two generations. `nix-gc-env` cleans
+  system/root profiles, while `samov-profile-gc` cleans the Home Manager and
+  user Nix profiles before the store GC. Updates are deliberately manual:
+  evaluate locally, deploy through the SSH alias, check `wg-quick-awg0`,
+  AdGuard, and SSH, then retain an off-host backup before relying on a
+  rollback.
+- `home/core-set` is the small common CLI base. Development packages are
+  explicit flake modules: `nix-authoring.nix`, `go.nix`, `node.nix`,
+  `python.nix`, `devenv.nix`, `native-build.nix`, `treesitter.nix`, and
+  `devtools/github.nix`. Desktop, laptop, and mac import all of them; server
+  imports only `native-build.nix` and `treesitter.nix`.
 
 ## Minecraft
 
@@ -163,13 +190,61 @@ wrong disk.
 
 ## VPS Installation
 
-### Preflight Checklist
+### Temporary Debian Or Rescue SSH
 
-1. Boot the provider rescue system and run the read-only inventory from the
-   workstation checkout:
+1. Use the provider-issued root password only to add the workstation public key
+   to the temporary Debian or rescue host. From the workstation:
 
    ```bash
-   ssh root@<rescue-host> 'sh -s' < hosts/server/preflight.sh
+   ssh-copy-id -i ~/.ssh/id_ed25519_samov0619.s.rutest.pub -p 22 root@<rescue-host>
+   ssh -i ~/.ssh/id_ed25519_samov0619.s.rutest \
+     -o IdentitiesOnly=yes -o PreferredAuthentications=publickey \
+     -p 22 root@<rescue-host> true
+   ```
+
+   Replace the key path when another public key is intended. If the provider
+   blocks root password SSH, add that public key through its console or rescue
+   panel instead. The verification intentionally prompts for the private-key
+   passphrase. Use `ssh-add ~/.ssh/id_ed25519_samov0619.s.rutest` before adding
+   `BatchMode=yes` to a non-interactive check.
+2. Keep separate SSH aliases instead of changing one alias between temporary
+   Debian and installed NixOS:
+
+   ```sshconfig
+   Host vps-bootstrap
+     HostName <server-ip>
+     User root
+     Port 22
+     IdentityFile ~/.ssh/id_ed25519_samov0619.s.rutest
+     IdentitiesOnly yes
+
+   Host vps-new
+     HostName <server-ip>
+     User samov
+     Port 17431
+     IdentityFile ~/.ssh/id_ed25519_samov0619.s.rutest
+     IdentitiesOnly yes
+   ```
+
+   Use `root@vps-bootstrap` for `nixos-anywhere`; use `samov@vps-new` after
+   the NixOS reboot. An explicit `-i` command is independent of SSH config and
+   is the right key-installation verification when several keys exist.
+3. Keep the temporary SSH service on its provider default port, usually 22.
+   Do not disable password login or change the port before installation: the
+   installer needs this temporary root connection and the disk will be erased.
+   Keep the original password or console session open until NixOS accepts the
+   `samov` key on port 17431.
+4. The installed NixOS configuration performs the permanent SSH hardening:
+   `samov` key access on port 17431, no password or keyboard-interactive login,
+   and root login only by key. The Debian password is not copied into NixOS.
+
+### Preflight Checklist
+
+1. On the temporary Debian or rescue host, run the read-only inventory from
+   the workstation checkout:
+
+   ```bash
+   ssh vps-bootstrap 'sh -s' < hosts/server/preflight.sh
    ```
 
    The installed server also provides the same `server-preflight` command.
@@ -184,27 +259,36 @@ wrong disk.
 4. Record global IPv6 addresses, routed prefixes, and the default IPv6 route.
    Link-local `fe80::/64` alone is not usable for an IPv6 VPN egress. Leave
    IPv6 disabled in the server configuration when no routed allocation exists.
-5. Verify a second rescue SSH connection with the intended key before any
-   destructive command. Keep the first rescue shell open until the installed
-   system accepts the `samov` login.
+5. Verify a second key-based root SSH connection before any destructive
+   command. Keep the first rescue shell open until the installed system accepts
+   the `samov` login.
 
 1. Set all provider-specific values in `hosts/server/settings.nix`. The probe
    can identify candidates but cannot safely automate this step across
    providers. Example for
    the installed VPS: `/dev/vda`, `ens3`, `94.103.3.166/24`, and gateway
    `94.103.3.1`. These values are examples, not defaults for a different VPS.
-2. Build and validate locally before destructive deployment:
+2. Validate the exact committed workstation checkout before destructive
+   deployment:
 
    ```bash
+   git status --short
+   git pull --ff-only
+   nix flake check --no-build
    nix build .#nixosConfigurations.server.config.system.build.toplevel --no-link
-   nix flake check --no-build 'path:.'
    ```
+
+   `git status --short` must be empty. Skip `git pull --ff-only` when the
+   checkout is already the intended revision. `nix flake check` evaluates every
+   host; `nix build` evaluates and builds the exact server closure locally, so
+   deployment transfers an already verified result instead of building on the
+   small VPS disk.
 
 3. From this repository on another machine, install with:
 
    ```bash
    nix run github:nix-community/nixos-anywhere -- \
-     --flake .#server root@<rescue-host>
+     --flake .#server root@vps-bootstrap
    ```
 
    This erases `settings.nix.diskDevice`. Do not interrupt after Disko begins.
@@ -212,21 +296,22 @@ wrong disk.
 4. After the final reboot, log in as `samov` using its SSH key. SSH listens on
    port `17431`; password and keyboard-interactive authentication are disabled.
    `samov` has declarative passwordless sudo to support remote deployments.
-5. Apply the standalone Home Manager profile from an up-to-date checkout:
+5. The initial NixOS closure contains no Git or Home Manager command. Bootstrap
+   the standalone Home Manager profile from the VPS with:
 
    ```bash
-   home-manager switch --flake .#samov-server
+   nix-shell -p git --run 'git clone <url> ~/nix-config'
+   cd ~/nix-config
+   nix run github:nix-community/home-manager/release-26.05 -- \
+     switch --flake .#samov-server
    ```
 
-   The server's initial NixOS closure contains no Git or Home Manager command.
-   Bootstrap them with `nix-shell -p git --run 'git clone <url> ~/nix-config'`
-   and `nix run github:nix-community/home-manager/release-26.05 -- ...`.
    Do not add OpenCode or Aider to the server profile just to bootstrap it.
 
 6. Access initial AdGuard setup only through:
 
    ```bash
-   ssh -p 17431 -L 8008:127.0.0.1:8008 samov@<server>
+   ssh -L 8008:127.0.0.1:8008 samov@vps-new
    ```
 
 7. Generate profiles with the installed AWG and Naive client helper commands,
