@@ -2,6 +2,9 @@
 {
   # Confirmed in the provider rescue environment with `lsblk`.
   diskDevice = "/dev/vda";
+  # A 3 GiB VPS needs disk-backed headroom for large Tree-sitter parser builds.
+  # Set null only when RAM is sufficient without swap.
+  swapMiB = 2048;
   domain = null;
   acmeEmail = null;
   publicEndpoint = "94.103.3.166";

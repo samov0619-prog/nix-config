@@ -45,6 +45,13 @@ in
     device = serverSettings.diskDevice;
   };
 
+  # Disko leaves root ext4 as the remaining disk space. NixOS creates this
+  # swapfile declaratively, avoiding parser-build OOM on the small VPS.
+  swapDevices = lib.optional (serverSettings.swapMiB != null) {
+    device = "/swapfile";
+    size = serverSettings.swapMiB;
+  };
+
   time.timeZone = "Europe/Moscow";
 
   networking = {
@@ -98,6 +105,10 @@ in
           || (ipv4 ? address && ipv4 ? prefixLength && ipv4 ? gateway && ipv4 ? nameservers)
         );
       message = "IPv4 requires an interface; static mode also requires address, prefixLength, gateway, and nameservers";
+    }
+    {
+      assertion = serverSettings.swapMiB == null || serverSettings.swapMiB > 0;
+      message = "swapMiB must be null or a positive MiB value";
     }
     {
       assertion =

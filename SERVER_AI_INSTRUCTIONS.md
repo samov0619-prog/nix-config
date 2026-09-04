@@ -104,6 +104,8 @@ preflight checklist first, record verified facts, then select a branch.
 | `network.ipv6 = null` | No global IPv6 address and default route are present. | Server and generated profiles remain IPv4-only. | Safest when IPv6 is unavailable, but dual-stack clients can bypass the VPN over IPv6. |
 | `network.ipv6 = { ...; egress = "nat66"; }` | The VPS has a global WAN IPv6 but no provider-routed client prefix. | Clients use private ULA IPv6; server translates it to its WAN IPv6. | Works with a single WAN address, but NAT66 obscures client IPv6 addresses and is less direct. |
 | `network.ipv6 = { ...; egress = "routed"; }` | The provider routes `vpnNetwork` to this VPS. | Clients use that routed prefix without translation. | Preserves end-to-end IPv6, but requires a provider-confirmed route; selecting it without one breaks IPv6 egress. |
+| `swapMiB = 2048` | VPS RAM is small or local parser/build tasks can peak above RAM. | Creates a 2 GiB `/swapfile` on ext4 root. | Slower than RAM when used, but prevents OOM; consumes 2 GiB disk capacity. |
+| `swapMiB = null` | RAM is ample and no memory-heavy local work is expected. | Creates no disk swap. | Leaves all headroom to `/nix/store`, but a large compiler process can be OOM-killed. |
 | `publicEndpoint = null` | AWG must be intentionally absent. | Disables AWG interface, NAT, client generator, and UDP listener. | Reduces attack surface, but no VPN or AWG DNS access exists. |
 | `publicEndpoint = "<IPv4>"` | The VPS has a reachable public IPv4 endpoint. | Enables AWG, NAT, and `awg-add-client`. | Requires provider firewall and NixOS UDP port access. |
 | `domain = null` or `acmeEmail = null` | NaiveProxy is not ready. | Leaves Caddy, ACME, TCP 80/443, and `naive-add-client` disabled. | Safe default; no NaiveProxy connection is available. |
@@ -311,11 +313,31 @@ wrong disk.
 6. Access initial AdGuard setup only through:
 
    ```bash
-   ssh -L 8008:127.0.0.1:8008 samov@vps-new
+   ssh -N -L 8008:127.0.0.1:8008 samov@vps-new
    ```
 
-7. Generate profiles with the installed AWG and Naive client helper commands,
-   then download them through SFTP.
+   Keep this terminal open, then open `http://127.0.0.1:8008` on the
+   workstation. The AdGuard UI is bound only to VPS localhost and has no public
+   firewall rule; `-L` forwards the workstation port securely over SSH. Stop
+   the tunnel with `Ctrl+C` after setup.
+
+7. Create and retrieve AWG profiles only after `wg-quick-awg0` is active:
+
+   ```bash
+   ssh samov@vps-new 'sudo awg-add-client <name>'
+   sftp vpn-download@vps-new
+   ```
+
+   `awg-add-client` creates `/srv/vpn-download/files/<name>.conf` and a
+   terminal QR rendering `<name>.txt`. The restricted SFTP account starts in
+   `/files`, so retrieve the config with `get <name>.conf`, not
+   `get files/<name>.conf`. Import the `.conf` into AmneziaVPN. It contains a
+   client private key: do not commit, share in chat, or retain an unnecessary
+   downloaded copy.
+
+   `naive-add-client <name>` is available only after `domain` and `acmeEmail`
+   enable Caddy/NaiveProxy. It creates `<name>-naive.json` in the same SFTP
+   directory for Karing/sing-box import.
 
 ## Remote Updates And Recovery
 
