@@ -54,10 +54,14 @@
 
 ## Client Routing And DNS
 
-- `awg-add-client` emits a full IPv4 tunnel (`AllowedIPs = 0.0.0.0/0`). This
-  is intentional: AmneziaVPN implements split tunneling on the client; an
-  AmneziaWG server transports packets and cannot identify a desktop or mobile
-  application after encryption.
+- `awg-add-client` emits the canonical full-tunnel route
+  `AllowedIPs = 0.0.0.0/0, ::/0`. This is intentional: AmneziaVPN implements
+  split tunneling on the client; an AmneziaWG server transports packets and
+  cannot identify a desktop or mobile application after encryption.
+- Android's imported-profile UI recognizes client-owned site/IP split tunneling
+  only with that exact full-tunnel route. Do not add service or LAN subnets to
+  this client `AllowedIPs` line: Amnezia will treat it as profile-defined
+  server routing and disable client site/IP split controls.
 - The supported split-tunneling matrix is maintained in the
   [AmneziaVPN documentation](https://docs.amnezia.org/documentation/instructions/vpn-split-tunneling):
   Android supports IP and app allow/bypass lists; Windows supports both IP
@@ -71,6 +75,16 @@
   and set `10.66.0.1` as the connection's custom primary DNS server in
   AmneziaVPN. On Linux, confirm `resolvectl status` shows that address on
   `amn0`, then test with `resolvectl query example.com`.
+
+### AmneziaVPN Client DNS
+
+1. Open the connection settings, disable **Use AmneziaDNS**, then open **DNS
+   servers**.
+2. Set **Primary DNS** to `10.66.0.1`. Leave secondary DNS empty unless a
+   deliberate fallback is required: a public fallback can bypass AdGuard when
+   the VPN DNS is unreachable.
+3. Save, disconnect, and reconnect the profile. On Linux, `resolvectl status`
+   must show `10.66.0.1` on `amn0`; test with `resolvectl query example.com`.
 
 ## Server Neovim
 
@@ -101,7 +115,7 @@ preflight checklist first, record verified facts, then select a branch.
 | --- | --- | --- | --- |
 | `network.ipv4.mode = "static"` | The provider gave a fixed IPv4 address, prefix, and gateway. | Declares the address and route exactly. | Most predictable, but a provider network change requires a config update. |
 | `network.ipv4.mode = "dhcp"` | The provider explicitly supports DHCP on the target NIC. | Lets DHCP set IPv4 address, route, and DNS. | Portable across changing leases, but unsuitable for an unverified static VPS setup. |
-| `network.ipv6 = null` | No global IPv6 address and default route are present. | Server and generated profiles remain IPv4-only. | Safest when IPv6 is unavailable, but dual-stack clients can bypass the VPN over IPv6. |
+| `network.ipv6 = null` | No global IPv6 address and default route are present. | Server forwards IPv4 only; client profiles route `::/0` into AWG. | Prevents IPv6 bypass and keeps Android split controls available, but IPv6 destinations cannot work until VPS IPv6 exists. |
 | `network.ipv6 = { ...; egress = "nat66"; }` | The VPS has a global WAN IPv6 but no provider-routed client prefix. | Clients use private ULA IPv6; server translates it to its WAN IPv6. | Works with a single WAN address, but NAT66 obscures client IPv6 addresses and is less direct. |
 | `network.ipv6 = { ...; egress = "routed"; }` | The provider routes `vpnNetwork` to this VPS. | Clients use that routed prefix without translation. | Preserves end-to-end IPv6, but requires a provider-confirmed route; selecting it without one breaks IPv6 egress. |
 | `swapMiB = 2048` | VPS RAM is small or local parser/build tasks can peak above RAM. | Creates a 2 GiB `/swapfile` on ext4 root. | Slower than RAM when used, but prevents OOM; consumes 2 GiB disk capacity. |
@@ -120,17 +134,16 @@ wrong disk.
 
 ## IPv6 Policy
 
-- The current server and generated profiles are IPv4-only. A dual-stack client
-  can therefore reach IPv6 destinations outside this VPN. This is a privacy
-  gap for a full-tunnel connection, not an Amnezia IP-split feature.
-- Do not add `::/0` to profiles until the VPS has a routed IPv6 prefix and the
-  server has IPv6 forwarding, firewall, DNS, and egress configured. Without an
-  IPv6 uplink it would blackhole IPv6 rather than provide IPv6 VPN access.
+- The current server forwards IPv4 only. Generated profiles nevertheless route
+  `::/0` through AWG to prevent an IPv6 privacy bypass and to preserve Android
+  client split controls. Until the VPS has IPv6 egress, IPv6 destinations will
+  fail or clients will fall back to IPv4.
+- Do not expect IPv6 connectivity until the VPS has a routed IPv6 prefix and
+  the server has IPv6 forwarding, firewall, DNS, and egress configured.
 - Before implementing IPv6, record the provider allocation on the VPS with
   `ip -6 -br address` and `ip -6 route`. The design must assign an AWG ULA
   subnet, route or NAT66 it through the provider prefix, expose AdGuard on its
-  IPv6 AWG address, and then add IPv6 client addresses and `::/0` to new
-  profiles.
+  IPv6 AWG address, and then make the existing `::/0` client route functional.
 
 ### Dual-Stack Settings
 
@@ -156,9 +169,9 @@ wrong disk.
   provider setups need their own tested branch.
 - Existing AWG runtime state is mutable and never rewritten automatically.
   When changing an installed server from IPv4-only to dual-stack, reissue and
-  replace all client profiles; they need IPv6 addresses and `::/0`. A future
-  migration helper must update both the persistent AWG config and live peers
-  before it can safely automate that transition.
+  replace all client profiles; they need IPv6 addresses. A future migration
+  helper must update both the persistent AWG config and live peers before it
+  can safely automate that transition.
 
 ## Operations And Recovery
 
@@ -328,12 +341,12 @@ wrong disk.
    sftp vpn-download@vps-new
    ```
 
-   `awg-add-client` creates `/srv/vpn-download/files/<name>.conf` and a
-   terminal QR rendering `<name>.txt`. The restricted SFTP account starts in
-   `/files`, so retrieve the config with `get <name>.conf`, not
-   `get files/<name>.conf`. Import the `.conf` into AmneziaVPN. It contains a
-   client private key: do not commit, share in chat, or retain an unnecessary
-   downloaded copy.
+   `awg-add-client` prints an ANSI/UTF-8 QR in the SSH terminal and writes
+   `/srv/vpn-download/files/<name>.conf` plus `<name>.txt`. The restricted SFTP
+   account starts in `/files`, so retrieve either with `get <name>.conf` or
+   `get <name>.txt`, not with a `files/` prefix. Import the `.conf` into
+   AmneziaVPN or scan the terminal QR. The profile contains a client private
+   key: do not commit, share in chat, or retain an unnecessary downloaded copy.
 
    `naive-add-client <name>` is available only after `domain` and `acmeEmail`
    enable Caddy/NaiveProxy. It creates `<name>-naive.json` in the same SFTP

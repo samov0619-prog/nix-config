@@ -186,6 +186,18 @@ not import Disko.
 после личной проверки. Для проверки агент может выполнять только evaluation
 или build без активации, например `nix eval` или `nix build`.
 
+### Область применения изменений
+
+В итогах всегда явно указывать, как применять каждую группу изменений:
+
+- `hosts/<host>/` и NixOS-модули: пользователь запускает `nixos-rebuild` с
+  рабочей станции; для VPS — через `--target-host` SSH alias.
+- `home/` и Home Manager-модули: пользователь запускает Home Manager для
+  нужного профиля; server Home Manager активируется на VPS по SSH.
+- Документация и ручное состояние (Neovim, Lazy, Mason, созданные VPN
+  профили): Nix activation не требуется; явно привести ручную команду, если
+  она нужна.
+
 ```bash
 # NixOS
 sudo nixos-rebuild switch --flake .#laptop

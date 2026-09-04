@@ -99,15 +99,17 @@ let
       [Peer]
       PublicKey = $server_public
       Endpoint = ${serverSettings.publicEndpoint}:${toString serverSettings.awgPort}
-      # Keep a full tunnel here. AmneziaVPN applies its supported split
-      # tunneling rules locally; server-side profiles cannot route by process.
-      AllowedIPs = 0.0.0.0/0${lib.optionalString ipv6Enabled ", ::/0"}
+      # Android recognizes client-owned split tunneling only with this exact
+      # canonical full-tunnel route. Until VPS IPv6 egress is configured, ::/0
+      # intentionally blocks IPv6 instead of allowing a privacy leak.
+      AllowedIPs = 0.0.0.0/0, ::/0
       PersistentKeepalive = 25
       EOF
             qrencode -t ANSIUTF8 < "$profile" > "$qr"
       chown root:vpn-download "$profile" "$qr"
             chmod 0640 "$profile" "$qr"
             printf 'created %s\n' "$profile"
+            cat "$qr"
     '';
   };
 in

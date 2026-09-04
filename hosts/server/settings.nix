@@ -26,7 +26,7 @@
       ];
     };
 
-    # null: IPv4-only; IPv6 can bypass a full IPv4 tunnel on dual-stack clients.
+    # null: IPv4-only; profiles block IPv6 until the VPS can route it.
     # An attrset enables dual-stack after the provider supplies global IPv6;
     # choose nat66 or routed egress as documented in SERVER_AI_INSTRUCTIONS.md.
     # This location currently has only link-local IPv6, so it stays null.
