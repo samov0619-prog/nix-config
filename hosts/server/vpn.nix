@@ -22,6 +22,7 @@ let
       gnugrep
       iproute2
       qrencode
+      util-linux
     ];
     text = ''
             set -euo pipefail
@@ -35,6 +36,9 @@ let
             config=${stateDir}/${interface}.conf
             profile=${profileDir}/$name.conf
             qr=${profileDir}/$name.txt
+
+            exec 9>"${stateDir}/${interface}.lock"
+            flock -x 9
 
             if [ ! -f "$config" ]; then
               echo "${interface} has not been initialized" >&2
@@ -112,6 +116,68 @@ let
             cat "$qr"
     '';
   };
+  awgRemoveClient = pkgs.writeShellApplication {
+    name = "awg-remove-client";
+    runtimeInputs = with pkgs; [
+      amneziawg-tools
+      coreutils
+      gawk
+      util-linux
+    ];
+    text = ''
+      set -euo pipefail
+
+      if [ "$#" -ne 1 ] || ! [[ "$1" =~ ^[A-Za-z0-9_-]+$ ]]; then
+        echo "usage: awg-remove-client <name>" >&2
+        exit 2
+      fi
+
+      name="$1"
+      config=${stateDir}/${interface}.conf
+      profile=${profileDir}/$name.conf
+      qr=${profileDir}/$name.txt
+
+      if [ ! -f "$config" ]; then
+        echo "${interface} has not been initialized" >&2
+        exit 1
+      fi
+
+      exec 9>"${stateDir}/${interface}.lock"
+      flock -x 9
+
+      peer=$(awk -v RS="" -v target="$name" '
+        $0 ~ "^[[:space:]]*\\[Peer\\]" && $0 ~ ("(^|\n)[[:space:]]*#[[:space:]]*" target "([[:space:]]|$)") {
+          print
+          exit
+        }
+      ' "$config")
+      if [ -z "$peer" ]; then
+        echo "client not found: $name" >&2
+        exit 1
+      fi
+
+      public_key=$(printf '%s\n' "$peer" | awk -F ' = ' '/^[[:space:]]*PublicKey[[:space:]]*=/ { print $2; exit }')
+      if [ -z "$public_key" ]; then
+        echo "client has no public key: $name" >&2
+        exit 1
+      fi
+
+      temporary=$(mktemp "''${config}.XXXXXX")
+      trap 'rm -f "$temporary"' EXIT
+      awk -v RS="" -v ORS='\n\n' -v target="$name" '
+        $0 ~ "^[[:space:]]*\\[Peer\\]" && $0 ~ ("(^|\n)[[:space:]]*#[[:space:]]*" target "([[:space:]]|$)") {
+          next
+        }
+        { print }
+      ' "$config" > "$temporary"
+
+      awg set ${interface} peer "$public_key" remove
+      mv "$temporary" "$config"
+      trap - EXIT
+      rm -f "$profile" "$qr"
+      printf 'removed client %s\n' "$name"
+    '';
+  };
 in
 {
   config = lib.mkIf enabled {
@@ -173,6 +239,9 @@ in
       '';
     };
 
-    environment.systemPackages = [ awgAddClient ];
+    environment.systemPackages = [
+      awgAddClient
+      awgRemoveClient
+    ];
   };
 }

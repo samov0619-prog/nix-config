@@ -352,6 +352,17 @@ wrong disk.
    enable Caddy/NaiveProxy. It creates `<name>-naive.json` in the same SFTP
    directory for Karing/sing-box import.
 
+8. Revoke a lost or retired AWG profile by name:
+
+   ```bash
+   ssh samov@vps-new 'sudo awg-remove-client <name>'
+   ```
+
+   This removes the peer from the live AWG interface and persistent config,
+   then deletes its `.conf` and QR from SFTP. The name is the exact argument
+   previously passed to `awg-add-client`; the operation is serialized with
+   profile creation to prevent address-allocation races.
+
 ## Remote Updates And Recovery
 
 - Deploy a server configuration from the workstation with:
