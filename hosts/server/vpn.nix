@@ -178,6 +178,70 @@ let
       printf 'removed client %s\n' "$name"
     '';
   };
+  awgListClients = pkgs.writeShellApplication {
+    name = "awg-list-clients";
+    runtimeInputs = with pkgs; [
+      amneziawg-tools
+      coreutils
+      gawk
+      util-linux
+    ];
+    text = ''
+      set -euo pipefail
+
+      config=${stateDir}/${interface}.conf
+      if [ ! -f "$config" ]; then
+        echo "${interface} has not been initialized" >&2
+        exit 1
+      fi
+      if ! awg show ${interface} >/dev/null 2>&1; then
+        echo "${interface} is not active" >&2
+        exit 1
+      fi
+
+      exec 9>"${stateDir}/${interface}.lock"
+      flock -s 9
+
+      declare -A received sent
+      while read -r public_key received_bytes sent_bytes; do
+        received["$public_key"]=$received_bytes
+        sent["$public_key"]=$sent_bytes
+      done < <(awg show ${interface} transfer)
+
+      printf '%-20s %-18s %14s %14s\n' CLIENT ADDRESS DOWNLOAD_GIB UPLOAD_GIB
+      awk -v RS="" '
+        {
+          name = key = address = ""
+          count = split($0, lines, "\n")
+          for (line_number = 1; line_number <= count; line_number++) {
+            line = lines[line_number]
+            sub(/^[[:space:]]+/, "", line)
+            if (line ~ /^#[[:space:]]*/) {
+              sub(/^#[[:space:]]*/, "", line)
+              name = line
+            } else if (line ~ /^PublicKey[[:space:]]*=/) {
+              sub(/^[^=]*=[[:space:]]*/, "", line)
+              key = line
+            } else if (line ~ /^AllowedIPs[[:space:]]*=/) {
+              sub(/^[^=]*=[[:space:]]*/, "", line)
+              split(line, addresses, ",")
+              address = addresses[1]
+              sub(/[[:space:]]+$/, "", address)
+            }
+          }
+          if (name != "" && key != "") {
+            print name "\t" key "\t" address
+          }
+        }
+      ' "$config" | while IFS=$'\t' read -r name public_key address; do
+        received_bytes=''${received[$public_key]:-0}
+        sent_bytes=''${sent[$public_key]:-0}
+        download=$(awk -v bytes="$sent_bytes" 'BEGIN { printf "%.2f", bytes / 1073741824 }')
+        upload=$(awk -v bytes="$received_bytes" 'BEGIN { printf "%.2f", bytes / 1073741824 }')
+        printf '%-20s %-18s %14s %14s\n' "$name" "$address" "$download" "$upload"
+      done
+    '';
+  };
 in
 {
   config = lib.mkIf enabled {
@@ -242,6 +306,7 @@ in
     environment.systemPackages = [
       awgAddClient
       awgRemoveClient
+      awgListClients
     ];
   };
 }

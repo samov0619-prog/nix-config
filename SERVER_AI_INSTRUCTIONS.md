@@ -363,6 +363,17 @@ wrong disk.
    previously passed to `awg-add-client`; the operation is serialized with
    profile creation to prevent address-allocation races.
 
+9. List active client records and their aggregate traffic without revealing
+   public keys, endpoints, or destinations:
+
+   ```bash
+   ssh samov@vps-new 'sudo awg-list-clients'
+   ```
+
+   `DOWNLOAD_GIB` is bytes sent from the VPS to the client; `UPLOAD_GIB` is
+   bytes received by the VPS. These are AWG interface counters, not billing
+   data: they reset whenever `awg0` restarts and do not identify visited sites.
+
 ## Remote Updates And Recovery
 
 - Deploy a server configuration from the workstation with:
