@@ -48,12 +48,13 @@
   userspace tools. Do not update only one: the kernel protocol engine and
   `awg` parser must support the same field set.
 - Fresh bootstrap creates the AWG3.1 Header Protection profile: equal
-  `S1`-`S4 = 32`, `H1`-`H4 = 1`-`4`, a freshly generated shared
-  `HeaderProtectionKey`, `RandomTrailers = on`, and `DisableCookies = on`.
-  Every generated client copies those exact interface fields.
-- Legacy AWG2 `Jc`/`Jmin`/`Jmax`, two-slot `S1`/`S2`, and randomized
-  `H1`-`H4` are preserved only as comments in `vpn.nix`; they are not active
-  or emitted into profiles.
+  `S1`-`S4 = 32`, `H1`-`H4 = 1`-`4`, `Jc = 4`, `Jmin = 10`, `Jmax = 50`, a
+  freshly generated shared `HeaderProtectionKey`, `RandomTrailers = on`, and
+  `DisableCookies = on`. Every generated client copies those exact interface
+  fields.
+- AWG3.1 retains `Jc`/`Jmin`/`Jmax`. The legacy AWG2 two-slot `S1`/`S2` and
+  randomized `H1`-`H4` reference is preserved only as comments in `vpn.nix`;
+  it is not active or emitted into profiles.
 - No AWG profile has been issued for this fresh VPS. Generate profiles only
   after the first boot verifies `wg-quick-awg0` is active. Clients must use a
   current AmneziaVPN build that supports AWG3.1 fields.

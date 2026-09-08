@@ -66,6 +66,9 @@ let
 
             server_private=$(config_value PrivateKey)
             server_public=$(printf '%s' "$server_private" | awg pubkey)
+            jc=$(config_value Jc)
+            jmin=$(config_value Jmin)
+            jmax=$(config_value Jmax)
             s1=$(config_value S1)
             s2=$(config_value S2)
             s3=$(config_value S3)
@@ -92,6 +95,9 @@ let
       Address = ${network}.$address/32${lib.optionalString ipv6Enabled ", ${ipv6.vpnNetwork}::$address/128"}
       PrivateKey = $client_private
       DNS = ${network}.1
+      Jc = $jc
+      Jmin = $jmin
+      Jmax = $jmax
       S1 = $s1
       S2 = $s2
       S3 = $s3
@@ -290,10 +296,11 @@ in
                 Address = ${network}.1/24${lib.optionalString ipv6Enabled ", ${ipv6.vpnNetwork}::1/${toString ipv6.vpnPrefixLength}"}
                 ListenPort = ${toString serverSettings.awgPort}
                 PrivateKey = $private_key
+                # AWG3.1 retains the WireGuard handshake junk train.
+                Jc = 4
+                Jmin = 10
+                Jmax = 50
                 # AWG2 legacy reference (disabled):
-                # Jc = 5
-                # Jmin = 50
-                # Jmax = 1000
                 # S1 = 15
                 # S2 = 100
                 # H1-H4 = randomized values
