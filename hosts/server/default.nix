@@ -57,12 +57,22 @@ in
   networking = {
     hostName = "hommy";
     useDHCP = ipv4.mode == "dhcp";
-    interfaces.${ipv4.interface}.ipv4.addresses = lib.optionals (ipv4.mode == "static") [
-      {
-        address = ipv4.address;
-        prefixLength = ipv4.prefixLength;
-      }
-    ];
+    interfaces.${ipv4.interface} = {
+      ipv4.addresses = lib.optionals (ipv4.mode == "static") [
+        {
+          address = ipv4.address;
+          prefixLength = ipv4.prefixLength;
+        }
+      ];
+    }
+    // lib.optionalAttrs ipv6Enabled {
+      ipv6.addresses = [
+        {
+          address = ipv6.wanAddress;
+          prefixLength = ipv6.wanPrefixLength;
+        }
+      ];
+    };
     firewall = {
       enable = true;
       allowedTCPPorts = [ 17431 ];
@@ -73,16 +83,13 @@ in
     };
   }
   // lib.optionalAttrs (ipv4.mode == "static") {
-    defaultGateway = ipv4.gateway;
+    defaultGateway = {
+      address = ipv4.gateway;
+      interface = ipv4.interface;
+    };
     nameservers = ipv4.nameservers;
   }
   // lib.optionalAttrs ipv6Enabled {
-    interfaces.${ipv4.interface}.ipv6.addresses = [
-      {
-        address = ipv6.wanAddress;
-        prefixLength = ipv6.wanPrefixLength;
-      }
-    ];
     defaultGateway6 = {
       address = ipv6.gateway;
       interface = ipv4.interface;
