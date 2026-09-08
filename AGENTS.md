@@ -21,7 +21,7 @@ NixOS и HM управляются раздельно: NixOS через `nixosCo
 | CPU | Intel | AMD | VPS |
 | GPU | Intel iGPU + NVIDIA PRIME | NVIDIA only | — |
 | Ввод | xremap + uinput | нет | — |
-| Сеть | NetworkManager, v2raya, Amnezia | NetworkManager, v2raya, Amnezia | SSH, AWG2, AdGuard, NaiveProxy, SFTP |
+| Сеть | NetworkManager, v2raya, Amnezia | NetworkManager, v2raya, Amnezia | SSH, AWG3.1, AdGuard, NaiveProxy, SFTP |
 | Boot | GRUB EFI removable | GRUB nodev | GRUB /dev/sda |
 | Доп. | Hibernate/zram, Bluetooth, brightnessctl, thermald | нет | NAT, ACME, profile download |
 | stateVersion | 25.11 | 25.11 | 25.11 |
@@ -63,7 +63,7 @@ home/
 hosts/server/
 ├── default.nix                  # system baseline and server module imports
 ├── settings.nix                 # VPS-specific domain, ports, interface, SFTP key
-├── vpn.nix                      # AWG2 bootstrap, NAT, profile generation
+├── vpn.nix                      # AWG3.1 bootstrap, NAT, profile generation
 ├── adguard.nix                  # private DNS and imported filter set
 ├── proxy.nix                    # Caddy + NaiveProxy plugin + Karing profiles
 └── sftp.nix                     # one-key, chrooted profile download account
@@ -162,7 +162,7 @@ not import Disko.
 
 ### Server services
 
-- Никакого Docker: AWG2 использует NixOS `wg-quick`, AdGuard Home и Caddy — обычные systemd services.
+- Никакого Docker: AWG3.1 использует NixOS `wg-quick`, AdGuard Home и Caddy — обычные systemd services.
 - `settings.nix` содержит незасекреченные VPS-specific значения и должен быть заполнен перед установкой; private keys и профили живут вне Git в `/var/lib/amneziawg` и `/var/lib/naiveproxy`.
 - `awg-add-client <name>` публикует AmneziaVPN `.conf` и QR; `naive-add-client <name>` публикует Karing/sing-box JSON.
 - `vpn-download` разрешает только `internal-sftp` по одному ключу в `/srv/vpn-download/files`; shell и forwarding запрещены.

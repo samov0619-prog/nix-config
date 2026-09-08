@@ -66,15 +66,17 @@ let
 
             server_private=$(config_value PrivateKey)
             server_public=$(printf '%s' "$server_private" | awg pubkey)
-            jc=$(config_value Jc)
-            jmin=$(config_value Jmin)
-            jmax=$(config_value Jmax)
             s1=$(config_value S1)
             s2=$(config_value S2)
+            s3=$(config_value S3)
+            s4=$(config_value S4)
             h1=$(config_value H1)
             h2=$(config_value H2)
             h3=$(config_value H3)
             h4=$(config_value H4)
+            header_protection_key=$(config_value HeaderProtectionKey)
+            random_trailers=$(config_value RandomTrailers)
+            disable_cookies=$(config_value DisableCookies)
 
             cat >> "$config" <<EOF
 
@@ -90,15 +92,17 @@ let
       Address = ${network}.$address/32${lib.optionalString ipv6Enabled ", ${ipv6.vpnNetwork}::$address/128"}
       PrivateKey = $client_private
       DNS = ${network}.1
-      Jc = $jc
-      Jmin = $jmin
-      Jmax = $jmax
       S1 = $s1
       S2 = $s2
+      S3 = $s3
+      S4 = $s4
       H1 = $h1
       H2 = $h2
       H3 = $h3
       H4 = $h4
+      HeaderProtectionKey = $header_protection_key
+      RandomTrailers = $random_trailers
+      DisableCookies = $disable_cookies
 
       [Peer]
       PublicKey = $server_public
@@ -280,24 +284,30 @@ in
 
                         if [ ! -f ${stateDir}/${interface}.conf ]; then
                           private_key=$(awg genkey)
-                          h1=$(od -An -N4 -tu4 /dev/urandom | tr -d ' ')
-                          h2=$(od -An -N4 -tu4 /dev/urandom | tr -d ' ')
-                          h3=$(od -An -N4 -tu4 /dev/urandom | tr -d ' ')
-                          h4=$(od -An -N4 -tu4 /dev/urandom | tr -d ' ')
+                          header_protection_key=$(openssl rand -base64 32 | tr -d '\n')
                           cat > ${stateDir}/${interface}.conf <<EOF
                 [Interface]
                 Address = ${network}.1/24${lib.optionalString ipv6Enabled ", ${ipv6.vpnNetwork}::1/${toString ipv6.vpnPrefixLength}"}
                 ListenPort = ${toString serverSettings.awgPort}
                 PrivateKey = $private_key
-                Jc = 5
-                Jmin = 50
-                Jmax = 1000
-                S1 = 15
-                S2 = 100
-                H1 = $h1
-        H2 = $h2
-        H3 = $h3
-        H4 = $h4
+                # AWG2 legacy reference (disabled):
+                # Jc = 5
+                # Jmin = 50
+                # Jmax = 1000
+                # S1 = 15
+                # S2 = 100
+                # H1-H4 = randomized values
+                S1 = 32
+                S2 = 32
+                S3 = 32
+                S4 = 32
+                H1 = 1
+                H2 = 2
+                H3 = 3
+                H4 = 4
+                HeaderProtectionKey = $header_protection_key
+                RandomTrailers = on
+                DisableCookies = on
         EOF
                         fi
       '';

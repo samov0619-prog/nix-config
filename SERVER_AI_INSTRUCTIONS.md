@@ -2,8 +2,9 @@
 
 ## Goals
 
-- Run AmneziaWG 2.0, AdGuard Home, and NaiveProxy without Docker.
-- Use AmneziaVPN 4.8.21+ for AmneziaWG and Karing for NaiveProxy.
+- Run AmneziaWG 3.1, AdGuard Home, and NaiveProxy without Docker.
+- Use a current AmneziaVPN release with AmneziaWG 3.1 support and Karing for
+  NaiveProxy.
 - Keep VPN credentials and generated profiles outside Git and the Nix store.
 - Publish client profiles through a single-key, SFTP-only account.
 - Select every host feature exclusively through module imports in `flake.nix`.
@@ -20,6 +21,9 @@
   disk, public endpoint, WAN interface, address, prefix, gateway, DNS, and
   optional proxy/SFTP values. Do not hardcode these in `default.nix`.
 - `hosts/server/vpn.nix` owns forwarding, NAT, and the AmneziaWG interface.
+- `pkgs/amneziawg-3.1/` pins the matched AWG 3.1.20260812 kernel module and
+  tools. Both are server-only overrides because `wg-quick` needs the module
+  from `boot.kernelPackages` and the matching `awg` userspace tools.
 - `hosts/server/adguard.nix` declares AdGuard filters based on
   `adguardhome-backup-2026-07-20-231323.tar.gz`. Do not import its old Docker
   upstream, administrator hash, statistics, or query log.
@@ -37,6 +41,22 @@
   runtimes or deploy a Neovim configuration.
 - `flake.nix` imports the reusable Minecraft server module on every Linux
   host. Only desktop and laptop additionally import `home/apps/minecraft`.
+
+## AmneziaWG 3.1
+
+- The server pins the mutually released AWG 3.1.20260812 kernel module and
+  userspace tools. Do not update only one: the kernel protocol engine and
+  `awg` parser must support the same field set.
+- Fresh bootstrap creates the AWG3.1 Header Protection profile: equal
+  `S1`-`S4 = 32`, `H1`-`H4 = 1`-`4`, a freshly generated shared
+  `HeaderProtectionKey`, `RandomTrailers = on`, and `DisableCookies = on`.
+  Every generated client copies those exact interface fields.
+- Legacy AWG2 `Jc`/`Jmin`/`Jmax`, two-slot `S1`/`S2`, and randomized
+  `H1`-`H4` are preserved only as comments in `vpn.nix`; they are not active
+  or emitted into profiles.
+- No AWG profile has been issued for this fresh VPS. Generate profiles only
+  after the first boot verifies `wg-quick-awg0` is active. Clients must use a
+  current AmneziaVPN build that supports AWG3.1 fields.
 
 ## Secrets And Profiles
 

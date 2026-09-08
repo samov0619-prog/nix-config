@@ -5,6 +5,11 @@
 }:
 let
   serverSettings = import ./settings.nix;
+  awg31KernelPackages = pkgs.linuxPackages.extend (
+    final: prev: {
+      amneziawg = final.callPackage ../../pkgs/amneziawg-3.1/kernel.nix { };
+    }
+  );
   network = serverSettings.network;
   ipv4 = network.ipv4;
   ipv6 = network.ipv6;
@@ -31,6 +36,15 @@ in
     ./proxy.nix
     ./sftp.nix
   ];
+
+  nixpkgs.overlays = [
+    (final: prev: {
+      amneziawg-tools = final.callPackage ../../pkgs/amneziawg-3.1/tools.nix { };
+    })
+  ];
+
+  # AWG 3.1 must update the kernel module and awg userspace as one pair.
+  boot.kernelPackages = awg31KernelPackages;
 
   _module.args = { inherit serverSettings; };
 
