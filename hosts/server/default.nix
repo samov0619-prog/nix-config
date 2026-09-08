@@ -178,9 +178,9 @@ in
     isNormalUser = true;
     shell = pkgs.fish;
     extraGroups = [ "wheel" ];
-    openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINTAdj6jWH+V9+USI7Gq4efjABJr9nmQ06lJozBBXHPe samov0619.s.rutest"
-    ];
+    openssh.authorizedKeys.keys = lib.optional (
+      serverSettings.operatorAuthorizedKey != null
+    ) serverSettings.operatorAuthorizedKey;
   };
 
   security.sudo.extraRules = [

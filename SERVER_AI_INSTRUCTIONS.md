@@ -281,8 +281,8 @@ wrong disk.
 1. Set all provider-specific values in `hosts/server/settings.nix`. The probe
    can identify candidates but cannot safely automate this step across
    providers. Example for
-   the installed VPS: `/dev/vda`, `ens3`, `94.103.3.166/24`, and gateway
-   `94.103.3.1`. These values are examples, not defaults for a different VPS.
+   the installed VPS: `<disk>`, `<NIC>`, `<IPv4>/<prefix>`, and `<gateway>`.
+   These values are examples, not defaults for a different VPS.
 2. Validate the exact committed workstation checkout before destructive
    deployment:
 
