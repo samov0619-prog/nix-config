@@ -338,6 +338,17 @@ wrong disk.
    nix-shell -p git --run 'git clone <url> ~/nix-config'
    cd ~/nix-config
    nix run github:nix-community/home-manager/release-26.05 -- \
+     switch -b backup --flake .#samov-server
+   ```
+
+   `-b backup` is required only for the first activation when Debian/manual
+   files such as `~/.config/fish/config.fish` already exist. It preserves them
+   as `*.backup` instead of overwriting them. For later server Home Manager
+   updates, run:
+
+   ```bash
+   cd ~/nix-config
+   nix run github:nix-community/home-manager/release-26.05 -- \
      switch --flake .#samov-server
    ```
 
