@@ -291,6 +291,7 @@ in
       path = with pkgs; [
         amneziawg-tools
         coreutils
+        gawk
         openssl
         util-linux
       ];
