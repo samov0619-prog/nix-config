@@ -58,6 +58,12 @@
 - No AWG profile has been issued for this fresh VPS. Generate profiles only
   after the first boot verifies `wg-quick-awg0` is active. Clients must use a
   current AmneziaVPN build that supports AWG3.1 fields.
+- `amneziawg-bootstrap` reconciles persisted `[Interface]` protocol fields on
+  every `wg-quick-awg0` start while preserving the server private key,
+  HeaderProtectionKey, and peer records. A schema change triggers a
+  `wg-quick-awg0` restart on `nixos-rebuild switch`; no Disko/reinstall is
+  needed. When the AWG kernel module itself changes, reboot once after the
+  deploy to load the new module.
 
 ## Secrets And Profiles
 

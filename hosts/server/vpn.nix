@@ -13,6 +13,21 @@ let
   network = "10.66.0";
   stateDir = "/var/lib/amneziawg";
   profileDir = "/srv/vpn-download/files";
+  awg31ProfileSchema = pkgs.writeText "amneziawg-3.1-profile-schema" ''
+    Jc = 4
+    Jmin = 10
+    Jmax = 50
+    S1 = 32
+    S2 = 32
+    S3 = 32
+    S4 = 32
+    H1 = 1
+    H2 = 2
+    H3 = 3
+    H4 = 4
+    RandomTrailers = on
+    DisableCookies = on
+  '';
   awgAddClient = pkgs.writeShellApplication {
     name = "awg-add-client";
     runtimeInputs = with pkgs; [
@@ -277,48 +292,59 @@ in
         amneziawg-tools
         coreutils
         openssl
+        util-linux
       ];
       serviceConfig = {
         Type = "oneshot";
         UMask = "0077";
       };
       script = ''
-                        mkdir -p ${stateDir}/clients ${profileDir}
-                        chmod 0700 ${stateDir} ${stateDir}/clients
-                        chmod 0750 ${profileDir}
-                chown root:vpn-download ${profileDir}
+        set -euo pipefail
 
-                        if [ ! -f ${stateDir}/${interface}.conf ]; then
-                          private_key=$(awg genkey)
-                          header_protection_key=$(openssl rand -base64 32 | tr -d '\n')
-                          cat > ${stateDir}/${interface}.conf <<EOF
-                [Interface]
-                Address = ${network}.1/24${lib.optionalString ipv6Enabled ", ${ipv6.vpnNetwork}::1/${toString ipv6.vpnPrefixLength}"}
-                ListenPort = ${toString serverSettings.awgPort}
-                PrivateKey = $private_key
-                # AWG3.1 retains the WireGuard handshake junk train.
-                Jc = 4
-                Jmin = 10
-                Jmax = 50
-                # AWG2 legacy reference (disabled):
-                # S1 = 15
-                # S2 = 100
-                # H1-H4 = randomized values
-                S1 = 32
-                S2 = 32
-                S3 = 32
-                S4 = 32
-                H1 = 1
-                H2 = 2
-                H3 = 3
-                H4 = 4
-                HeaderProtectionKey = $header_protection_key
-                RandomTrailers = on
-                DisableCookies = on
+        mkdir -p ${stateDir}/clients ${profileDir}
+        chmod 0700 ${stateDir} ${stateDir}/clients
+        chmod 0750 ${profileDir}
+        chown root:vpn-download ${profileDir}
+
+        config=${stateDir}/${interface}.conf
+        exec 9>"${stateDir}/${interface}.lock"
+        flock -x 9
+
+        if [ -f "$config" ]; then
+          private_key=$(awk -F ' = ' '/^[[:space:]]*PrivateKey[[:space:]]*=/ { print $2; exit }' "$config")
+          header_protection_key=$(awk -F ' = ' '/^[[:space:]]*HeaderProtectionKey[[:space:]]*=/ { print $2; exit }' "$config")
+        else
+          private_key=""
+          header_protection_key=""
+        fi
+        private_key=''${private_key:-$(awg genkey)}
+        header_protection_key=''${header_protection_key:-$(openssl rand -base64 32 | tr -d '\n')}
+
+        temporary=$(mktemp "''${config}.XXXXXX")
+        trap 'rm -f "$temporary"' EXIT
+        cat > "$temporary" <<EOF
+        [Interface]
+        Address = ${network}.1/24${lib.optionalString ipv6Enabled ", ${ipv6.vpnNetwork}::1/${toString ipv6.vpnPrefixLength}"}
+        ListenPort = ${toString serverSettings.awgPort}
+        PrivateKey = $private_key
+        $(cat ${awg31ProfileSchema})
+        HeaderProtectionKey = $header_protection_key
+        # AWG2 legacy reference (disabled):
+        # S1 = 15
+        # S2 = 100
+        # H1-H4 = randomized values
         EOF
-                        fi
+
+        if [ -f "$config" ]; then
+          awk -v RS="" '$0 ~ "^[[:space:]]*\\[Peer\\]" { print "\n" $0 }' "$config" >> "$temporary"
+        fi
+        mv "$temporary" "$config"
+        trap - EXIT
       '';
     };
+
+    # A profile schema update rebuilds persisted state before wg-quick restarts.
+    systemd.services."wg-quick-${interface}".restartTriggers = [ awg31ProfileSchema ];
 
     environment.systemPackages = [
       awgAddClient
