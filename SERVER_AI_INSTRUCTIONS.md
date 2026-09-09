@@ -57,7 +57,8 @@
   it is not active or emitted into profiles.
 - No AWG profile has been issued for this fresh VPS. Generate profiles only
   after the first boot verifies `wg-quick-awg0` is active. Clients must use a
-  current AmneziaVPN build that supports AWG3.1 fields.
+  current AmneziaVPN build that supports AWG3.1 fields; Android support starts
+  with AmneziaVPN 5.0.1.5.
 - `amneziawg-bootstrap` reconciles persisted `[Interface]` protocol fields on
   every `wg-quick-awg0` start while preserving the server private key,
   HeaderProtectionKey, and peer records. A schema change triggers a
@@ -386,9 +387,11 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
    nix build .#nixosConfigurations.server.config.system.build.toplevel --no-link
    ```
 
-   `git status --short` must be empty. Skip `git pull --ff-only` when the
-   checkout is already the intended revision. `nix flake check` evaluates every
-   host; `nix build` evaluates and builds the exact server closure locally, so
+   `git status --short` must be empty except for the intentional local
+   `hosts/server/settings.nix` provider/key values; never commit those values.
+   Skip `git pull --ff-only` when the checkout is already the intended revision
+   or contains those local settings. `nix flake check` evaluates every host;
+   `nix build` evaluates and builds the exact server closure locally, so
    deployment transfers an already verified result instead of building on the
    small VPS disk.
 
@@ -495,6 +498,10 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
   nixos-rebuild switch --flake .#server --target-host samov@<server-ssh-alias> --sudo
   ```
 
+- `--sudo` is a `nixos-rebuild` option: it runs the final activation command
+  on the VPS through `sudo` as `samov`. It is not the shell command
+  `sudo nixos-rebuild`; do not prefix this remote deployment command with
+  `sudo`, because the build and closure transfer should run as the local user.
 - This remote NixOS deployment builds on the workstation, transfers the
   closure over SSH, and activates it through `samov`'s declarative
   passwordless sudo. It avoids using VPS disk space for a system build.

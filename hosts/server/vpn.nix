@@ -182,7 +182,7 @@ let
       AllowedIPs = 0.0.0.0/0, ::/0
       PersistentKeepalive = 25
       EOF
-            cat <<EOF | ${pkgs.python3Minimal}/bin/python ${awgGuestProfileEncoder} > "$guest_profile"
+            cat <<EOF | ${pkgs.python3}/bin/python ${awgGuestProfileEncoder} > "$guest_profile"
       {
         "name": "$name",
         "host": "${serverSettings.publicEndpoint}",
@@ -207,7 +207,9 @@ let
       }
       EOF
             qrencode -t ANSIUTF8 < "$profile" > "$qr"
-            qrencode -t ANSIUTF8 < "$guest_profile" > "$guest_qr"
+            # QR imports expect compressed Base64URL data, unlike .vpn files
+            # which use vpn:// to select the file-import format.
+            tail -c +7 "$guest_profile" | qrencode -t ANSIUTF8 > "$guest_qr"
       chown root:vpn-download "$profile" "$qr" "$guest_profile" "$guest_qr"
             chmod 0640 "$profile" "$qr" "$guest_profile" "$guest_qr"
             printf 'created native profile %s\n' "$profile"
