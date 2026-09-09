@@ -232,6 +232,58 @@ wrong disk.
 
 ## VPS Installation
 
+### Candidate Connectivity Gate
+
+Before changing `settings.nix` or running Disko, verify that the candidate IP
+is reachable directly from the networks that will use the VPN. Do not use a
+SOCKS `ProxyCommand` for these tests: a proxy hides an ISP/provider path block.
+Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
+
+1. On the workstation, test temporary Debian/rescue SSH directly:
+
+   ```bash
+   nc -vz -w 5 <server-ip> 22
+   ```
+
+   A timeout means the workstation path cannot reach this IP before NixOS is
+   installed. Do not proceed with installation; test another independent uplink
+   or request a different provider IP/location.
+2. After temporary root key setup, confirm direct key SSH without proxy:
+
+   ```bash
+   ssh -i ~/.ssh/id_ed25519_samov0619.s \
+     -o IdentitiesOnly=yes -o ProxyCommand=none -o ConnectTimeout=5 \
+     -p 22 root@<server-ip> true
+   ```
+
+3. Test raw UDP delivery to the intended AWG port before installing. On the
+   temporary Debian/rescue host, run a one-shot listener:
+
+   ```bash
+   python3 -c 'import socket; s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.bind(("0.0.0.0", 51820)); print("ready", flush=True); print(s.recvfrom(256))'
+   ```
+
+   From the workstation, send a harmless token directly:
+
+   ```bash
+   nix shell nixpkgs#socat --command sh -c \
+     'printf "AWG-UDP-PROBE" | socat - UDP:<server-ip>:51820'
+   ```
+
+   The listener must receive the token. This proves UDP transport only, not an
+   AWG handshake.
+4. Repeat the UDP token test from Android when that network is a target client.
+   In Termux, install a UDP utility once with `pkg install netcat-openbsd`, then
+   run while the temporary listener is waiting:
+
+   ```bash
+   printf 'AWG-ANDROID-UDP-PROBE' | nc -u -w 1 <server-ip> 51820
+   ```
+
+   If direct TCP or UDP fails from a target uplink, do not use the candidate
+   IP for a VPN that must work from that uplink. Changing AWG parameters cannot
+   repair packets that never reach the VPS.
+
 ### Temporary Debian Or Rescue SSH
 
 1. Use the provider-issued root password only to add the workstation public key
