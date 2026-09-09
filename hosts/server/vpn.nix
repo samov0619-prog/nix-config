@@ -28,6 +28,52 @@ let
     RandomTrailers = on
     DisableCookies = on
   '';
+  awgGuestProfileEncoder = pkgs.writeText "encode-awg-guest-profile.py" ''
+    import base64
+    import json
+    import struct
+    import sys
+    import zlib
+
+    source = json.load(sys.stdin)
+    client = {
+        "hostName": source["host"],
+        "port": source["port"],
+        "client_ip": source["client_ip"],
+        "client_priv_key": source["client_private_key"],
+        "server_pub_key": source["server_public_key"],
+        "allowed_ips": ["0.0.0.0/0", "::/0"],
+        "persistent_keep_alive": "25",
+        "mtu": "1280",
+        "Jc": source["jc"],
+        "Jmin": source["jmin"],
+        "Jmax": source["jmax"],
+        "S1": source["s1"],
+        "S2": source["s2"],
+        "S3": source["s3"],
+        "S4": source["s4"],
+        "H1": source["h1"],
+        "H2": source["h2"],
+        "H3": source["h3"],
+        "H4": source["h4"],
+        "HeaderProtectionKey": source["header_protection_key"],
+        "RandomTrailers": source["random_trailers"],
+        "DisableCookies": source["disable_cookies"],
+    }
+    profile = {
+        "description": source["name"],
+        "hostName": source["host"],
+        "dns1": "10.66.0.1",
+        "containers": [{
+            "container": "amnezia-awg2",
+            "awg": {"last_config": json.dumps(client, separators=(",", ":"))},
+        }],
+        "defaultContainer": "amnezia-awg2",
+    }
+    raw = json.dumps(profile, separators=(",", ":")).encode()
+    compressed = struct.pack(">I", len(raw)) + zlib.compress(raw, 8)
+    print("vpn://" + base64.urlsafe_b64encode(compressed).rstrip(b"=").decode())
+  '';
   awgAddClient = pkgs.writeShellApplication {
     name = "awg-add-client";
     runtimeInputs = with pkgs; [
@@ -51,6 +97,8 @@ let
             config=${stateDir}/${interface}.conf
             profile=${profileDir}/$name.conf
             qr=${profileDir}/$name.txt
+            guest_profile=${profileDir}/$name.vpn
+            guest_qr=${profileDir}/$name.vpn.txt
 
             exec 9>"${stateDir}/${interface}.lock"
             flock -x 9
@@ -59,7 +107,7 @@ let
               echo "${interface} has not been initialized" >&2
               exit 1
             fi
-            if [ -e "$profile" ]; then
+            if [ -e "$profile" ] || [ -e "$guest_profile" ]; then
               echo "profile already exists: $name" >&2
               exit 1
             fi
@@ -134,11 +182,37 @@ let
       AllowedIPs = 0.0.0.0/0, ::/0
       PersistentKeepalive = 25
       EOF
+            cat <<EOF | ${pkgs.python3Minimal}/bin/python ${awgGuestProfileEncoder} > "$guest_profile"
+      {
+        "name": "$name",
+        "host": "${serverSettings.publicEndpoint}",
+        "port": ${toString serverSettings.awgPort},
+        "client_ip": "${network}.$address/32${lib.optionalString ipv6Enabled ", ${ipv6.vpnNetwork}::$address/128"}",
+        "client_private_key": "$client_private",
+        "server_public_key": "$server_public",
+        "jc": "$jc",
+        "jmin": "$jmin",
+        "jmax": "$jmax",
+        "s1": "$s1",
+        "s2": "$s2",
+        "s3": "$s3",
+        "s4": "$s4",
+        "h1": "$h1",
+        "h2": "$h2",
+        "h3": "$h3",
+        "h4": "$h4",
+        "header_protection_key": "$header_protection_key",
+        "random_trailers": "$random_trailers",
+        "disable_cookies": "$disable_cookies"
+      }
+      EOF
             qrencode -t ANSIUTF8 < "$profile" > "$qr"
-      chown root:vpn-download "$profile" "$qr"
-            chmod 0640 "$profile" "$qr"
-            printf 'created %s\n' "$profile"
-            cat "$qr"
+            qrencode -t ANSIUTF8 < "$guest_profile" > "$guest_qr"
+      chown root:vpn-download "$profile" "$qr" "$guest_profile" "$guest_qr"
+            chmod 0640 "$profile" "$qr" "$guest_profile" "$guest_qr"
+            printf 'created native profile %s\n' "$profile"
+            printf 'created AmneziaVPN guest profile %s\n' "$guest_profile"
+            cat "$guest_qr"
     '';
   };
   awgRemoveClient = pkgs.writeShellApplication {
@@ -161,6 +235,8 @@ let
       config=${stateDir}/${interface}.conf
       profile=${profileDir}/$name.conf
       qr=${profileDir}/$name.txt
+      guest_profile=${profileDir}/$name.vpn
+      guest_qr=${profileDir}/$name.vpn.txt
 
       if [ ! -f "$config" ]; then
         echo "${interface} has not been initialized" >&2
@@ -199,7 +275,7 @@ let
       awg set ${interface} peer "$public_key" remove
       mv "$temporary" "$config"
       trap - EXIT
-      rm -f "$profile" "$qr"
+      rm -f "$profile" "$qr" "$guest_profile" "$guest_qr"
       printf 'removed client %s\n' "$name"
     '';
   };

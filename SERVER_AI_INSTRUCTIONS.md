@@ -445,12 +445,21 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
    sftp vpn-download@vps-new
    ```
 
-   `awg-add-client` prints an ANSI/UTF-8 QR in the SSH terminal and writes
-   `/srv/vpn-download/files/<name>.conf` plus `<name>.txt`. The restricted SFTP
-   account starts in `/files`, so retrieve either with `get <name>.conf` or
-   `get <name>.txt`, not with a `files/` prefix. Import the `.conf` into
-   AmneziaVPN or scan the terminal QR. The profile contains a client private
-   key: do not commit, share in chat, or retain an unnecessary downloaded copy.
+   `awg-add-client` writes both formats into `/srv/vpn-download/files`:
+
+   - `<name>.vpn` and `<name>.vpn.txt`: credential-free AmneziaVPN guest
+     profile and its terminal QR. Import/scan this format for a structured,
+     read-only AmneziaVPN connection. Client-side split settings remain local
+     to each importing device.
+   - `<name>.conf` and `<name>.txt`: native AmneziaWG config and QR for the
+     AmneziaWG app, routers, or manual use.
+
+   The terminal prints the `.vpn` QR. The restricted SFTP account starts in
+   `/files`, so retrieve with `get <name>.vpn` or `get <name>.conf`, not with a
+   `files/` prefix. Both formats contain a client private key: do not commit,
+   share in chat, or retain an unnecessary downloaded copy.
+   The `vpn://` guest payload is compressed/Base64URL transport encoding, not
+   encryption; treat `.vpn` and its QR as the same secret as `.conf`.
 
    `naive-add-client <name>` is available only after `domain` and `acmeEmail`
    enable Caddy/NaiveProxy. It creates `<name>-naive.json` in the same SFTP
@@ -463,9 +472,9 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
    ```
 
    This removes the peer from the live AWG interface and persistent config,
-   then deletes its `.conf` and QR from SFTP. The name is the exact argument
-   previously passed to `awg-add-client`; the operation is serialized with
-   profile creation to prevent address-allocation races.
+   then deletes its `.conf`, `.vpn`, and QR files from SFTP. The name is the
+   exact argument previously passed to `awg-add-client`; the operation is
+   serialized with profile creation to prevent address-allocation races.
 
 9. List active client records and their aggregate traffic without revealing
    public keys, endpoints, or destinations:
