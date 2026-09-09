@@ -272,7 +272,21 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
 
    The listener must receive the token. This proves UDP transport only, not an
    AWG handshake.
-4. Repeat the UDP token test from Android when that network is a target client.
+4. Test Android direct TCP from every target mobile/Wi-Fi uplink with VPN
+   disabled. Termux's toybox `nc` needs `-q` to exit after connecting:
+
+   ```bash
+   if nc -W 5 -q 1 <server-ip> 22 </dev/null >/dev/null 2>&1; then
+     echo "TCP 22 reachable"
+   else
+     echo "TCP 22 unavailable"
+   fi
+   ```
+
+   Do not interrupt the command: wait up to six seconds for its result. A
+   connection that works only after enabling another VPN does not validate the
+   direct client path.
+5. Repeat the UDP token test from Android when that network is a target client.
    In Termux, install a UDP utility once with `pkg install netcat-openbsd`, then
    run while the temporary listener is waiting:
 
