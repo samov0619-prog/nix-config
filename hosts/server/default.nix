@@ -22,6 +22,8 @@ let
     name = "server-preflight";
     runtimeInputs = [
       pkgs.iproute2
+      pkgs.jq
+      pkgs.openssh
       pkgs.util-linux
     ];
     text = builtins.readFile ./preflight.sh;
@@ -133,6 +135,36 @@ in
     }
     {
       assertion =
+        serverSettings.diskDevice == null
+        || (builtins.isString serverSettings.diskDevice && lib.hasPrefix "/dev/" serverSettings.diskDevice);
+      message = "diskDevice must be null or an absolute /dev path";
+    }
+    {
+      assertion =
+        builtins.isInt serverSettings.awgPort
+        && serverSettings.awgPort >= 1
+        && serverSettings.awgPort <= 65535;
+      message = "awgPort must be an integer from 1 to 65535";
+    }
+    {
+      assertion =
+        builtins.isString ipv4.interface
+        && (
+          ipv4.mode != "static"
+          || (
+            builtins.isString ipv4.address
+            && builtins.isInt ipv4.prefixLength
+            && ipv4.prefixLength >= 0
+            && ipv4.prefixLength <= 32
+            && builtins.isString ipv4.gateway
+            && builtins.isList ipv4.nameservers
+            && lib.all builtins.isString ipv4.nameservers
+          )
+        );
+      message = "IPv4 fields must have valid Nix types; a static prefix must be from 0 to 32";
+    }
+    {
+      assertion =
         !ipv6Enabled
         || (
           ipv6 ? wanAddress
@@ -140,14 +172,23 @@ in
           && ipv6 ? gateway
           && ipv6 ? vpnNetwork
           && ipv6 ? vpnPrefixLength
-          && ipv6 ? egress
-          && builtins.elem ipv6.egress [
+           && ipv6 ? egress
+           && builtins.isString ipv6.wanAddress
+           && builtins.isInt ipv6.wanPrefixLength
+           && ipv6.wanPrefixLength >= 0
+           && ipv6.wanPrefixLength <= 128
+           && builtins.isString ipv6.gateway
+           && builtins.isString ipv6.vpnNetwork
+           && builtins.isInt ipv6.vpnPrefixLength
+           && ipv6.vpnPrefixLength >= 0
+           && ipv6.vpnPrefixLength <= 128
+           && builtins.elem ipv6.egress [
             "nat66"
             "routed"
           ]
           && !lib.hasPrefix "fe80:" ipv6.wanAddress
         );
-      message = "IPv6 requires a global WAN address, gateway, VPN prefix, and nat66 or routed egress";
+      message = "IPv6 requires valid typed WAN/VPN prefixes, gateway, and nat66 or routed egress";
     }
   ];
 

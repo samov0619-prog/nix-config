@@ -5,8 +5,17 @@ Disko is destructive only when its command is explicitly run. A normal
 
 ## Remote VPS
 
-Boot the provider rescue system, confirm the target disk with `lsblk`, set
-`hosts/server/settings.nix`, then run from this repository on another machine:
+Boot the provider rescue system and run the read-only preflight locally from
+the workstation checkout. The rescue host needs only `ip` and `lsblk`; all
+parsing, interactive prompts, and the write to local `hosts/server/settings.nix`
+happen on the workstation:
+
+```bash
+nix shell nixpkgs#jq nixpkgs#openssh --command \
+  sh hosts/server/preflight.sh vps-bootstrap
+```
+
+Then run from this repository on another machine:
 
 ```bash
 nix run github:nix-community/nixos-anywhere -- \

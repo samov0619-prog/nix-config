@@ -1,11 +1,13 @@
-# VPS-specific values. Replace every null before enabling the corresponding service.
+# VPS-specific values. Replace every REPLACE_ME value before installation and
+# every null before enabling the corresponding service.
 let
   # Use one public key for samov SSH administration and profile-download SFTP.
   operatorAuthorizedKey = null;
 in
 {
-  # Fill every null from hosts/server/preflight.sh before installation.
-  diskDevice = null;
+  # The placeholder is deliberately not a device, so Disko cannot target a
+  # real disk until preflight generates local settings.
+  diskDevice = "/dev/REPLACE_ME";
   # A 3 GiB VPS needs disk-backed headroom for large Tree-sitter parser builds.
   # Set null only when RAM is sufficient without swap.
   swapMiB = 2048;
@@ -17,10 +19,12 @@ in
       # static: fixed provider values, required by the current VPS. dhcp: let
       # the provider assign IPv4; use only when its DHCP setup is verified.
       mode = "static";
-      interface = null;
-      address = null;
-      prefixLength = null;
-      gateway = null;
+      # Documentation-only IPv4 values keep the skeleton evaluable. They must
+      # never be activated on a real server.
+      interface = "REPLACE_ME";
+      address = "192.0.2.2";
+      prefixLength = 24;
+      gateway = "192.0.2.1";
       # DNS for the VPS itself: Nix downloads, filter updates, Git, and ACME.
       # VPN clients use AdGuard at 10.66.0.1 instead.
       nameservers = [

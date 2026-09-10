@@ -164,7 +164,8 @@ not import Disko.
 ### Server services
 
 - Никакого Docker: AWG3.1 использует NixOS `wg-quick`, AdGuard Home и Caddy — обычные systemd services.
-- `settings.nix` содержит незасекреченные VPS-specific значения и должен быть заполнен перед установкой; private keys и профили живут вне Git в `/var/lib/amneziawg` и `/var/lib/naiveproxy`.
+- `settings.nix` содержит незасекреченные VPS-specific значения. `server-preflight` сначала показывает read-only inventory и открывает wizard только при валидных disk/IPv4 candidates; после явного подтверждения он записывает локальный, некоммитящийся settings-файл. Private keys и профили живут вне Git в `/var/lib/amneziawg` и `/var/lib/naiveproxy`.
+- `hosts/server/settings.nix` описывает ровно один VPS и участвует в каждом `nixosConfigurations.server` evaluation/build/deploy. Перед любой server evaluation, build или deploy агент обязан сверить целевой SSH host с `diskDevice`, WAN interface, IPv4 endpoint и IPv6 VPN ULA в settings; при несовпадении или двух одновременно обслуживаемых VPS остановиться и запросить отдельный host configuration. Никогда не переключать settings между live VPS для обычного обновления.
 - `awg-add-client <name>` публикует AmneziaVPN `.conf` и QR; `naive-add-client <name>` публикует Karing/sing-box JSON.
 - `vpn-download` разрешает только `internal-sftp` по одному ключу в `/srv/vpn-download/files`; shell и forwarding запрещены.
 - AdGuard DNS доступен только через `awg0` и localhost; UI — через SSH tunnel на `127.0.0.1:8008`.

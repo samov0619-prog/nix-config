@@ -19,7 +19,15 @@
   the normal system can configure its address.
 - `hosts/server/settings.nix` contains all provider-specific network values:
   disk, public endpoint, WAN interface, address, prefix, gateway, DNS, and
-  optional proxy/SFTP values. Do not hardcode these in `default.nix`.
+  optional proxy/SFTP values. Do not hardcode these in `default.nix`. The
+  tracked file is a safe template; keep generated VPS values as an intentional
+  local, uncommitted change.
+- This repository's `server` configuration represents exactly one live VPS.
+  `settings.nix` is read by every server evaluation, build, and deploy, not
+  only by Disko. Before any such action, compare its disk, WAN interface, IPv4
+  endpoint, and IPv6 VPN ULA with the intended SSH target. Do not rotate one
+  settings file between live VPSes; add a separate NixOS host and settings
+  module for a second server.
 - `hosts/server/vpn.nix` owns forwarding, NAT, and the AmneziaWG interface.
 - `pkgs/amneziawg-3.1/` pins the matched AWG 3.1.20260812 kernel module and
   tools. Both are server-only overrides because `wg-quick` needs the module
@@ -349,35 +357,30 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
 
 ### Preflight Checklist
 
-1. On the temporary Debian or rescue host, run the read-only inventory from
-   the workstation checkout:
+1. Run preflight locally from the workstation checkout. It executes only
+   read-only `ip` and `lsblk` probes over SSH on the rescue host; the wizard,
+   validation, and settings write all stay on the workstation:
 
    ```bash
-   ssh vps-bootstrap 'sh -s' < hosts/server/preflight.sh
+   nix shell nixpkgs#jq nixpkgs#openssh --command \
+     sh hosts/server/preflight.sh vps-bootstrap
    ```
 
-   The installed server also provides the same `server-preflight` command.
-   It reports disks, NICs, IPv4, and IPv6 but deliberately never writes
-   `settings.nix` or selects a target disk.
-2. Confirm the installation disk manually from the `Block devices` section.
-   Never infer it from its name: `/dev/vda`, `/dev/sda`, and NVMe names vary by
-   provider and rescue image.
-3. Record the NIC, public IPv4 address/prefix, default IPv4 gateway, and DNS
-   from the IPv4 sections. Confirm them with the provider control panel when
-   the rescue configuration is DHCP or NAT-based.
-4. Record global IPv6 addresses, routed prefixes, and the default IPv6 route.
-   Link-local `fe80::/64` alone is not usable for an IPv6 VPN egress. Leave
-   IPv6 disabled in the server configuration when no routed allocation exists.
-5. Verify a second key-based root SSH connection before any destructive
-   command. Keep the first rescue shell open until the installed system accepts
-   the `samov` login.
-
-1. Set all provider-specific values in `hosts/server/settings.nix`. The probe
-   can identify candidates but cannot safely automate this step across
-   providers. Example for
-   the installed VPS: `<disk>`, `<NIC>`, `<IPv4>/<prefix>`, and `<gateway>`.
-   These values are examples, not defaults for a different VPS.
-2. Validate the exact committed workstation checkout before destructive
+   It always prints a read-only inventory first. It opens its interactive
+   settings wizard only when it finds writable disks and a global IPv4 address
+   with a default gateway. Select each candidate explicitly, review the final
+   summary, then answer `y` to write local `hosts/server/settings.nix`. A
+   missing prerequisite leaves that file untouched and exits with the inventory
+   for manual analysis. The rescue host needs only standard `iproute2` and
+   `util-linux` commands available on Debian 12 and common provider images; the
+   local Nix shell supplies the predictable `jq` and `ssh` tooling. The
+   resulting local settings are intentionally uncommitted.
+2. Confirm the selected installation disk manually before continuing. Never
+   infer it from its name: `/dev/vda`, `/dev/sda`, and NVMe names vary by
+   provider and rescue image. Verify a second key-based root SSH connection and
+   keep the first rescue shell open until the installed system accepts the
+   `samov` login.
+3. Validate the exact committed workstation checkout before destructive
    deployment:
 
    ```bash
@@ -394,6 +397,13 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
    `nix build` evaluates and builds the exact server closure locally, so
    deployment transfers an already verified result instead of building on the
    small VPS disk.
+
+   Before a routine update as well as a first install, verify that this same
+   settings file belongs to the target host. At minimum compare `diskDevice`,
+   `network.ipv4.interface`, `publicEndpoint`, and `network.ipv6.vpnNetwork`
+   with `ip -br address`, `ip route`, `ip -6 route`, and `lsblk` over that SSH
+   connection. A mismatch means the target needs its own NixOS host; do not
+   overwrite `settings.nix` with another live VPS's values.
 
 3. From this repository on another machine, install with:
 
