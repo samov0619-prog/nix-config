@@ -36,7 +36,34 @@ let
     import zlib
 
     source = json.load(sys.stdin)
+    native_config = "\n".join([
+        "[Interface]",
+        f"Address = {source['client_ip']}",
+        f"PrivateKey = {source['client_private_key']}",
+        "DNS = 10.66.0.1",
+        f"Jc = {source['jc']}",
+        f"Jmin = {source['jmin']}",
+        f"Jmax = {source['jmax']}",
+        f"S1 = {source['s1']}",
+        f"S2 = {source['s2']}",
+        f"S3 = {source['s3']}",
+        f"S4 = {source['s4']}",
+        f"H1 = {source['h1']}",
+        f"H2 = {source['h2']}",
+        f"H3 = {source['h3']}",
+        f"H4 = {source['h4']}",
+        f"HeaderProtectionKey = {source['header_protection_key']}",
+        f"RandomTrailers = {source['random_trailers']}",
+        f"DisableCookies = {source['disable_cookies']}",
+        "",
+        "[Peer]",
+        f"PublicKey = {source['server_public_key']}",
+        f"Endpoint = {source['host']}:{source['port']}",
+        "AllowedIPs = 0.0.0.0/0, ::/0",
+        "PersistentKeepalive = 25",
+    ]) + "\n"
     client = {
+        "config": native_config,
         "hostName": source["host"],
         "port": source["port"],
         "client_ip": source["client_ip"],
