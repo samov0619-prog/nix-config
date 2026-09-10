@@ -66,7 +66,12 @@ let
         "dns1": "10.66.0.1",
         "containers": [{
             "container": "amnezia-awg2",
-            "awg": {"last_config": json.dumps(client, separators=(",", ":"))},
+            "awg": {
+                "last_config": json.dumps(client, separators=(",", ":")),
+                "port": str(source["port"]),
+                "transport_proto": "udp",
+                "isThirdPartyConfig": True,
+            },
         }],
         "defaultContainer": "amnezia-awg2",
     }

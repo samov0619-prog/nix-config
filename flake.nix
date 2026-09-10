@@ -94,13 +94,18 @@
         {
           system,
           modules,
+          overlays ? [ ],
         }:
         lib.nixosSystem {
           inherit system;
           specialArgs = {
             pkgsUnstable = pkgsUnstableFor system;
           };
-          modules = modules ++ [
+          modules = [
+            {
+              nixpkgs.overlays = overlays;
+            }
+          ] ++ modules ++ [
             home-manager.nixosModules.home-manager
             nix-gc-env.nixosModules.default
           ];
@@ -108,6 +113,10 @@
     in
     {
       overlays = {
+        amnezia-vpn = final: prev: {
+          amnezia-vpn = final.callPackage ./pkgs/amnezia-vpn { };
+        };
+
         filemanager1-common = final: prev: {
           filemanager1-common = final.callPackage ./pkgs/filemanager1-common { };
         };
@@ -116,6 +125,7 @@
       nixosConfigurations = {
         desktop = mkNixos {
           system = systems.linux;
+          overlays = [ self.overlays.amnezia-vpn ];
           modules = [
             ./hosts/desktop
           ];
@@ -123,6 +133,7 @@
 
         laptop = mkNixos {
           system = systems.linux;
+          overlays = [ self.overlays.amnezia-vpn ];
           modules = [
             ./hosts/laptop
           ];

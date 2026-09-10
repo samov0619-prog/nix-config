@@ -4,6 +4,7 @@
 
 {
   config,
+  lib,
   pkgs,
   pkgsUnstable,
   ...
@@ -78,8 +79,15 @@
 
   programs.amnezia-vpn = {
     enable = true;
-    package = pkgsUnstable.amnezia-vpn;
+    package = pkgs.amnezia-vpn;
   };
+
+  # The daemon invokes iptables, ip6tables, and awk for its firewall rules.
+  systemd.services.AmneziaVPN.path = lib.mkAfter [ pkgs.iptables pkgs.gawk ];
+
+  warnings = lib.optional (lib.versionOlder pkgs.amnezia-vpn.version pkgsUnstable.amnezia-vpn.version) ''
+    A newer nixpkgs-unstable AmneziaVPN (${pkgsUnstable.amnezia-vpn.version}) is available than the local ${pkgs.amnezia-vpn.version}; verify its AWG backend and service PATH before removing the local override.
+  '';
 
   nixpkgs.config.allowUnfree = true;
 

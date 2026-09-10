@@ -109,6 +109,9 @@ stdenv.mkDerivation (finalAttrs: {
       --replace-fail 'QDir appPath(QCoreApplication::applicationDirPath());' "" \
       --replace-fail 'appPath.filePath("amneziawg-go")' 'QString::fromUtf8("${amneziawg-go-pinned}/bin/amneziawg-go")'
 
+    substituteInPlace client/mozilla/localsocketcontroller.cpp \
+      --replace-fail $'  json.insert("deviceIpv4Address", wgConfig.value(amnezia::configKey::clientIp));\n  m_deviceIpv4 = wgConfig.value(amnezia::configKey::clientIp).toString();' $'  const QString clientIp = wgConfig.value(amnezia::configKey::clientIp).toString();\n  json.insert("deviceIpv4Address", clientIp.section(\',\', 0, 0).trimmed());\n  m_deviceIpv4 = clientIp.section(\',\', 0, 0).trimmed();'
+
     substituteInPlace client/cmake/3rdparty.cmake \
       --replace-fail 'list(APPEND LIBS ssh::ssh)' 'list(APPEND LIBS ssh)'
 

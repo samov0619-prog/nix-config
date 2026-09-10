@@ -11,7 +11,8 @@ NixOS и HM управляются раздельно: NixOS через `nixosCo
 - Каналы: `nixpkgs` + `home-manager` = 26.05; `nixpkgs-unstable` передаётся через `specialArgs`.
 - Системы: `x86_64-linux`, `aarch64-darwin`.
 - Хелперы: `pkgsFor`, `pkgsUnstableFor`, `mkHM`, `mkNixos`.
-- Overlays: `filemanager1-common` + `freesm` — только для desktop/laptop HM.
+- Overlays: `filemanager1-common` + `freesm` — только для desktop/laptop HM;
+  локальный `amnezia-vpn` — только для NixOS desktop/laptop.
 - `xremap-flake` передаётся в `extraSpecialArgs`.
 
 ### NixOS-хосты
@@ -168,6 +169,18 @@ not import Disko.
 - `vpn-download` разрешает только `internal-sftp` по одному ключу в `/srv/vpn-download/files`; shell и forwarding запрещены.
 - AdGuard DNS доступен только через `awg0` и localhost; UI — через SSH tunnel на `127.0.0.1:8008`.
 - Caddy/NaiveProxy включается после заполнения domain и ACME email; Caddy собран с pinned `forwardproxy` plugin.
+
+### AmneziaVPN clients
+
+- `pkgs/amnezia-vpn/` вендорит Linux-клиент `5.0.1.5` с `amneziawg-go`
+  `v3.1.20260814`, который upstream release использует для AWG 3.1.
+- Overlay подключён только к NixOS desktop/laptop в `flake.nix`; оба хоста
+  используют `pkgs.amnezia-vpn`, а daemon PATH содержит `iptables`,
+  `ip6tables` и `gawk`.
+- При обновлении `nixpkgs-unstable` NixOS warning появляется только если его
+  официальный `amnezia-vpn` новее локального. Перед удалением override
+  проверить backend AWG и service PATH; автоматически на upstream не
+  переключаться.
 
 ### Disko + nixos-anywhere
 
