@@ -23,9 +23,9 @@ NixOS и HM управляются раздельно: NixOS через `nixosCo
 | GPU | Intel iGPU + NVIDIA PRIME | NVIDIA only | — |
 | Ввод | xremap + uinput | нет | — |
 | Сеть | NetworkManager, v2raya, Amnezia | NetworkManager, v2raya, Amnezia | SSH, AWG3.1, AdGuard, NaiveProxy, SFTP |
-| Boot | GRUB EFI removable | GRUB nodev | GRUB /dev/sda |
+| Boot | GRUB EFI removable | GRUB nodev | GRUB on `settings.nix.diskDevice` |
 | Доп. | Hibernate/zram, Bluetooth, brightnessctl, thermald | нет | NAT, ACME, profile download |
-| stateVersion | 25.11 | 25.11 | 25.11 |
+| stateVersion | 25.11 | 25.11 | 26.05 |
 
 ### Home Manager-конфигурации
 
@@ -195,7 +195,7 @@ not import Disko.
 - Никакого Docker: AWG3.1 использует NixOS `wg-quick`, AdGuard Home и Caddy — обычные systemd services.
 - `settings.nix` содержит незасекреченные VPS-specific значения. `server-preflight` сначала показывает read-only inventory и открывает wizard только при валидных disk/IPv4 candidates; administrator key всегда вводится вручную полным OpenSSH public key. При отсутствии global IPv6 с default route wizard требует явное `y` для продолжения без IPv6; по умолчанию выходит без записи settings. После явного подтверждения он записывает локальный, некоммитящийся settings-файл. Private keys и профили живут вне Git в `/var/lib/amneziawg` и `/var/lib/naiveproxy`.
 - `hosts/server/settings.nix` описывает ровно один VPS и участвует в каждом `nixosConfigurations.server` evaluation/build/deploy. Перед любой server evaluation, build или deploy агент обязан сверить целевой SSH host с `diskDevice`, WAN interface, IPv4 endpoint и IPv6 VPN ULA в settings; при несовпадении или двух одновременно обслуживаемых VPS остановиться и запросить отдельный host configuration. Никогда не переключать settings между live VPS для обычного обновления.
-- `awg-add-client <name>` публикует AmneziaVPN `.conf` и QR; `naive-add-client <name>` публикует Karing/sing-box JSON.
+- `awg-add-client <name>` публикует structured AmneziaVPN `.vpn` и QR, а также native `.conf` и QR; `naive-add-client <name>` публикует Karing/sing-box JSON.
 - `vpn-download` разрешает только `internal-sftp` по одному ключу в `/srv/vpn-download/files`; shell и forwarding запрещены.
 - AdGuard DNS доступен только через `awg0` и localhost; UI — через SSH tunnel на `127.0.0.1:8008`.
 - Caddy/NaiveProxy включается после заполнения domain и ACME email; Caddy собран с pinned `forwardproxy` plugin.
@@ -204,6 +204,7 @@ not import Disko.
 
 - `pkgs/amnezia-vpn/` вендорит Linux-клиент `5.0.1.5` с `amneziawg-go`
   `v3.1.20260814`, который upstream release использует для AWG 3.1.
+- Локальный клиент `5.0.1.5` проверенно работает с deployed AWG3.1 server.
 - Overlay подключён только к NixOS desktop/laptop в `flake.nix`; оба хоста
   используют `pkgs.amnezia-vpn`, а daemon PATH содержит `iptables`,
   `ip6tables` и `gawk`.

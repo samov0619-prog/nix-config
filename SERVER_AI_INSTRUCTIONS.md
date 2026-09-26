@@ -63,10 +63,10 @@
 - AWG3.1 retains `Jc`/`Jmin`/`Jmax`. The legacy AWG2 two-slot `S1`/`S2` and
   randomized `H1`-`H4` reference is preserved only as comments in `vpn.nix`;
   it is not active or emitted into profiles.
-- No AWG profile has been issued for this fresh VPS. Generate profiles only
-  after the first boot verifies `wg-quick-awg0` is active. Clients must use a
-  current AmneziaVPN build that supports AWG3.1 fields; Android support starts
-  with AmneziaVPN 5.0.1.5.
+- The deployed server and the local AmneziaVPN 5.0.1.5 client have verified
+  AWG3.1 connectivity. For a fresh or replacement VPS, generate profiles only
+  after the first boot verifies `wg-quick-awg0` is active. Android support
+  starts with AmneziaVPN 5.0.1.5.
 - `amneziawg-bootstrap` reconciles persisted `[Interface]` protocol fields on
   every `wg-quick-awg0` start while preserving the server private key,
   HeaderProtectionKey, and peer records. A schema change triggers a
@@ -79,7 +79,9 @@
 - Keep runtime state under `/var/lib/amneziawg` and `/var/lib/naiveproxy`.
 - Do not commit private WireGuard keys, NaiveProxy passwords, or generated
   profiles.
-- Generate AmneziaWG profiles as `.conf` files for AmneziaVPN.
+- Generate `.vpn` files for the structured AmneziaVPN guest import. Keep the
+  accompanying `.conf` files for the native AmneziaWG app, routers, or manual
+  configuration.
 - Generate Karing/sing-box JSON for NaiveProxy.
 - Publish copies only to `/srv/vpn-download/files`; the SFTP user cannot get a
   shell, forward ports, or access any other path.
@@ -170,16 +172,14 @@ wrong disk.
 
 ## IPv6 Policy
 
-- The current server forwards IPv4 only. Generated profiles nevertheless route
-  `::/0` through AWG to prevent an IPv6 privacy bypass and to preserve Android
-  client split controls. Until the VPS has IPv6 egress, IPv6 destinations will
-  fail or clients will fall back to IPv4.
-- Do not expect IPv6 connectivity until the VPS has a routed IPv6 prefix and
-  the server has IPv6 forwarding, firewall, DNS, and egress configured.
-- Before implementing IPv6, record the provider allocation on the VPS with
-  `ip -6 -br address` and `ip -6 route`. The design must assign an AWG ULA
-  subnet, route or NAT66 it through the provider prefix, expose AdGuard on its
-  IPv6 AWG address, and then make the existing `::/0` client route functional.
+- The deployed server uses IPv6 NAT66. Generated profiles route `::/0` through
+  AWG, which prevents an IPv6 privacy bypass and preserves Android client split
+  controls.
+- For a new IPv4-only provider, keep `network.ipv6 = null`: the `::/0` profile
+  route still prevents a bypass, but IPv6 destinations will be unavailable.
+- Before enabling IPv6 on another provider, record its allocation with
+  `ip -6 -br address` and `ip -6 route`, then configure a verified ULA subnet
+  and NAT66 or a provider-routed prefix.
 
 ### Dual-Stack Settings
 
@@ -215,9 +215,10 @@ wrong disk.
   `/srv/vpn-download/files`, `/var/lib/private/AdGuardHome`, and, when enabled,
   `/var/lib/naiveproxy`. Those paths contain credentials or settings that are
   intentionally outside Git and the Nix store.
-- `awg-add-client` and `naive-add-client` currently create credentials only.
-  There is no supported list, revocation, or expiry helper yet; add that
-  lifecycle before issuing profiles to multiple people.
+- `awg-list-clients` reports client names, tunnel addresses, and aggregate
+  traffic without exposing keys or destinations. `awg-remove-client <name>`
+  revokes the live and persistent peer and deletes its published artifacts.
+  Profile expiry is not automated.
 - The server runs daily GC and keeps two system/Home Manager generations.
   `nix-gc-env` cleans system/legacy profiles, while `samov-profile-gc` cleans
   the Home Manager profile and wipes non-current modern user Nix profile
@@ -244,8 +245,8 @@ wrong disk.
 
 ### Candidate Connectivity Gate
 
-Before changing `settings.nix` or running Disko, verify that the candidate IP
-is reachable directly from the networks that will use the VPN. Do not use a
+Before selecting a replacement VPS or running Disko, verify that its candidate
+IP is reachable directly from the networks that will use the VPN. Do not use a
 SOCKS `ProxyCommand` for these tests: a proxy hides an ISP/provider path block.
 Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
 
@@ -411,7 +412,7 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
    connection. A mismatch means the target needs its own NixOS host; do not
    overwrite `settings.nix` with another live VPS's values.
 
-3. From this repository on another machine, install with:
+4. From this repository on another machine, install with:
 
    ```bash
    nix run github:nix-community/nixos-anywhere -- \
@@ -420,10 +421,10 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
 
    This erases `settings.nix.diskDevice`. Do not interrupt after Disko begins.
 
-4. After the final reboot, log in as `samov` using its SSH key. SSH listens on
+5. After the final reboot, log in as `samov` using its SSH key. SSH listens on
    port `17431`; password and keyboard-interactive authentication are disabled.
    `samov` has declarative passwordless sudo to support remote deployments.
-5. The initial NixOS closure contains no Git or Home Manager command. Bootstrap
+6. The initial NixOS closure contains no Git or Home Manager command. Bootstrap
    the standalone Home Manager profile from the VPS with:
 
    ```bash
@@ -446,7 +447,7 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
 
    Do not add OpenCode or Aider to the server profile just to bootstrap it.
 
-6. Access initial AdGuard setup only through:
+7. Access initial AdGuard setup only through:
 
    ```bash
    ssh -N -L 8008:127.0.0.1:8008 samov@vps-new
@@ -457,7 +458,7 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
    firewall rule; `-L` forwards the workstation port securely over SSH. Stop
    the tunnel with `Ctrl+C` after setup.
 
-7. Create and retrieve AWG profiles only after `wg-quick-awg0` is active:
+8. Create and retrieve AWG profiles only after `wg-quick-awg0` is active:
 
    ```bash
    ssh samov@vps-new 'sudo awg-add-client <name>'
@@ -484,7 +485,7 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
    enable Caddy/NaiveProxy. It creates `<name>-naive.json` in the same SFTP
    directory for Karing/sing-box import.
 
-8. Revoke a lost or retired AWG profile by name:
+9. Revoke a lost or retired AWG profile by name:
 
    ```bash
    ssh samov@vps-new 'sudo awg-remove-client <name>'
@@ -495,7 +496,7 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
    exact argument previously passed to `awg-add-client`; the operation is
    serialized with profile creation to prevent address-allocation races.
 
-9. List active client records and their aggregate traffic without revealing
+10. List active client records and their aggregate traffic without revealing
    public keys, endpoints, or destinations:
 
    ```bash
@@ -556,7 +557,8 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
 
 ## Validation
 
-- Run `nix flake check` and evaluate both server configurations before deploy.
+- Run `nix flake check` and build the exact server closure before a server
+  deploy or replacement install.
 - Confirm `wg-quick-awg0`, `adguardhome`, and `sshd` are healthy. Confirm
   `caddy` only after both `domain` and `acmeEmail` are set.
 - Confirm public DNS and the AdGuard UI are unreachable.
