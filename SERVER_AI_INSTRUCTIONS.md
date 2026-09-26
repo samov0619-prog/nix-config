@@ -468,7 +468,7 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
    the standalone Home Manager profile from the VPS with:
 
    ```bash
-   nix-shell -p git --run 'git clone <url> ~/nix-config'
+   nix-shell -p git --run 'git clone https://github.com/samov0619-prog/nix-config.git ~/nix-config'
    cd ~/nix-config
    nix run github:nix-community/home-manager/release-26.05 -- \
      switch -b backup --flake .#samov-server
