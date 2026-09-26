@@ -56,7 +56,8 @@
     automatic = true;
     dates = "weekly";
     options = "";
-    delete_generations = "+5";
+    # Keep the current system and two rollback generations.
+    delete_generations = "+3";
   };
 
   # Configure network connections interactively with nmcli or nmtui.
