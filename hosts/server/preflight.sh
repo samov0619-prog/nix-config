@@ -209,21 +209,10 @@ while :; do
   printf 'Enter a port from 1 to 65535.\n' >&2
 done
 
-operator_key_default=''
-for public_key_file in "$HOME"/.ssh/*.pub; do
-  [ -r "$public_key_file" ] || continue
-  candidate=$(awk '
-    $1 ~ /^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)|sk-ssh-ed25519@openssh.com|sk-ecdsa-sha2-nistp256@openssh.com)$/ && $2 ~ /^[A-Za-z0-9+\/=]+$/ { print $1 " " $2; exit }
-  ' "$public_key_file")
-  if [ -n "$candidate" ]; then
-    operator_key_default=$candidate
-    break
-  fi
-done
 while :; do
-  operator_key=$(ask "Administrator SSH public key" "$operator_key_default")
+  operator_key=$(ask "Administrator SSH public key")
   is_public_key "$operator_key" && break
-  printf 'Enter a valid OpenSSH public key.\n' >&2
+  printf 'Enter a complete OpenSSH public key, for example: ssh-ed25519 AAAA...\n' >&2
 done
 
 domain=$(ask "NaiveProxy domain (leave empty to disable)")
@@ -256,7 +245,8 @@ if ! ipv6_candidates=$(printf '%s\n' "$probe" | jq -rs '
   .prefixlen as $prefix |
   $link.ifname as $interface |
   $routes[]? |
-  select(.dev == $interface and (.gateway | type == "string") and (.gateway | startswith("fe80:") | not)) |
+  # IPv6 default routers commonly use a link-local gateway address.
+  select(.dev == $interface and (.gateway | type == "string")) |
   "\($address)|\($address)/\($prefix) via \(.gateway)"
 '); then
   fail_analysis "could not parse remote IPv6 addresses and routes"
@@ -280,6 +270,19 @@ if [ -n "$ipv6_candidates" ]; then
       ipv6_summary=nat66
       ;;
   esac
+else
+  printf 'IPv6 was not detected: no global IPv6 address with a usable default route was found.\n' >&2
+  while :; do
+    continue_without_ipv6=$(ask "Continue setup without IPv6? [y/N]")
+    case $continue_without_ipv6 in
+      y|Y|yes|YES) break ;;
+      ''|n|N|no|NO)
+        printf 'IPv6 was not detected; setup stopped and settings were not written.\n' >&2
+        exit 0
+        ;;
+      *) printf 'Enter y to continue without IPv6, or N to stop.\n' >&2 ;;
+    esac
+  done
 fi
 
 section "Proposed settings"

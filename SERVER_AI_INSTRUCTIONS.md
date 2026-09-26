@@ -369,13 +369,18 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
 
    It always prints a read-only inventory first. It opens its interactive
    settings wizard only when it finds writable disks and a global IPv4 address
-   with a default gateway. Select each candidate explicitly, review the final
-   summary, then answer `y` to write local `hosts/server/settings.nix`. A
-   missing prerequisite leaves that file untouched and exits with the inventory
-   for manual analysis. The rescue host needs only standard `iproute2` and
-   `util-linux` commands available on Debian 12 and common provider images; the
-   local Nix shell supplies the predictable `jq` and `ssh` tooling. The
-   resulting local settings are intentionally uncommitted.
+   with a default gateway. Enter the administrator key manually as a complete
+   OpenSSH public key; it never selects a local SSH key as a default. Select
+   each candidate explicitly. When no global IPv6 address with a default route
+   is found, the wizard explains this and requires an explicit `y` to continue
+   without IPv6; its default exits without changing settings. Otherwise review
+   the final summary, then answer `y` to write local
+   `hosts/server/settings.nix`. A missing prerequisite leaves that file
+   untouched and exits with the inventory for manual analysis. The rescue host
+   needs only standard `iproute2` and `util-linux` commands available on Debian
+   12 and common provider images; the local Nix shell supplies the predictable
+   `jq` and `ssh` tooling. The resulting local settings are intentionally
+   uncommitted.
 2. Confirm the selected installation disk manually before continuing. Never
    infer it from its name: `/dev/vda`, `/dev/sda`, and NVMe names vary by
    provider and rescue image. Verify a second key-based root SSH connection and
