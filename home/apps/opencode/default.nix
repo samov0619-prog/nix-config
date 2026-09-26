@@ -15,12 +15,9 @@
 #    programs.opencode.tools: тот принял бы derivation за attrs и развалился.
 #    @opencode-ai/plugin НЕ импортируем — tool() это passthrough, а tool.schema=zod.
 #
-# 2. small_model = OpenAI GPT-5.4 mini (НЕ дефолт):
-#    дефолт для провайдера opencode захардкожен в gpt-5-nano (issue #8609),
-#    а он платный на zen → 401 CreditsError на титулах/суммаризации. Явный
-#    small_model перебивает эту ветку (getSmallModel: `if (cfg.small_model)`).
-#    RLM subquery берёт именно small_model: mini достаточно силён для Python
-#    срезов и семантической агрегации, не тратя лимит основной Terra-модели.
+# 2. small_model = OpenAI GPT-5.6 Luna (НЕ дефолт):
+#    GPT-5.4 mini больше не поддерживается Codex с ChatGPT OAuth. Luna — его
+#    поддерживаемая дешёвая замена для заголовков, суммаризации и RLM subquery.
 #
 # 3. package override — фикс file-watcher (libstdc++ через LD_LIBRARY_PATH).
 #    Подробности — в комменте у самого override ниже.
@@ -37,7 +34,7 @@
 # на deepseek-…-free без 401, file.watcher backend=inotify без ERROR.
 # ─────────────────────────────────────────────────────────────────────────────
 
-{ pkgs, lib, config, ... }:
+{ pkgs, pkgsUnstable, lib, config, ... }:
 let
   # ─── ПЕРЕКЛЮЧАТЕЛЬ RLM ──────────────────────────────────────────────────
   # false → только tool `rlm` (depth-0). true → + plugin-tool `rlm_subquery` (рекурсия).
@@ -86,7 +83,7 @@ in
     #   grep -iE "watcher|libstdc" <свежий лог>   # backend=inotify без ERROR
     # (если запускать из грязного шелла, libstdc++ может подтянуться транзитивом
     #  и замаскировать поломку — тестируй только через env -i.)
-    package = pkgs.opencode.overrideAttrs (old: {
+    package = pkgsUnstable.opencode.overrideAttrs (old: {
       nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkgs.makeWrapper ];
       postFixup = (old.postFixup or "") + ''
         for b in $out/bin/.opencode-wrapped__ $out/bin/opencode; do
@@ -137,8 +134,8 @@ in
       # Основная модель: код, рефакторинг, отладка, агентные задачи.
       model = "openai/gpt-5.6-terra";
 
-      # Лёгкие служебные и изолированные RLM-задачи выполняет coding-capable mini.
-      small_model = "openai/gpt-5.4-mini";
+      # Лёгкие служебные и изолированные RLM-задачи выполняет дешёвая Luna.
+      small_model = "openai/gpt-5.6-luna";
     };
 
     extraPackages = with pkgs; [
