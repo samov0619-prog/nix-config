@@ -9,11 +9,6 @@
     ../../modules/voice-dictate
   ];
 
-  # Keep the active profile and two rollback generations.
-  samov.homeGenerationGc = {
-    keep = 3;
-  };
-
   xdg.configFile."hypr/hyprland.conf".source = ./hyprland.conf;
   xdg.configFile."waybar/config.jsonc".source = ./waybar-config.jsonc;
 

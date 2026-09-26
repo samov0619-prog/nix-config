@@ -218,9 +218,10 @@ wrong disk.
 - `awg-add-client` and `naive-add-client` currently create credentials only.
   There is no supported list, revocation, or expiry helper yet; add that
   lifecycle before issuing profiles to multiple people.
-- The server runs daily GC and keeps two generations. `nix-gc-env` cleans
-  system/root profiles, while `samov-profile-gc` cleans the Home Manager and
-  user Nix profiles before the store GC. Updates are deliberately manual:
+- The server runs daily GC and keeps two system/Home Manager generations.
+  `nix-gc-env` cleans system/legacy profiles, while `samov-profile-gc` cleans
+  the Home Manager profile and wipes non-current modern user Nix profile
+  history before the store GC. Updates are deliberately manual:
   evaluate locally, deploy through the SSH alias, check `wg-quick-awg0`,
   AdGuard, and SSH, then retain an off-host backup before relying on a
   rollback.

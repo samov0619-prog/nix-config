@@ -1,50 +1,14 @@
-{ config, lib, pkgs, ... }:
-let
-  cfg = config.samov.homeGenerationGc;
-in
+{ pkgs, ... }:
 {
-  options.samov.homeGenerationGc = {
-    keep = lib.mkOption {
-      type = lib.types.ints.positive;
-      default = 5;
-      description = "Number of Home Manager generations to retain.";
-    };
-  };
+  home.packages = with pkgs; [
+    xray
+    adbfs-rootless
+    android-tools
+    btop
+  ];
 
-  config = {
-    home.packages = with pkgs; [
-      xray
-      adbfs-rootless
-      android-tools
-      btop
-    ];
-
-    programs.fish.shellAliases = {
-      phone-mount = "mkdir -p ~/mnt/phone && adbfs ~/mnt/phone";
-      phone-unmount = "fusermount3 -u ~/mnt/phone";
-    };
-
-    # nix-gc-env does not scan Home Manager's per-user profile location.
-    systemd.user.services.hm-gc = {
-      Unit.Description = "Prune old Home Manager generations";
-      Service = {
-        Type = "oneshot";
-        ExecStart = pkgs.writeShellScript "hm-gc" ''
-          ${pkgs.nix}/bin/nix-env \
-            --profile $HOME/.local/state/nix/profiles/home-manager \
-            --delete-generations +${toString cfg.keep}
-          ${pkgs.nix}/bin/nix-collect-garbage
-        '';
-      };
-    };
-
-    systemd.user.timers.hm-gc = {
-      Unit.Description = "Home Manager GC timer";
-      Timer = {
-        OnCalendar = "weekly";
-        Persistent = true;
-      };
-      Install.WantedBy = [ "timers.target" ];
-    };
+  programs.fish.shellAliases = {
+    phone-mount = "mkdir -p ~/mnt/phone && adbfs ~/mnt/phone";
+    phone-unmount = "fusermount3 -u ~/mnt/phone";
   };
 }

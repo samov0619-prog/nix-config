@@ -105,6 +105,7 @@
             {
               nixpkgs.overlays = overlays;
             }
+            ./hosts/profiles/gc.nix
           ] ++ modules ++ [
             home-manager.nixosModules.home-manager
             nix-gc-env.nixosModules.default
@@ -243,6 +244,7 @@
           username = "samov";
           modules = [
             ./home/users/samov
+            ./home/modules/profile-gc
             ./home/core-set
             ./home/core-set/nix-authoring.nix
             ./home/core-set/go.nix

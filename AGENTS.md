@@ -54,7 +54,7 @@ home/
 │   ├── kitty/                   # generated langmap-aware kitty.conf
 │   └── minecraft/server/        # Packwiz → Fabric → backup-sync implementation
 └── linux/
-    ├── core-set/                # xray, adb, btop, Home Manager GC timer
+    ├── core-set/                # xray, adb, btop
     ├── gui-set/                 # Hyprland ecosystem, audio, screenshots, file manager
     ├── modules/                 # Hyprland, Waybar, tofi, xremap, FileManager1
     ├── desktop/                 # desktop leaf and raw host overrides
@@ -160,6 +160,35 @@ not import Disko.
   store. Home Manager намеренно не подключает `~/.config/nvim` через
   `xdg.configFile`; для VPS используется ручная ветка `server-build`.
 - Git editor и алиасы vi/vim → nvim.
+
+### Nix generations и GC
+
+- Store paths удаляются только когда на них не ссылается ни один GC root. NixOS
+  system profile, Home Manager profile и modern `nix profile` независимы, но
+  могут удерживать одни и те же store paths.
+- На NixOS единственный полный cleanup запускается `sudo systemctl start
+  nix-gc.service`; штатный `nix-gc.timer` вызывает этот же service. Не запускать
+  отдельный user timer или `nix-collect-garbage` как регулярную альтернативу.
+- Общий `hosts/profiles/gc.nix` запускается перед `nix-gc.service`: `nix-gc-env`
+  очищает system/legacy profiles, `samov-profile-gc` очищает XDG Home Manager и
+  modern user Nix profile от имени `samov`, затем `nix-gc.service` очищает store.
+- Home Manager generations сохраняются по host policy: server `+2` daily,
+  laptop `+3` weekly, desktop `+5` weekly. Это обеспечивает rollback именно
+  конфигурации Home Manager.
+- Modern `nix profile` сохраняет только current generation через `nix profile
+  wipe-history`: Nix не предоставляет API "keep N", а его history откатывает
+  bootstrap CLI, не Home Manager configuration. Не применять `nix-env` к modern
+  `nix profile`: эти форматы несовместимы.
+- Текущий `~/.nix-profile` на laptop содержит рабочий `home-manager`; не удалять
+  сам current user profile. Проверка 2026-09: очистка 33 старых `nix profile`
+  generations и последующий store GC освободили около 14 GiB, а повторный GC
+  удалил 0 paths.
+- `nix-collect-garbage` без flags удаляет только уже недостижимые store paths;
+  он не удаляет profile generations. Сначала очищаются generations, затем store.
+- `samov-mac` импортирует `home/modules/profile-gc` только как future interface.
+  Когда Mac получит расписание, реализовать `launchd` agent: Home Manager prune,
+  `nix profile wipe-history`, затем `nix-collect-garbage`. macOS не имеет
+  NixOS `nix-gc.service` или system profile.
 
 ### Server services
 

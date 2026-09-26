@@ -59,6 +59,8 @@
     # Keep the current system and two rollback generations.
     delete_generations = "+3";
   };
+  # Home Manager retains the active generation and two rollback generations.
+  samov.profileGc.homeManager.keep = 3;
 
   # Configure network connections interactively with nmcli or nmtui.
   networking = {
