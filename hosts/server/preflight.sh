@@ -27,7 +27,7 @@ choose() {
   while :; do
     printf '\n%s\n' "$prompt" >&2
     index=0
-    printf '%s\n' "$values" | while IFS='|' read -r value label; do
+    printf '%s\n' "$values" | while IFS='|' read -r _value label; do
       printf '  [%s] %s\n' "$index" "$label" >&2
       index=$((index + 1))
     done
@@ -125,7 +125,9 @@ ip -j -4 address show
 ip -j -4 route show default
 ip -j -6 address show
 ip -j -6 route show default
-ip -j -6 route show dev awg0
+# A rescue/Debian host normally has no AWG interface. Preserve a sixth JSON
+# document so the local parser can treat that as an empty prior VPN allocation.
+ip -j -6 route show dev awg0 2>/dev/null || printf '[]\n'
 REMOTE_PROBE
 ); then
   fail_analysis "the remote JSON probe failed"
