@@ -128,6 +128,12 @@ ip -j -6 route show default
 # A rescue/Debian host normally has no AWG interface. Preserve a sixth JSON
 # document so the local parser can treat that as an empty prior VPN allocation.
 ip -j -6 route show dev awg0 2>/dev/null || printf '[]\n'
+if [ -r /etc/os-release ]; then
+  . /etc/os-release
+  printf '{"id":"%s","variantId":"%s"}\n' "${ID:-}" "${VARIANT_ID:-}"
+else
+  printf '{"id":"","variantId":""}\n'
+fi
 REMOTE_PROBE
 ); then
   fail_analysis "the remote JSON probe failed"
@@ -140,6 +146,17 @@ if ! disks=$(printf '%s\n' "$probe" | jq -rs '
   fail_analysis "could not parse the remote block-device inventory"
 fi
 [ -n "$disks" ] || fail_analysis "no writable whole-disk candidate was found"
+
+if ! boot_environment=$(printf '%s\n' "$probe" | jq -rs '
+  .[6] | select(type == "object") | {
+    id: (.id // ""),
+    variantId: (.variantId // "")
+  }
+'); then
+  fail_analysis "could not parse the remote operating-system inventory"
+fi
+
+is_nixos_installer=$(printf '%s\n' "$boot_environment" | jq -r '.id == "nixos" and .variantId == "installer"')
 
 if ! ipv4_candidates=$(printf '%s\n' "$probe" | jq -rs '
   def public_ipv4:
@@ -354,3 +371,14 @@ EOF
 mv "$temporary" "$settings_file"
 trap - EXIT
 printf 'Wrote local %s. It is intentionally a local, uncommitted change.\n' "$settings_file"
+
+section "Bootstrap handoff"
+if [ "$is_nixos_installer" = true ]; then
+  printf 'Bootstrap path: NixOS installer already running.\n'
+  printf 'Continue with SERVER_AI_INSTRUCTIONS.md, "NixOS Installer Completion", step 1.\n'
+else
+  printf 'Bootstrap path: attempt kexec first.\n'
+  printf '1. Continue with SERVER_AI_INSTRUCTIONS.md, "Kexec installation", step 1:\n'
+  printf '   nix run github:nix-community/nixos-anywhere -- --flake .#server --phases kexec %s\n' "$remote_host"
+  printf '2. If kexec fails, no Disko phase was run. Continue with "Provider ISO installation", step 1.\n'
+fi

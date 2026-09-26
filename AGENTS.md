@@ -64,6 +64,7 @@ home/
 hosts/server/
 ├── default.nix                  # system baseline and server module imports
 ├── settings.nix                 # VPS-specific domain, ports, interface, SFTP key
+├── installer.nix                # minimal settings-based provider ISO, no Disko/services
 ├── vpn.nix                      # AWG3.1 bootstrap, NAT, profile generation
 ├── adguard.nix                  # private DNS and imported filter set
 ├── proxy.nix                    # Caddy + NaiveProxy plugin + Karing profiles
@@ -248,8 +249,12 @@ sudo nixos-rebuild switch --flake .#laptop
 sudo nixos-rebuild switch --flake .#desktop
 sudo nixos-rebuild switch --flake .#server
 
-# Fresh remote VPS (provider rescue mode)
-nix run github:nix-community/nixos-anywhere -- --flake .#server root@<vps-ip>
+# Fresh remote VPS: run preflight first. Try only the kexec bootstrap, then
+# use the provider ISO fallback documented in SERVER_AI_INSTRUCTIONS.md.
+nix run github:nix-community/nixos-anywhere -- --flake .#server --phases kexec root@<vps-ip>
+nix build .#nixosConfigurations.server-installer.config.system.build.isoImage
+# After a NixOS installer is running:
+nix run github:nix-community/nixos-anywhere -- --flake .#server --phases disko,install,reboot root@<vps-ip>
 
 # Home Manager
 home-manager switch --flake .#samov-laptop

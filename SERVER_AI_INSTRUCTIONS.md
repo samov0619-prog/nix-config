@@ -412,19 +412,59 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
    connection. A mismatch means the target needs its own NixOS host; do not
    overwrite `settings.nix` with another live VPS's values.
 
-4. From this repository on another machine, install with:
+### Kexec Installation
+
+1. On a regular Linux/rescue host, bootstrap only into the NixOS installer:
 
    ```bash
    nix run github:nix-community/nixos-anywhere -- \
-     --flake .#server root@vps-bootstrap
+     --flake .#server --phases kexec root@vps-bootstrap
+   ```
+
+   This phase does not run Disko or install NixOS. If it succeeds, the host
+   reboots into a temporary NixOS installer. If it fails, the target disk is
+   untouched; continue with **Provider ISO Installation**, step 1.
+2. After the host accepts root SSH on port 22 from the NixOS installer, continue
+   with **NixOS Installer Completion**, step 1.
+
+### Provider ISO Installation
+
+1. Build the local settings-based installer ISO:
+
+   ```bash
+   nix build .#nixosConfigurations.server-installer.config.system.build.isoImage
+   ```
+
+   `result` is the local ISO file. It contains only the minimal installer,
+   networking from local `settings.nix`, and temporary root SSH key access. It
+   does not import Disko or the final server services.
+2. Upload `result` as a local ISO file in the provider panel and boot the VPS
+   from it. No public ISO hosting is required.
+3. Verify root SSH on port 22 and recheck the exact disk and network identity:
+
+   ```bash
+   ssh root@vps-bootstrap 'lsblk; ip -br address; ip route; ip -6 route'
+   ```
+
+4. Continue with **NixOS Installer Completion**, step 1.
+
+### NixOS Installer Completion
+
+1. From this repository on another machine, partition and install with:
+
+   ```bash
+   nix run github:nix-community/nixos-anywhere -- \
+     --flake .#server --phases disko,install,reboot root@vps-bootstrap
    ```
 
    This erases `settings.nix.diskDevice`. Do not interrupt after Disko begins.
 
-5. After the final reboot, log in as `samov` using its SSH key. SSH listens on
+### Post-install
+
+1. After the final reboot, log in as `samov` using its SSH key. SSH listens on
    port `17431`; password and keyboard-interactive authentication are disabled.
    `samov` has declarative passwordless sudo to support remote deployments.
-6. The initial NixOS closure contains no Git or Home Manager command. Bootstrap
+2. The initial NixOS closure contains no Git or Home Manager command. Bootstrap
    the standalone Home Manager profile from the VPS with:
 
    ```bash
@@ -447,7 +487,7 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
 
    Do not add OpenCode or Aider to the server profile just to bootstrap it.
 
-7. Access initial AdGuard setup only through:
+3. Access initial AdGuard setup only through:
 
    ```bash
    ssh -N -L 8008:127.0.0.1:8008 samov@vps-new
@@ -458,7 +498,7 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
    firewall rule; `-L` forwards the workstation port securely over SSH. Stop
    the tunnel with `Ctrl+C` after setup.
 
-8. Create and retrieve AWG profiles only after `wg-quick-awg0` is active:
+4. Create and retrieve AWG profiles only after `wg-quick-awg0` is active:
 
    ```bash
    ssh samov@vps-new 'sudo awg-add-client <name>'
@@ -485,7 +525,7 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
    enable Caddy/NaiveProxy. It creates `<name>-naive.json` in the same SFTP
    directory for Karing/sing-box import.
 
-9. Revoke a lost or retired AWG profile by name:
+5. Revoke a lost or retired AWG profile by name:
 
    ```bash
    ssh samov@vps-new 'sudo awg-remove-client <name>'
@@ -496,7 +536,7 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
    exact argument previously passed to `awg-add-client`; the operation is
    serialized with profile creation to prevent address-allocation races.
 
-10. List active client records and their aggregate traffic without revealing
+6. List active client records and their aggregate traffic without revealing
    public keys, endpoints, or destinations:
 
    ```bash

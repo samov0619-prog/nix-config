@@ -111,6 +111,11 @@
             nix-gc-env.nixosModules.default
           ];
         };
+
+      mkServerInstaller = lib.nixosSystem {
+        system = systems.linux;
+        modules = [ ./hosts/server/installer.nix ];
+      };
     in
     {
       overlays = {
@@ -147,6 +152,8 @@
             ./hosts/server
           ];
         };
+
+        server-installer = mkServerInstaller;
 
         laptop-next = mkNixos {
           system = systems.linux;
