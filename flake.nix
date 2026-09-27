@@ -22,6 +22,10 @@
       url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    browser-previews = {
+      url = "github:nix-community/browser-previews";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -48,6 +52,7 @@
       nixpkgs,
       nixpkgs-unstable,
       home-manager,
+      browser-previews,
       disko,
       # nvim-config,
       freesm,
@@ -75,6 +80,10 @@
           inherit system;
         };
 
+      browserPreviewsFor =
+        system:
+        browser-previews.packages.${system};
+
       mkHM =
         {
           pkgs,
@@ -87,6 +96,7 @@
             # To re-enable declarative Neovim, also pass nvim-config here.
             inherit username xremap-flake;
             pkgsUnstable = pkgsUnstableFor pkgs.stdenv.hostPlatform.system;
+            browserPreviews = browserPreviewsFor pkgs.stdenv.hostPlatform.system;
           };
         };
 

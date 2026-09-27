@@ -2,6 +2,7 @@
   lib,
   config,
   pkgs,
+  browserPreviews,
   ...
 }:
 {
@@ -18,5 +19,8 @@
   programs.chromium.enable = true;
   programs.mpv.enable = true;
 
-  home.packages = [ pkgs.ueberzugpp ];
+  home.packages = [
+    pkgs.ueberzugpp
+    browserPreviews.google-chrome
+  ];
 }
