@@ -170,6 +170,9 @@ not import Disko.
 - На NixOS единственный полный cleanup запускается `sudo systemctl start
   nix-gc.service`; штатный `nix-gc.timer` вызывает этот же service. Не запускать
   отдельный user timer или `nix-collect-garbage` как регулярную альтернативу.
+- `nix-gc-run` запускает этот же service и выводит очистку профилей и store в
+  реальном времени. `systemctl start` намеренно не передаёт stdout service в
+  вызвавший терминал.
 - Общий `hosts/profiles/gc.nix` запускается перед `nix-gc.service`: `nix-gc-env`
   очищает system/legacy profiles, `samov-profile-gc` очищает XDG Home Manager и
   modern user Nix profile от имени `samov`, затем `nix-gc.service` очищает store.
