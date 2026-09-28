@@ -230,6 +230,63 @@ not import Disko.
 ## Применение конфигурации
 
 **Никогда не запускай `nixos-rebuild switch` или `home-manager switch`.**
+## Обновление flake и конфигураций
+
+`nix-flake-update-verify` — декларативная команда из `home/core-set`.
+Она обновляет ровно один root input и выполняет настоящие `nix build --no-link`
+только для выбранного host. Большой update может потребовать дополнительное
+место в `/nix/store`, сопоставимое с размером текущего closure; при массовом
+пересборе ориентироваться на запас до двух размеров текущего closure.
+Backup OpenCode-сессий для этой операции не нужен: update и build не меняют
+установленный OpenCode или его storage.
+
+На laptop обновить один input и проверить только laptop outputs:
+
+```bash
+nix-flake-update-verify --hosts laptop --input nixpkgs
+```
+
+- Inputs: `nixpkgs`, `nixpkgs-unstable`, `home-manager`, `browser-previews`,
+  `disko`, `freesm`, `nix-gc-env`, `xremap-flake`; `all` доступен только
+  явно через `--input all`.
+- Hosts: `laptop`, `desktop`, `server`, `server-installer`, `mac`; `--hosts
+  all` проверяет все hosts, поддерживаемые текущей платформой: Linux hosts на
+  Linux и `mac` на macOS.
+- Linux hosts `laptop`, `desktop` и `server` строят свои NixOS и Home Manager
+  outputs; `server-installer` строит только NixOS ISO output; `mac` строит
+  только свой Home Manager output на macOS.
+- `laptop-next` и `desktop-next` намеренно не поддерживаются: это
+  непроверенные шаблоны будущего оборудования.
+
+После переноса одного и того же `flake.lock` на другую машину проверить её
+host без изменения lock-файла:
+
+```bash
+nix-flake-update-verify --hosts desktop --no-update
+nix-flake-update-verify --hosts server --no-update
+```
+
+Локальный server build не подключается к VPS. Сверка server settings с VPS
+нужна перед deploy, не перед verification.
+
+На Mac:
+
+```bash
+nix-flake-update-verify --hosts mac --no-update
+```
+
+Для обновления input на Mac заменить `--no-update` на `--input <name>`.
+
+При любой ошибке команда немедленно завершается и оставляет `flake.lock` для
+обычного Git review или rollback. Nix печатает исходную ошибку, после чего
+скрипт выводит machine-readable summary, например:
+
+```text
+FAILED: phase=build; input=nixpkgs; host=laptop; output=home-manager; exit=1
+```
+
+Команда не делает switch, Git commit или автоматический rollback.
+
 Пользователь применяет системную и Home Manager-конфигурацию самостоятельно
 после личной проверки. Для проверки агент может выполнять только evaluation
 или build без активации, например `nix eval` или `nix build`.
