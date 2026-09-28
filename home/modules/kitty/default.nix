@@ -5,12 +5,20 @@ let
   # и был мутабельный костыль. Логика чисто функциональная, поэтому её место
   # в деривации: на выходе обычный read-only store-путь.
   kittyConf = pkgs.runCommand "kitty.conf" { } ''
+    templates=(${pkgs.kitty}/share/doc/kitty/html/_downloads/*/kitty.conf)
+    test "''${#templates[@]}" -eq 1
+    ${
+      if pkgs.stdenv.isDarwin then
+        ''cat ${./darwin-prelude.conf} "''${templates[0]}" ${./common.conf} ${./darwin.conf} > source.conf''
+      else
+        ''cat "''${templates[0]}" ${./common.conf} > source.conf''
+    }
     ${pkgs.python3}/bin/python3 ${./kitty-langmap/build.py} \
-      ${./kitty.conf} ${./kitty-langmap/map.txt} > "$out"
+      source.conf ${./kitty-langmap/map.txt} > "$out"
   '';
 in
 {
-  home.packages = [ pkgs.kitty ];
+  home.packages = [ pkgs.kitty pkgs.nerd-fonts.noto ];
 
   # Всё декларативно и read-only. Обновления из репы доезжают сами,
   # результат воспроизводим на любой машине.

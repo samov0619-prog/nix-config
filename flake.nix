@@ -270,6 +270,7 @@
             ./home/core-set/treesitter.nix
             ./home/core-set/devtools/github.nix
             ./home/modules/voice-dictate
+            ./home/modules/kitty
           ];
         };
       };

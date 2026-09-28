@@ -56,6 +56,41 @@ in
         '')
       ];
     })
+    (lib.mkIf cfg.enable {
+      home.packages = [
+        (pkgs.writeShellScriptBin "hypr-controls" ''
+          #!${pkgs.runtimeShell}
+
+          printf '%s\n' '
+          HYPRLAND CONTROLS
+
+          F1                  this help
+          Super+M             fullscreen
+          Super+F             focus floating window
+          Super+Shift+F       focus tiled window
+          Super+G             toggle floating
+          Super+T             toggle Dwindle split
+          Super+P             toggle pseudotile
+          Super+,             new Kitty window
+          Super+N             new Kitty nvim window
+          Super+E             new Yazi window
+          Super+Shift+E       sudo Yazi window
+
+          Super+H/J/K/L       focus left/down/up/right
+          Super+Arrow         focus left/down/up/right
+          Super+Shift+H/J/K/L move active window
+          Super+LMB           move window with pointer
+
+          Super+1..0          switch workspace 1..10
+          Super+Shift+1..0    move window to workspace 1..10
+          Super+S             toggle special workspace
+          Super+Shift+S       move window to special workspace
+          Super+Mouse wheel   previous/next workspace
+          Touchpad 3-finger   switch workspace (laptop)
+          ' | tofi --prompt-text='Hyprland controls' >/dev/null || true
+        '')
+      ];
+    })
     (lib.mkIf (cfg.enable && cfg.sessionmenu.enable) {
       home.packages = [
         (pkgs.writeShellScriptBin "tofi-sessionmenu" ''
