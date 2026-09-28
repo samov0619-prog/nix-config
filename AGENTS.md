@@ -117,9 +117,9 @@ not import Disko.
 
 ### Kitty langmap
 
-- `home/modules/kitty/default.nix` генерирует `kitty.conf` через build-деривацию: `build.py` читает конфиг + `map.txt` и дублирует каждую `map`-строку с русской раскладкой.
+- `home/modules/kitty/default.nix` собирает version-matched template из ${pkgs.kitty} с common и Linux/macOS fragments, затем `build.py` дублирует каждую `map`-строку с русской раскладкой. Не возвращать полную snapshot-копию upstream `kitty.conf` в репозиторий.
 - `map.txt`: две строки — латиница и транслит (йцукен→qwerty).
-- Активные настройки в сгенерированном конфиге: Fish, 10k scrollback, nvim pager, font size 14, NotoSansM Nerd Font Mono, grid layout, remote control, powerline tabs.
+- Активные настройки в сгенерированном конфиге: Fish, 10k scrollback, nvim pager, font size 14, NotoSansM Nerd Font Mono, grid layout, remote control, powerline tabs. Linux сохраняет stock Kitty shortcuts; macOS `kitty_mod = Cmd+Shift`, `Cmd+N`/`kitty_mod+N` создают nvim tab, `Cmd+E` — Yazi, panes `kitty_mod+Left/Right`.
 
 ### Alacritty + toggle-theme
 
@@ -133,6 +133,12 @@ not import Disko.
 - Laptop: без compose:ralt (xremap перехватывает), есть `on_focus_under_fullscreen`.
 - Desktop: compose:ralt активен, есть `new_window_takes_over_fullscreen`.
 - Оба: dwindle, zero gaps/borders, UWSM autostart, waybar, terminal-layout-en.sh.
+
+### Window management policy
+
+- Не добавлять manual resize bindings или resize-by-mouse: workflow использует Dwindle без ручной подгонки размеров. Fullscreen и app maximize policy сохраняются.
+- Основные window controls: `Super+T` (Dwindle split), `Super+F`/`Super+Shift+F` (floating/tiled focus), `Super(+Shift)+HJKL`, workspaces и переносы между ними. Laptop: horizontal three-finger touchpad swipe переключает workspace.
+- `F1` открывает read-only `hypr-controls` через Tofi; поддерживать его список в соответствии с фактическими bind-ами laptop/desktop.
 
 ### Minecraft server
 
@@ -227,9 +233,6 @@ not import Disko.
 
 ## Полезные команды
 
-## Применение конфигурации
-
-**Никогда не запускай `nixos-rebuild switch` или `home-manager switch`.**
 ## Обновление flake и конфигураций
 
 `nix-flake-update-verify` — декларативная команда из `home/core-set`.
@@ -287,6 +290,9 @@ FAILED: phase=build; input=nixpkgs; host=laptop; output=home-manager; exit=1
 
 Команда не делает switch, Git commit или автоматический rollback.
 
+## Применение конфигурации
+
+**Никогда не запускай `nixos-rebuild switch` или `home-manager switch`.**
 Пользователь применяет системную и Home Manager-конфигурацию самостоятельно
 после личной проверки. Для проверки агент может выполнять только evaluation
 или build без активации, например `nix eval` или `nix build`.
