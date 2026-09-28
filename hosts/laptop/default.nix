@@ -88,8 +88,8 @@
   # The daemon invokes iptables, ip6tables, and awk for its firewall rules.
   systemd.services.AmneziaVPN.path = lib.mkAfter [ pkgs.iptables pkgs.gawk ];
 
-  warnings = lib.optional (lib.versionOlder pkgs.amnezia-vpn.version pkgsUnstable.amnezia-vpn.version) ''
-    A newer nixpkgs-unstable AmneziaVPN (${pkgsUnstable.amnezia-vpn.version}) is available than the local ${pkgs.amnezia-vpn.version}; verify its AWG backend and service PATH before removing the local override.
+  warnings = lib.optional (lib.versionAtLeast pkgsUnstable.amnezia-vpn.version "5.0.3.1") ''
+    A newer nixpkgs-unstable AmneziaVPN (${pkgsUnstable.amnezia-vpn.version}) is available after the broken Linux 5.0.3.0 test. Before replacing the local ${pkgs.amnezia-vpn.version} override, verify that upstream PR #2840 (dual-stack IPv4 address assignment) and #3231 (Linux endpoint-route handling) are included, then build and connection-test the package.
   '';
 
   nixpkgs.config.allowUnfree = true;
