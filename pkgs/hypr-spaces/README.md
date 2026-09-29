@@ -6,24 +6,24 @@ separate upstream flake or `hyprpm` runtime build.
 
 ## Product contract
 
-- `Super+Space` opens a fit-all canvas of regular workspaces on the current
-  monitor.
-- Every workspace is a scaled copy of its real work area. Tiled geometry is
-  preserved; floating windows remain above tiled windows.
-- A pseudotiled window keeps its visible fixed size and also shows a muted tile
-  slot frame.
-- `special:magic` is represented separately from numbered workspaces.
+- `Super+Space` opens a fit-all canvas of numeric regular-workspace slots on
+  the current monitor. If the highest existing regular workspace is `N`, the
+  canvas contains every slot from `1` through `N`, in numeric order.
+- Every slot is a scaled copy of the monitor work area. Layer-shell background
+  and bottom-layer wallpaper surfaces are included; there is no fallback
+  background renderer. Empty slots remain visible and can be selected; `Enter`
+  switches to (and creates, if needed) the selected ID on the canvas monitor.
+  Tiled geometry is preserved; floating windows remain above tiled windows.
 - Previews are compositor-side live surfaces, not screenshots.
-- Search highlights matching workspace numbers, window titles, classes,
-  foreground terminal processes, and working directories without rebuilding
-  the canvas.
 - `H`, `J`, `K`, `L` move through the grid with horizontal and vertical wrap.
-  Vertical moves keep their exact column; a missing slot in a short row wraps
-  to the outer row in the direction of travel. `Enter` commits focus, `Escape` closes,
-  `Space` restores fit-all, and wheel/`+`/`-` zoom around the selection.
+  Vertical moves keep their exact column but never cross a missing column between
+  a short row and a long row, in either direction. This deliberately simple,
+  experimental policy may be replaced by a smarter scheme. `Enter` commits
+  focus and `Escape` closes.
 - `Enter` activates on key release intentionally. This experimental input
   policy is retained to compare with press activation later.
 
-The first MVP renders a live, scaled active workspace with opaque backdrop and
-swallows keyboard/pointer input until Escape closes it. It is loaded
-declaratively by the Linux Hyprland module.
+Pseudotile tile frames, special-workspace cards, search, and zoom are planned,
+not implemented. The canvas has an opaque backdrop and swallows keyboard and
+pointer input until Escape closes it. It is loaded declaratively by the Linux
+Hyprland module.

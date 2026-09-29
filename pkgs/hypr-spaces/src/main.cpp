@@ -1,7 +1,9 @@
 #include <hyprland/src/devices/IKeyboard.hpp>
 #include <hyprland/src/devices/IPointer.hpp>
 #include <hyprland/src/Compositor.hpp>
+#include <hyprland/src/config/shared/actions/ConfigActions.hpp>
 #include <hyprland/src/desktop/Workspace.hpp>
+#include <hyprland/src/desktop/view/LayerSurface.hpp>
 #include <hyprland/src/desktop/view/Window.hpp>
 #include <hyprland/src/event/EventBus.hpp>
 #include <hyprland/src/helpers/memory/Memory.hpp>
@@ -28,6 +30,7 @@ CHyprSignalListener   g_renderHook;
 CHyprSignalListener   g_keyboardHook;
 CHyprSignalListener   g_mouseButtonHook;
 CHyprSignalListener   g_mouseAxisHook;
+CHyprSignalListener   g_mouseMoveHook;
 
 struct SCameraState {
     float    currentScale = 1.F;
@@ -50,7 +53,6 @@ int                         g_selectedWorkspaceID = 0;
 int                         g_pendingWorkspaceID = 0;
 int                         g_gridRows = 0;
 int                         g_gridColumns = 0;
-int                         g_workspaceToCloseAfterRender = 0;
 
 void resetCamera() {
     g_camera = {};
@@ -70,7 +72,6 @@ void close() {
     g_pendingWorkspaceID = 0;
     g_gridRows = 0;
     g_gridColumns = 0;
-    g_workspaceToCloseAfterRender = 0;
     resetCamera();
     damage();
 }
@@ -86,9 +87,10 @@ void selectCard(int columnDirection, int rowDirection) {
         column = (column + columnDirection + g_rowColumns[row]) % g_rowColumns[row];
     } else if (rowDirection) {
         const int adjacentRow = (row + rowDirection + g_gridRows) % g_gridRows;
-        // Do not shift columns for a short row. A missing slot wraps to the
-        // outer row in the direction of travel instead.
-        row = column < g_rowColumns[adjacentRow] ? adjacentRow : (rowDirection > 0 ? 0 : g_gridRows - 1);
+        // Never cross a missing slot between a short row and a long row.
+        if (column >= g_rowColumns[adjacentRow])
+            return;
+        row = adjacentRow;
     }
 
     const auto destination = std::ranges::find_if(g_cards, [row, column](const auto& card) {
@@ -145,6 +147,51 @@ void renderWindow(PHLWINDOW window, PHLMONITOR monitor, float scale, const Vecto
     g_pHyprRenderer->m_renderPass.add(makeUnique<CRendererHintsPassElement>(CRendererHintsPassElement::SData{.renderModif = Render::SRenderModifData{}}));
 }
 
+void renderLayer(PHLLS layer, PHLMONITOR monitor, const CBox& box, const CBox& clipBox, const Time::steady_tp& time) {
+    if (!layer || !layer->m_mapped || layer->m_readyToDelete || !layer->m_layerSurface || !layer->wlSurface() || !layer->wlSurface()->resource())
+        return;
+
+    const auto position = layer->m_realPosition->value();
+    const auto size = layer->m_realSize->value();
+    const float scale = box.w / size.x;
+    if (!(scale > 0.F) || size.x < 1 || size.y < 1)
+        return;
+
+    Render::SRenderModifData transform;
+    transform.enabled = true;
+    transform.modifs.push_back({Render::SRenderModifData::eRenderModifType::RMOD_TYPE_TRANSLATE, std::any(monitor->m_position + box.pos() / scale - position)});
+    transform.modifs.push_back({Render::SRenderModifData::eRenderModifType::RMOD_TYPE_SCALE, std::any(scale)});
+    g_pHyprRenderer->m_renderPass.add(makeUnique<CRendererHintsPassElement>(CRendererHintsPassElement::SData{.renderModif = transform}));
+
+    CSurfacePassElement::SRenderData data = {monitor, time, position};
+    data.pos = position;
+    data.w = size.x;
+    data.h = size.y;
+    data.surface = layer->wlSurface()->resource();
+    data.pLS = layer;
+    data.clipBox = clipBox;
+    data.decorate = false;
+    data.blur = false;
+    data.alpha = 1.F;
+    data.fadeAlpha = 1.F;
+    data.surfaceCounter = 0;
+
+    layer->wlSurface()->resource()->breadthfirst(
+        [&data, &layer](SP<CWLSurfaceResource> surface, const Vector2D& offset, void*) {
+            if (!surface || !surface->m_current.texture || surface->m_current.size.x < 1 || surface->m_current.size.y < 1)
+                return;
+            data.localPos = offset;
+            data.texture = surface->m_current.texture;
+            data.surface = surface;
+            data.mainSurface = surface == layer->wlSurface()->resource();
+            g_pHyprRenderer->m_renderPass.add(makeUnique<CSurfacePassElement>(data));
+            data.surfaceCounter++;
+        },
+        &data);
+
+    g_pHyprRenderer->m_renderPass.add(makeUnique<CRendererHintsPassElement>(CRendererHintsPassElement::SData{.renderModif = Render::SRenderModifData{}}));
+}
+
 void render() {
     if (!g_open || !g_monitor || g_pHyprRenderer->m_renderData.pMonitor != g_monitor)
         return;
@@ -155,14 +202,14 @@ void render() {
     backdrop.color = CHyprColor(0.02F, 0.03F, 0.05F, 1.F);
     g_pHyprRenderer->m_renderPass.add(makeUnique<CRectPassElement>(backdrop));
 
-    std::vector<PHLWORKSPACE> workspaces;
+    int highestWorkspaceID = 0;
     for (const auto& workspaceRef : g_pCompositor->getWorkspaces()) {
         const auto workspace = workspaceRef.lock();
         if (workspace && workspace->m_id > 0 && workspace->m_monitor.lock() == g_monitor)
-            workspaces.emplace_back(workspace);
+            highestWorkspaceID = std::max(highestWorkspaceID, static_cast<int>(workspace->m_id));
     }
 
-    if (workspaces.empty()) {
+    if (highestWorkspaceID == 0) {
         g_cards.clear();
         g_rowColumns.clear();
         g_gridRows = 0;
@@ -170,6 +217,15 @@ void render() {
         g_selectedWorkspaceID = 0;
         damage();
         return;
+    }
+
+    // Slots are numbered rather than enumerated so their positions do not change
+    // when Hyprland creates or destroys an otherwise empty workspace.
+    std::vector<PHLWORKSPACE> workspaces(highestWorkspaceID);
+    for (const auto& workspaceRef : g_pCompositor->getWorkspaces()) {
+        const auto workspace = workspaceRef.lock();
+        if (workspace && workspace->m_id > 0 && workspace->m_id <= highestWorkspaceID && workspace->m_monitor.lock() == g_monitor)
+            workspaces[workspace->m_id - 1] = workspace;
     }
 
     constexpr float padding = 48.F;
@@ -208,7 +264,7 @@ void render() {
         const Vector2D unscaledOrigin = gridOrigin + Vector2D{column * (cardSize.x + gap), row * (cardSize.y + gap)};
         const Vector2D cardOrigin = g_monitor->m_transformedSize / 2.F +
             (unscaledOrigin - g_monitor->m_transformedSize / 2.F) * g_camera.currentScale + g_camera.currentOffset;
-        g_cards.emplace_back(workspaces[index]->m_id, CBox{cardOrigin, cardSize * g_camera.currentScale}, row, column);
+        g_cards.emplace_back(static_cast<int>(index) + 1, CBox{cardOrigin, cardSize * g_camera.currentScale}, row, column);
     }
 
     if (std::ranges::find(g_cards, g_selectedWorkspaceID, &SWorkspaceCard::workspaceID) == g_cards.end())
@@ -222,9 +278,9 @@ void render() {
 
         CRectPassElement::SRectData cardBackground;
         cardBackground.box = cardBox;
-        if (workspaces[index]->m_id == g_selectedWorkspaceID)
+        if (g_cards[index].workspaceID == g_selectedWorkspaceID)
             cardBackground.color = CHyprColor(0.42F, 0.12F, 0.62F, 1.F);
-        else if (workspaces[index] == g_monitor->m_activeWorkspace)
+        else if (g_cards[index].workspaceID == (g_monitor->m_activeWorkspace ? g_monitor->m_activeWorkspace->m_id : 0))
             cardBackground.color = CHyprColor(0.10F, 0.35F, 0.14F, 1.F);
         else
             cardBackground.color = CHyprColor(0.12F, 0.15F, 0.20F, 1.F);
@@ -236,6 +292,24 @@ void render() {
         g_pHyprRenderer->m_renderPass.add(makeUnique<CRectPassElement>(previewBackground));
 
         const float scale = previewBox.w / g_monitor->m_transformedSize.x;
+        for (const auto& layerRef : g_monitor->m_layerSurfaceLayers[0]) {
+            const auto layer = layerRef.lock();
+            if (layer) {
+                const CBox layerBox = {previewBox.pos() + (layer->m_realPosition->value() - g_monitor->m_position) * g_monitor->m_scale * scale,
+                                       layer->m_realSize->value() * g_monitor->m_scale * scale};
+                renderLayer(layer, g_monitor, layerBox, previewBox, time);
+            }
+        }
+        for (const auto& layerRef : g_monitor->m_layerSurfaceLayers[1]) {
+            const auto layer = layerRef.lock();
+            if (layer) {
+                const CBox layerBox = {previewBox.pos() + (layer->m_realPosition->value() - g_monitor->m_position) * g_monitor->m_scale * scale,
+                                       layer->m_realSize->value() * g_monitor->m_scale * scale};
+                renderLayer(layer, g_monitor, layerBox, previewBox, time);
+            }
+        }
+        if (!workspaces[index])
+            continue;
         for (const auto& window : g_pCompositor->m_windows) {
             if (window && window->m_workspace == workspaces[index] && !window->m_isFloating) {
                 const auto position = window->m_realPosition->value() + window->m_floatingOffset;
@@ -252,12 +326,6 @@ void render() {
         }
     }
     damage();
-
-    // This hook runs after Hyprland has rendered the target workspace. Keep the
-    // canvas over that frame, then reveal it on the following damaged frame.
-    if (g_workspaceToCloseAfterRender && g_monitor->m_activeWorkspace &&
-        g_monitor->m_activeWorkspace->m_id == g_workspaceToCloseAfterRender)
-        close();
 }
 
 SDispatchResult toggle(std::string) {
@@ -273,7 +341,6 @@ SDispatchResult toggle(std::string) {
         g_cards.clear();
         g_rowColumns.clear();
         g_selectedWorkspaceID = g_monitor->m_activeWorkspace ? g_monitor->m_activeWorkspace->m_id : 0;
-        g_workspaceToCloseAfterRender = 0;
         resetCamera();
         damage();
     }
@@ -315,8 +382,11 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
             if (event.keycode == KEY_ENTER && event.state == WL_KEYBOARD_KEY_STATE_RELEASED && g_pendingWorkspaceID > 0) {
                 const int workspaceID = g_pendingWorkspaceID;
                 g_pendingWorkspaceID = 0;
-                g_monitor->changeWorkspace(workspaceID);
-                g_workspaceToCloseAfterRender = workspaceID;
+                // Hyprland creates an unknown numeric workspace on its focused
+                // monitor, which must remain the monitor that owns this canvas.
+                Config::Actions::focusMonitor(g_monitor);
+                HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + std::to_string(workspaceID));
+                close();
                 damage();
             }
             return;
@@ -347,6 +417,9 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     g_mouseAxisHook = Event::bus()->m_events.input.mouse.axis.listen([](const IPointer::SAxisEvent&, Event::SCallbackInfo& info) {
         info.cancelled = g_open;
     });
+    g_mouseMoveHook = Event::bus()->m_events.input.mouse.move.listen([](const Vector2D&, Event::SCallbackInfo& info) {
+        info.cancelled = g_open;
+    });
     return {"hypr-spaces", "Live workspace canvas", "samov", "0.0.0"};
 }
 
@@ -355,5 +428,6 @@ APICALL EXPORT void PLUGIN_EXIT() {
     g_keyboardHook.reset();
     g_mouseButtonHook.reset();
     g_mouseAxisHook.reset();
+    g_mouseMoveHook.reset();
     close();
 }
