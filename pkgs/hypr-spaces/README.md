@@ -17,9 +17,12 @@ separate upstream flake or `hyprpm` runtime build.
 - Search highlights matching workspace numbers, window titles, classes,
   foreground terminal processes, and working directories without rebuilding
   the canvas.
-- `H`, `J`, `K`, `L` select the nearest preview in that direction. `Enter`
-  commits focus, `Escape` closes, `Space` restores fit-all, and wheel/`+`/`-`
-  zoom around the selection.
+- `H`, `J`, `K`, `L` move through the grid with horizontal and vertical wrap.
+  Vertical moves keep their exact column; a missing slot in a short row wraps
+  to the outer row in the direction of travel. `Enter` commits focus, `Escape` closes,
+  `Space` restores fit-all, and wheel/`+`/`-` zoom around the selection.
+- `Enter` activates on key release intentionally. This experimental input
+  policy is retained to compare with press activation later.
 
 The first MVP renders a live, scaled active workspace with opaque backdrop and
 swallows keyboard/pointer input until Escape closes it. It is loaded

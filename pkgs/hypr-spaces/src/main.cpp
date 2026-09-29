@@ -16,7 +16,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
 #include <vector>
 
 namespace {
@@ -46,8 +45,12 @@ struct SWorkspaceCard {
 
 SCameraState                g_camera;
 std::vector<SWorkspaceCard> g_cards;
+std::vector<int>            g_rowColumns;
 int                         g_selectedWorkspaceID = 0;
 int                         g_pendingWorkspaceID = 0;
+int                         g_gridRows = 0;
+int                         g_gridColumns = 0;
+int                         g_workspaceToCloseAfterRender = 0;
 
 void resetCamera() {
     g_camera = {};
@@ -62,34 +65,37 @@ void close() {
     g_open = false;
     g_pendingOpenerSpaceRelease = false;
     g_cards.clear();
+    g_rowColumns.clear();
     g_selectedWorkspaceID = 0;
     g_pendingWorkspaceID = 0;
+    g_gridRows = 0;
+    g_gridColumns = 0;
+    g_workspaceToCloseAfterRender = 0;
     resetCamera();
     damage();
 }
 
-void selectNearestCard(int columnDirection, int rowDirection) {
+void selectCard(int columnDirection, int rowDirection) {
     const auto selected = std::ranges::find(g_cards, g_selectedWorkspaceID, &SWorkspaceCard::workspaceID);
-    if (selected == g_cards.end())
+    if (selected == g_cards.end() || g_gridRows == 0 || g_rowColumns.empty())
         return;
 
-    const Vector2D selectedCenter = selected->box.middle();
-    const SWorkspaceCard* nearest = nullptr;
-    float nearestDistance = std::numeric_limits<float>::max();
-    for (const auto& card : g_cards) {
-        const Vector2D delta = card.box.middle() - selectedCenter;
-        if ((columnDirection && delta.x * columnDirection <= 0.F) || (rowDirection && delta.y * rowDirection <= 0.F))
-            continue;
-
-        const float distance = delta.x * delta.x + delta.y * delta.y;
-        if (distance < nearestDistance) {
-            nearest = &card;
-            nearestDistance = distance;
-        }
+    int row = selected->row;
+    int column = selected->column;
+    if (columnDirection) {
+        column = (column + columnDirection + g_rowColumns[row]) % g_rowColumns[row];
+    } else if (rowDirection) {
+        const int adjacentRow = (row + rowDirection + g_gridRows) % g_gridRows;
+        // Do not shift columns for a short row. A missing slot wraps to the
+        // outer row in the direction of travel instead.
+        row = column < g_rowColumns[adjacentRow] ? adjacentRow : (rowDirection > 0 ? 0 : g_gridRows - 1);
     }
 
-    if (nearest) {
-        g_selectedWorkspaceID = nearest->workspaceID;
+    const auto destination = std::ranges::find_if(g_cards, [row, column](const auto& card) {
+        return card.row == row && card.column == column;
+    });
+    if (destination != g_cards.end()) {
+        g_selectedWorkspaceID = destination->workspaceID;
         damage();
     }
 }
@@ -158,6 +164,9 @@ void render() {
 
     if (workspaces.empty()) {
         g_cards.clear();
+        g_rowColumns.clear();
+        g_gridRows = 0;
+        g_gridColumns = 0;
         g_selectedWorkspaceID = 0;
         damage();
         return;
@@ -189,6 +198,10 @@ void render() {
 
     g_cards.clear();
     g_cards.reserve(workspaces.size());
+    g_gridRows = rows;
+    g_gridColumns = columns;
+    g_rowColumns.assign(rows, columns);
+    g_rowColumns.back() = static_cast<int>(workspaces.size()) - (rows - 1) * columns;
     for (size_t index = 0; index < workspaces.size(); index++) {
         const int column = index % columns;
         const int row = index / columns;
@@ -239,6 +252,12 @@ void render() {
         }
     }
     damage();
+
+    // This hook runs after Hyprland has rendered the target workspace. Keep the
+    // canvas over that frame, then reveal it on the following damaged frame.
+    if (g_workspaceToCloseAfterRender && g_monitor->m_activeWorkspace &&
+        g_monitor->m_activeWorkspace->m_id == g_workspaceToCloseAfterRender)
+        close();
 }
 
 SDispatchResult toggle(std::string) {
@@ -252,7 +271,9 @@ SDispatchResult toggle(std::string) {
         g_open = true;
         g_pendingOpenerSpaceRelease = true;
         g_cards.clear();
+        g_rowColumns.clear();
         g_selectedWorkspaceID = g_monitor->m_activeWorkspace ? g_monitor->m_activeWorkspace->m_id : 0;
+        g_workspaceToCloseAfterRender = 0;
         resetCamera();
         damage();
     }
@@ -295,23 +316,24 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
                 const int workspaceID = g_pendingWorkspaceID;
                 g_pendingWorkspaceID = 0;
                 g_monitor->changeWorkspace(workspaceID);
-                close();
+                g_workspaceToCloseAfterRender = workspaceID;
+                damage();
             }
             return;
         }
 
         switch (event.keycode) {
             case KEY_H:
-                selectNearestCard(-1, 0);
+                selectCard(-1, 0);
                 break;
             case KEY_J:
-                selectNearestCard(0, 1);
+                selectCard(0, 1);
                 break;
             case KEY_K:
-                selectNearestCard(0, -1);
+                selectCard(0, -1);
                 break;
             case KEY_L:
-                selectNearestCard(1, 0);
+                selectCard(1, 0);
                 break;
             case KEY_ENTER:
                 if (g_selectedWorkspaceID > 0)
