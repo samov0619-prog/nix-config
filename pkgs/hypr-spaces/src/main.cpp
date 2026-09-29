@@ -1,6 +1,7 @@
 #include <hyprland/src/devices/IKeyboard.hpp>
 #include <hyprland/src/devices/IPointer.hpp>
 #include <hyprland/src/Compositor.hpp>
+#include <hyprland/src/desktop/Workspace.hpp>
 #include <hyprland/src/desktop/view/Window.hpp>
 #include <hyprland/src/event/EventBus.hpp>
 #include <hyprland/src/helpers/memory/Memory.hpp>
@@ -12,6 +13,10 @@
 #include <hyprland/src/render/pass/RendererHintsPassElement.hpp>
 #include <hyprland/src/render/pass/SurfacePassElement.hpp>
 #include <linux/input-event-codes.h>
+
+#include <algorithm>
+#include <cmath>
+#include <vector>
 
 namespace {
 
@@ -88,19 +93,74 @@ void render() {
     backdrop.color = CHyprColor(0.02F, 0.03F, 0.05F, 1.F);
     g_pHyprRenderer->m_renderPass.add(makeUnique<CRectPassElement>(backdrop));
 
-    constexpr float padding = 64.F;
-    const float scale = std::min((g_monitor->m_transformedSize.x - 2 * padding) / g_monitor->m_transformedSize.x,
-                                 (g_monitor->m_transformedSize.y - 2 * padding) / g_monitor->m_transformedSize.y);
-    const Vector2D previewSize = g_monitor->m_transformedSize * scale;
-    const Vector2D origin = (g_monitor->m_transformedSize - previewSize) / 2.F;
-
-    for (const auto& window : g_pCompositor->m_windows) {
-        if (window && window->m_workspace == g_monitor->m_activeWorkspace && !window->m_isFloating)
-            renderWindow(window, g_monitor, scale, origin, fullMonitor, Time::steadyNow());
+    std::vector<PHLWORKSPACE> workspaces;
+    for (const auto& workspaceRef : g_pCompositor->getWorkspaces()) {
+        const auto workspace = workspaceRef.lock();
+        if (workspace && workspace->m_id > 0 && workspace->m_monitor.lock() == g_monitor)
+            workspaces.emplace_back(workspace);
     }
-    for (const auto& window : g_pCompositor->m_windows) {
-        if (window && window->m_workspace == g_monitor->m_activeWorkspace && window->m_isFloating)
-            renderWindow(window, g_monitor, scale, origin, fullMonitor, Time::steadyNow());
+
+    if (workspaces.empty()) {
+        damage();
+        return;
+    }
+
+    constexpr float padding = 48.F;
+    constexpr float gap = 24.F;
+    constexpr float border = 2.F;
+    const Vector2D canvasSize = g_monitor->m_transformedSize - Vector2D{2 * padding, 2 * padding};
+    const float aspect = g_monitor->m_transformedSize.x / g_monitor->m_transformedSize.y;
+
+    int columns = 1;
+    float cardWidth = 0.F;
+    for (int candidate = 1; candidate <= static_cast<int>(workspaces.size()); candidate++) {
+        const int rows = static_cast<int>(std::ceil(static_cast<float>(workspaces.size()) / candidate));
+        const float width = std::min((canvasSize.x - gap * (candidate - 1)) / candidate,
+                                     ((canvasSize.y - gap * (rows - 1)) / rows) * aspect);
+        if (width > cardWidth) {
+            columns = candidate;
+            cardWidth = width;
+        }
+    }
+
+    const int rows = static_cast<int>(std::ceil(static_cast<float>(workspaces.size()) / columns));
+    const Vector2D cardSize = {cardWidth, cardWidth / aspect};
+    const Vector2D gridSize = {columns * cardSize.x + (columns - 1) * gap, rows * cardSize.y + (rows - 1) * gap};
+    const Vector2D gridOrigin = (g_monitor->m_transformedSize - gridSize) / 2.F;
+    const auto time = Time::steadyNow();
+
+    for (size_t index = 0; index < workspaces.size(); index++) {
+        const int column = index % columns;
+        const int row = index / columns;
+        const Vector2D cardOrigin = gridOrigin + Vector2D{column * (cardSize.x + gap), row * (cardSize.y + gap)};
+        const CBox cardBox = {cardOrigin, cardSize};
+        const CBox previewBox = {cardOrigin + Vector2D{border, border}, cardSize - Vector2D{2 * border, 2 * border}};
+
+        CRectPassElement::SRectData cardBackground;
+        cardBackground.box = cardBox;
+        cardBackground.color = CHyprColor(0.12F, 0.15F, 0.20F, 1.F);
+        g_pHyprRenderer->m_renderPass.add(makeUnique<CRectPassElement>(cardBackground));
+
+        CRectPassElement::SRectData previewBackground;
+        previewBackground.box = previewBox;
+        previewBackground.color = CHyprColor(0.04F, 0.06F, 0.09F, 1.F);
+        g_pHyprRenderer->m_renderPass.add(makeUnique<CRectPassElement>(previewBackground));
+
+        const float scale = previewBox.w / g_monitor->m_transformedSize.x;
+        for (const auto& window : g_pCompositor->m_windows) {
+            if (window && window->m_workspace == workspaces[index] && !window->m_isFloating) {
+                const auto position = window->m_realPosition->value() + window->m_floatingOffset;
+                const Vector2D target = previewBox.pos() + (position - g_monitor->m_position) * g_monitor->m_scale * scale;
+                renderWindow(window, g_monitor, scale, target, previewBox, time);
+            }
+        }
+        for (const auto& window : g_pCompositor->m_windows) {
+            if (window && window->m_workspace == workspaces[index] && window->m_isFloating) {
+                const auto position = window->m_realPosition->value() + window->m_floatingOffset;
+                const Vector2D target = previewBox.pos() + (position - g_monitor->m_position) * g_monitor->m_scale * scale;
+                renderWindow(window, g_monitor, scale, target, previewBox, time);
+            }
+        }
     }
     damage();
 }
