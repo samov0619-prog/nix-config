@@ -146,12 +146,14 @@ in
 
     # Скилл — просто markdown, node_modules не нужен → оставляем через модуль.
     skills.rlm = ./rlm-skill.md; # → ~/.config/opencode/skills/rlm/SKILL.md
+    skills.git-regression-rollback = ./git-regression-rollback-skill.md;
   };
 
   # tools/plugin ставим НАПРЯМУЮ (каталог с node_modules/zod), а не через
   # programs.opencode.tools: тот принимает либо path-литерал, либо attrs, а derivation
   # он ошибочно примет за attrs и развалится.
   xdg.configFile."opencode/tools".source = withZod "rlm" ./rlm-tool.ts;
+  xdg.configFile."opencode/AGENTS.md".source = ./AGENTS.md;
   xdg.configFile."opencode/plugin" = lib.mkIf rlmRecursive {
     source = pluginDirectory;
   };
