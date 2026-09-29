@@ -1,9 +1,30 @@
 {
   lib,
   config,
+  pkgs,
   ...
 }:
+let
+  hyprSpaces = pkgs.callPackage ../../../../pkgs/hypr-spaces { };
+  semanticSwitcher = pkgs.writeShellApplication {
+    name = "hypr-semantic-switcher";
+    runtimeInputs = [ pkgs.hyprland pkgs.python3 ];
+    text = ''
+      exec python3 ${./semantic-switcher.py} "$@"
+    '';
+  };
+  semanticSwitcherTofi = pkgs.writeShellApplication {
+    name = "hypr-semantic-switcher-tofi";
+    runtimeInputs = [ pkgs.tofi semanticSwitcher ];
+    text = ''
+      selection=$(hypr-semantic-switcher menu | tofi --prompt-text="Switch: ") || exit 0
+      exec hypr-semantic-switcher activate "$selection"
+    '';
+  };
+in
 {
+  home.packages = [ semanticSwitcher semanticSwitcherTofi ];
+
   wayland.windowManager.hyprland = {
     enable = true;
     systemd.enable = false;
@@ -26,6 +47,10 @@
     source = ./scripts/toggle-theme.sh;
     executable = true;
   };
+
+  xdg.configFile."hypr/hypr-spaces.conf".text = ''
+    plugin = ${hyprSpaces}/lib/libhypr-spaces.so
+  '';
 
   xdg.configFile."hypr/scripts/terminal-layout-en.sh" = {
     source = ./scripts/terminal-layout-en.sh;
