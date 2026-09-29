@@ -128,6 +128,9 @@
       };
     in
     {
+      packages.x86_64-linux.hypr-spaces =
+        (pkgsFor systems.linux [ ]).callPackage ./pkgs/hypr-spaces { };
+
       overlays = {
         amnezia-vpn = final: prev: {
           amnezia-vpn = final.callPackage ./pkgs/amnezia-vpn { };

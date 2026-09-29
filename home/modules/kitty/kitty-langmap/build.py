@@ -15,7 +15,9 @@ with open(config_path) as f:
 
 out = []
 for line in lines:
-    if ' map ' not in line or line.startswith('#::'):
+    # Upstream's template documents many platform-specific bindings as
+    # comments. They are examples, not mappings to enable.
+    if ' map ' not in line or line.lstrip().startswith('#'):
         out.append(line)
         continue
     parts = line.split(' ')
@@ -25,9 +27,6 @@ for line in lines:
     new_line = ''
     for i, part in enumerate(parts):
         new_line += (new_keys if i == ki else part) + ' '
-    if line.startswith('#'):
-        line = line[1:].strip() + '\n'
-        new_line = new_line[1:].strip() + '\n'
     out.append(line)
     out.append(new_line)
 
