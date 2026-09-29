@@ -16,17 +16,42 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <vector>
 
 namespace {
 
 bool                  g_open = false;
 bool                  g_swallowEscapeRelease = false;
+bool                  g_pendingOpenerSpaceRelease = false;
 PHLMONITOR            g_monitor;
 CHyprSignalListener   g_renderHook;
 CHyprSignalListener   g_keyboardHook;
 CHyprSignalListener   g_mouseButtonHook;
 CHyprSignalListener   g_mouseAxisHook;
+
+struct SCameraState {
+    float    currentScale = 1.F;
+    float    targetScale = 1.F;
+    Vector2D currentOffset;
+    Vector2D targetOffset;
+};
+
+struct SWorkspaceCard {
+    int   workspaceID = 0;
+    CBox  box;
+    int   row = 0;
+    int   column = 0;
+};
+
+SCameraState                g_camera;
+std::vector<SWorkspaceCard> g_cards;
+int                         g_selectedWorkspaceID = 0;
+int                         g_pendingWorkspaceID = 0;
+
+void resetCamera() {
+    g_camera = {};
+}
 
 void damage() {
     if (g_monitor)
@@ -35,7 +60,38 @@ void damage() {
 
 void close() {
     g_open = false;
+    g_pendingOpenerSpaceRelease = false;
+    g_cards.clear();
+    g_selectedWorkspaceID = 0;
+    g_pendingWorkspaceID = 0;
+    resetCamera();
     damage();
+}
+
+void selectNearestCard(int columnDirection, int rowDirection) {
+    const auto selected = std::ranges::find(g_cards, g_selectedWorkspaceID, &SWorkspaceCard::workspaceID);
+    if (selected == g_cards.end())
+        return;
+
+    const Vector2D selectedCenter = selected->box.middle();
+    const SWorkspaceCard* nearest = nullptr;
+    float nearestDistance = std::numeric_limits<float>::max();
+    for (const auto& card : g_cards) {
+        const Vector2D delta = card.box.middle() - selectedCenter;
+        if ((columnDirection && delta.x * columnDirection <= 0.F) || (rowDirection && delta.y * rowDirection <= 0.F))
+            continue;
+
+        const float distance = delta.x * delta.x + delta.y * delta.y;
+        if (distance < nearestDistance) {
+            nearest = &card;
+            nearestDistance = distance;
+        }
+    }
+
+    if (nearest) {
+        g_selectedWorkspaceID = nearest->workspaceID;
+        damage();
+    }
 }
 
 void renderWindow(PHLWINDOW window, PHLMONITOR monitor, float scale, const Vector2D& origin, const CBox& clipBox, const Time::steady_tp& time) {
@@ -101,6 +157,8 @@ void render() {
     }
 
     if (workspaces.empty()) {
+        g_cards.clear();
+        g_selectedWorkspaceID = 0;
         damage();
         return;
     }
@@ -129,16 +187,34 @@ void render() {
     const Vector2D gridOrigin = (g_monitor->m_transformedSize - gridSize) / 2.F;
     const auto time = Time::steadyNow();
 
+    g_cards.clear();
+    g_cards.reserve(workspaces.size());
     for (size_t index = 0; index < workspaces.size(); index++) {
         const int column = index % columns;
         const int row = index / columns;
-        const Vector2D cardOrigin = gridOrigin + Vector2D{column * (cardSize.x + gap), row * (cardSize.y + gap)};
-        const CBox cardBox = {cardOrigin, cardSize};
-        const CBox previewBox = {cardOrigin + Vector2D{border, border}, cardSize - Vector2D{2 * border, 2 * border}};
+        const Vector2D unscaledOrigin = gridOrigin + Vector2D{column * (cardSize.x + gap), row * (cardSize.y + gap)};
+        const Vector2D cardOrigin = g_monitor->m_transformedSize / 2.F +
+            (unscaledOrigin - g_monitor->m_transformedSize / 2.F) * g_camera.currentScale + g_camera.currentOffset;
+        g_cards.emplace_back(workspaces[index]->m_id, CBox{cardOrigin, cardSize * g_camera.currentScale}, row, column);
+    }
+
+    if (std::ranges::find(g_cards, g_selectedWorkspaceID, &SWorkspaceCard::workspaceID) == g_cards.end())
+        g_selectedWorkspaceID = g_monitor->m_activeWorkspace ? g_monitor->m_activeWorkspace->m_id : g_cards.front().workspaceID;
+    if (std::ranges::find(g_cards, g_selectedWorkspaceID, &SWorkspaceCard::workspaceID) == g_cards.end())
+        g_selectedWorkspaceID = g_cards.front().workspaceID;
+
+    for (size_t index = 0; index < workspaces.size(); index++) {
+        const CBox cardBox = g_cards[index].box;
+        const CBox previewBox = {cardBox.pos() + Vector2D{border, border}, Vector2D{cardBox.w, cardBox.h} - Vector2D{2 * border, 2 * border}};
 
         CRectPassElement::SRectData cardBackground;
         cardBackground.box = cardBox;
-        cardBackground.color = CHyprColor(0.12F, 0.15F, 0.20F, 1.F);
+        if (workspaces[index]->m_id == g_selectedWorkspaceID)
+            cardBackground.color = CHyprColor(0.42F, 0.12F, 0.62F, 1.F);
+        else if (workspaces[index] == g_monitor->m_activeWorkspace)
+            cardBackground.color = CHyprColor(0.10F, 0.35F, 0.14F, 1.F);
+        else
+            cardBackground.color = CHyprColor(0.12F, 0.15F, 0.20F, 1.F);
         g_pHyprRenderer->m_renderPass.add(makeUnique<CRectPassElement>(cardBackground));
 
         CRectPassElement::SRectData previewBackground;
@@ -170,9 +246,14 @@ SDispatchResult toggle(std::string) {
         close();
         return {};
     }
+    g_pendingOpenerSpaceRelease = false;
     g_monitor = g_pCompositor->getMonitorFromCursor();
     if (g_monitor) {
         g_open = true;
+        g_pendingOpenerSpaceRelease = true;
+        g_cards.clear();
+        g_selectedWorkspaceID = g_monitor->m_activeWorkspace ? g_monitor->m_activeWorkspace->m_id : 0;
+        resetCamera();
         damage();
     }
     return {};
@@ -198,10 +279,44 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
             }
             return;
         }
+        if (g_pendingOpenerSpaceRelease && event.keycode == KEY_SPACE && event.state == WL_KEYBOARD_KEY_STATE_RELEASED) {
+            g_pendingOpenerSpaceRelease = false;
+            return;
+        }
         info.cancelled = true;
         if (event.keycode == KEY_ESC && event.state == WL_KEYBOARD_KEY_STATE_PRESSED) {
             g_swallowEscapeRelease = true;
             close();
+            return;
+        }
+        if (event.state != WL_KEYBOARD_KEY_STATE_PRESSED)
+        {
+            if (event.keycode == KEY_ENTER && event.state == WL_KEYBOARD_KEY_STATE_RELEASED && g_pendingWorkspaceID > 0) {
+                const int workspaceID = g_pendingWorkspaceID;
+                g_pendingWorkspaceID = 0;
+                g_monitor->changeWorkspace(workspaceID);
+                close();
+            }
+            return;
+        }
+
+        switch (event.keycode) {
+            case KEY_H:
+                selectNearestCard(-1, 0);
+                break;
+            case KEY_J:
+                selectNearestCard(0, 1);
+                break;
+            case KEY_K:
+                selectNearestCard(0, -1);
+                break;
+            case KEY_L:
+                selectNearestCard(1, 0);
+                break;
+            case KEY_ENTER:
+                if (g_selectedWorkspaceID > 0)
+                    g_pendingWorkspaceID = g_selectedWorkspaceID;
+                break;
         }
     });
     g_mouseButtonHook = Event::bus()->m_events.input.mouse.button.listen([](const IPointer::SButtonEvent&, Event::SCallbackInfo& info) {

@@ -21,22 +21,9 @@ let
       exec hypr-semantic-switcher activate "$selection"
     '';
   };
-  hyprSpacesCapture = pkgs.writeShellApplication {
-    name = "hypr-spaces-capture";
-    runtimeInputs = [ pkgs.coreutils pkgs.grim pkgs.hyprland ];
-    text = ''
-      hyprctl dispatch spaces:toggle
-      sleep 0.2
-      number=1
-      while [ -e "$HOME/spaces_$number.png" ]; do
-        number=$((number + 1))
-      done
-      exec grim "$HOME/spaces_$number.png"
-    '';
-  };
 in
 {
-  home.packages = [ semanticSwitcher semanticSwitcherTofi hyprSpacesCapture ];
+  home.packages = [ semanticSwitcher semanticSwitcherTofi ];
 
   wayland.windowManager.hyprland = {
     enable = true;
