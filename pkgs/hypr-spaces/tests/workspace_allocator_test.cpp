@@ -16,6 +16,16 @@ const WorkspaceCard& card(const std::vector<WorkspaceCard>& cards, int id) {
     __builtin_unreachable();
 }
 
+const WorkspaceCard& tail(const std::vector<WorkspaceCard>& cards) {
+    const auto tails = std::count_if(cards.begin(), cards.end(), [](const auto& item) { return item.isTail; });
+    assert(tails == 1);
+    for (const auto& item : cards)
+        if (item.isTail)
+            return item;
+    assert(false);
+    __builtin_unreachable();
+}
+
 } // namespace
 
 int main() {
@@ -23,7 +33,7 @@ int main() {
 
     auto cards = allocateWorkspaceCards({{1, 10}, {3, 20}});
     assert(card(cards, 2).owner == 20 && !card(cards, 2).real);
-    assert(card(cards, 4).owner == 20 && !card(cards, 4).real);
+    assert(tail(cards).id == 4 && tail(cards).owner == 20 && !tail(cards).real);
 
     cards = allocateWorkspaceCards({{3, 20}, {10, 10}});
     assert(card(cards, 1).owner == 20 && !card(cards, 1).real);
@@ -34,7 +44,7 @@ int main() {
     for (int id = 1; id <= 33; ++id) assert(card(cards, id).owner == 10);
     for (int id = 34; id <= 66; ++id) assert(card(cards, id).owner == 30);
     for (int id = 67; id <= 100; ++id) assert(card(cards, id).owner == 20);
-    assert(card(cards, 101).owner == 20 && !card(cards, 101).real);
+    assert(tail(cards).id == 101 && tail(cards).owner == 20 && !tail(cards).real);
     assert(card(cards, 44).real && card(cards, 100).real);
 
     const auto inserted = allocateWorkspaceCards({{1, 10}, {44, 30}, {50, 30}, {100, 20}});
@@ -46,4 +56,5 @@ int main() {
     std::set<int> ids;
     for (const auto& item : inserted)
         assert(ids.insert(item.id).second);
+    assert(tail(inserted).id == 101);
 }

@@ -15,6 +15,7 @@
 #include <hyprland/src/render/pass/RectPassElement.hpp>
 #include <hyprland/src/render/pass/RendererHintsPassElement.hpp>
 #include <hyprland/src/render/pass/SurfacePassElement.hpp>
+#include <hyprland/src/render/pass/TexPassElement.hpp>
 #include <linux/input-event-codes.h>
 
 #include "monitor_layout.hpp"
@@ -24,6 +25,8 @@
 #include <algorithm>
 #include <cmath>
 #include <ranges>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace {
@@ -52,6 +55,7 @@ struct SWorkspaceCard {
     CBox  box;
     int   row = 0;
     int   column = 0;
+    bool  isTail = false;
 };
 
 struct SMonitorGroup {
@@ -86,6 +90,7 @@ SCameraState                g_camera;
 std::vector<SWorkspaceCard> g_cards;
 std::vector<int>            g_rowColumns;
 std::vector<SMonitorGroup>  g_groups;
+std::unordered_map<std::string, SP<Render::ITexture>> g_titleTextures;
 int                         g_selectedWorkspaceID = 0;
 int                         g_pendingWorkspaceID = 0;
 int                         g_gridRows = 0;
@@ -96,6 +101,11 @@ constexpr float GROUP_GAP = 96.F;
 constexpr float GROUP_PADDING = 48.F;
 constexpr float CARD_GAP = 24.F;
 constexpr float CARD_BORDER = 2.F;
+constexpr float CARD_TITLE_HEIGHT = 56.F;
+
+const CHyprColor WAYBAR_FOCUSED = CHyprColor(0.392F, 0.447F, 0.490F, 1.F); // #64727d
+const CHyprColor WAYBAR_VISIBLE = CHyprColor(0.502F, 0.502F, 0.502F, 1.F); // #808080
+const CHyprColor WAYBAR_TEXT = CHyprColor(1.F, 1.F, 1.F, 1.F);
 
 void resetCamera() {
     g_camera = {};
@@ -115,6 +125,57 @@ void damage() {
     for (const auto& monitor : g_pCompositor->m_realMonitors)
         if (monitor && monitor->m_enabled)
             g_pHyprRenderer->damageMonitor(monitor);
+}
+
+SP<Render::ITexture> titleTexture(const std::string& title, int pointSize) {
+    auto& texture = g_titleTextures[title + ":" + std::to_string(pointSize)];
+    if (!texture)
+        texture = g_pHyprRenderer->renderText(title, WAYBAR_TEXT, pointSize, false, "Noto Sans");
+    return texture;
+}
+
+void renderCardTitle(const CBox& cardBox, int workspaceID) {
+    const std::string title = std::to_string(workspaceID);
+    const auto texture = titleTexture(title, 26);
+    if (!texture)
+        return;
+
+    const float headerHeight = std::min(CARD_TITLE_HEIGHT, std::max(0.F, static_cast<float>(cardBox.h) - 2 * CARD_BORDER));
+    if (headerHeight < 2.F)
+        return;
+    const CBox headerBox = {cardBox.pos() + Vector2D{CARD_BORDER, CARD_BORDER}, {cardBox.w - 2 * CARD_BORDER, headerHeight}};
+    CRectPassElement::SRectData header{.box = headerBox, .color = CHyprColor(0.169F, 0.188F, 0.231F, 0.58F), .blur = true, .blurA = 0.58F};
+    g_pHyprRenderer->m_renderPass.add(makeUnique<CRectPassElement>(header));
+    CRectPassElement::SRectData headerBorder{.box = {Vector2D{headerBox.x, headerBox.y + headerBox.h - 1.F}, Vector2D{headerBox.w, 1.F}}, .color = CHyprColor(0.392F, 0.447F, 0.490F, 0.62F)};
+    g_pHyprRenderer->m_renderPass.add(makeUnique<CRectPassElement>(headerBorder));
+
+    CTexPassElement::SRenderData data;
+    data.tex = texture;
+    data.box = {cardBox.x + (cardBox.w - texture->m_size.x) / 2.F, headerBox.y + (headerBox.h - texture->m_size.y) / 2.F, texture->m_size.x, texture->m_size.y};
+    data.a = 1.F;
+    g_pHyprRenderer->m_renderPass.add(makeUnique<CTexPassElement>(std::move(data)));
+}
+
+void renderTailCrown(const CBox& cardBox) {
+    const float diameter = std::min(static_cast<float>(cardBox.w), static_cast<float>(cardBox.h)) * 0.45F;
+    const CBox circleBox = {{cardBox.x + (cardBox.w - diameter) / 2.F, cardBox.y + (cardBox.h - diameter) / 2.F}, {diameter, diameter}};
+    CRectPassElement::SRectData circle{.box = circleBox, .color = CHyprColor(0.169F, 0.188F, 0.231F, 0.58F), .round = static_cast<int>(diameter / 2.F)};
+    g_pHyprRenderer->m_renderPass.add(makeUnique<CRectPassElement>(circle));
+
+    const std::string title = "+";
+    const auto texture = titleTexture(title, static_cast<int>(diameter * 0.58F));
+    if (!texture)
+        return;
+
+    CTexPassElement::SRenderData data;
+    data.tex = texture;
+    data.box = {circleBox.x + (circleBox.w - texture->m_size.x) / 2.F, circleBox.y + (circleBox.h - texture->m_size.y) / 2.F, texture->m_size.x, texture->m_size.y};
+    data.a = 1.F;
+    g_pHyprRenderer->m_renderPass.add(makeUnique<CTexPassElement>(std::move(data)));
+}
+
+CBox previewBoxFor(const CBox& cardBox) {
+    return {cardBox.pos() + Vector2D{CARD_BORDER, CARD_BORDER}, cardBox.size() - Vector2D{2 * CARD_BORDER, 2 * CARD_BORDER}};
 }
 
 void zoom(float steps) {
@@ -283,16 +344,6 @@ void renderSingleMonitor() {
             highestWorkspaceID = std::max(highestWorkspaceID, static_cast<int>(workspace->m_id));
     }
 
-    if (highestWorkspaceID == 0) {
-        g_cards.clear();
-        g_rowColumns.clear();
-        g_gridRows = 0;
-        g_gridColumns = 0;
-        g_selectedWorkspaceID = 0;
-        damage();
-        return;
-    }
-
     // Slots are numbered rather than enumerated so their positions do not change
     // when Hyprland creates or destroys an otherwise empty workspace.
     std::vector<PHLWORKSPACE> workspaces(highestWorkspaceID);
@@ -304,14 +355,14 @@ void renderSingleMonitor() {
 
     constexpr float padding = 48.F;
     constexpr float gap = 24.F;
-    constexpr float border = 2.F;
     const Vector2D canvasSize = g_monitor->m_transformedSize - Vector2D{2 * padding, 2 * padding};
     const float aspect = g_monitor->m_transformedSize.x / g_monitor->m_transformedSize.y;
 
     int columns = 1;
     float cardWidth = 0.F;
-    for (int candidate = 1; candidate <= static_cast<int>(workspaces.size()); candidate++) {
-        const int rows = static_cast<int>(std::ceil(static_cast<float>(workspaces.size()) / candidate));
+    const int cardCount = highestWorkspaceID + 1;
+    for (int candidate = 1; candidate <= cardCount; candidate++) {
+        const int rows = static_cast<int>(std::ceil(static_cast<float>(cardCount) / candidate));
         const float width = std::min((canvasSize.x - gap * (candidate - 1)) / candidate,
                                      ((canvasSize.y - gap * (rows - 1)) / rows) * aspect);
         if (width > cardWidth) {
@@ -320,25 +371,25 @@ void renderSingleMonitor() {
         }
     }
 
-    const int rows = static_cast<int>(std::ceil(static_cast<float>(workspaces.size()) / columns));
+    const int rows = static_cast<int>(std::ceil(static_cast<float>(cardCount) / columns));
     const Vector2D cardSize = {cardWidth, cardWidth / aspect};
     const Vector2D gridSize = {columns * cardSize.x + (columns - 1) * gap, rows * cardSize.y + (rows - 1) * gap};
     const Vector2D gridOrigin = (g_monitor->m_transformedSize - gridSize) / 2.F;
     const auto time = Time::steadyNow();
 
     g_cards.clear();
-    g_cards.reserve(workspaces.size());
+    g_cards.reserve(cardCount);
     g_gridRows = rows;
     g_gridColumns = columns;
     g_rowColumns.assign(rows, columns);
-    g_rowColumns.back() = static_cast<int>(workspaces.size()) - (rows - 1) * columns;
-    for (size_t index = 0; index < workspaces.size(); index++) {
+    g_rowColumns.back() = cardCount - (rows - 1) * columns;
+    for (int index = 0; index < cardCount; index++) {
         const int column = index % columns;
         const int row = index / columns;
         const Vector2D unscaledOrigin = gridOrigin + Vector2D{column * (cardSize.x + gap), row * (cardSize.y + gap)};
         const Vector2D cardOrigin = g_monitor->m_transformedSize / 2.F +
             (unscaledOrigin - g_monitor->m_transformedSize / 2.F) * g_camera.currentScale + g_camera.currentOffset;
-        g_cards.emplace_back(static_cast<int>(index) + 1, CBox{cardOrigin, cardSize * g_camera.currentScale}, row, column);
+        g_cards.emplace_back(index + 1, CBox{cardOrigin, cardSize * g_camera.currentScale}, row, column, index == highestWorkspaceID);
     }
 
     if (std::ranges::find(g_cards, g_selectedWorkspaceID, &SWorkspaceCard::workspaceID) == g_cards.end())
@@ -346,16 +397,16 @@ void renderSingleMonitor() {
     if (std::ranges::find(g_cards, g_selectedWorkspaceID, &SWorkspaceCard::workspaceID) == g_cards.end())
         g_selectedWorkspaceID = g_cards.front().workspaceID;
 
-    for (size_t index = 0; index < workspaces.size(); index++) {
+    for (size_t index = 0; index < g_cards.size(); index++) {
         const CBox cardBox = g_cards[index].box;
-        const CBox previewBox = {cardBox.pos() + Vector2D{border, border}, Vector2D{cardBox.w, cardBox.h} - Vector2D{2 * border, 2 * border}};
+        const CBox previewBox = previewBoxFor(cardBox);
 
         CRectPassElement::SRectData cardBackground;
         cardBackground.box = cardBox;
         if (g_cards[index].workspaceID == g_selectedWorkspaceID)
-            cardBackground.color = CHyprColor(0.42F, 0.12F, 0.62F, 1.F);
+            cardBackground.color = WAYBAR_FOCUSED;
         else if (g_cards[index].workspaceID == (g_monitor->m_activeWorkspace ? g_monitor->m_activeWorkspace->m_id : 0))
-            cardBackground.color = CHyprColor(0.10F, 0.35F, 0.14F, 1.F);
+            cardBackground.color = WAYBAR_VISIBLE;
         else
             cardBackground.color = CHyprColor(0.12F, 0.15F, 0.20F, 1.F);
         g_pHyprRenderer->m_renderPass.add(makeUnique<CRectPassElement>(cardBackground));
@@ -376,8 +427,15 @@ void renderSingleMonitor() {
             if (layer)
                 renderLayer(layer, g_monitor, g_monitor, scale, previewBox.pos(), previewBox, time);
         }
-        if (!workspaces[index])
+        if (g_cards[index].isTail) {
+            renderTailCrown(cardBox);
             continue;
+        }
+        if (!workspaces[index])
+        {
+            renderCardTitle(cardBox, g_cards[index].workspaceID);
+            continue;
+        }
         for (const auto& window : g_pCompositor->m_windows) {
             if (window && window->m_workspace == workspaces[index] && !window->m_isFloating) {
                 renderWindow(window, g_monitor, g_monitor, scale, previewBox.pos(), previewBox, time);
@@ -388,6 +446,7 @@ void renderSingleMonitor() {
                 renderWindow(window, g_monitor, g_monitor, scale, previewBox.pos(), previewBox, time);
             }
         }
+        renderCardTitle(cardBox, g_cards[index].workspaceID);
     }
     damage();
 }
@@ -456,7 +515,7 @@ void rebuildGlobalCanvas() {
             return static_cast<int>(item.monitor->m_id) == allocated.owner;
         });
         if (group != g_groups.end())
-            group->cards.emplace_back(allocated.id, CBox{}, 0, 0);
+            group->cards.emplace_back(allocated.id, CBox{}, 0, 0, allocated.isTail);
     }
 
     for (auto& group : g_groups) {
@@ -554,12 +613,12 @@ void renderGlobalCanvas(PHLMONITOR output) {
 
         for (const auto& card : group.cards) {
             const CBox cardBox = screenBox(card.box, output);
-            const CBox previewBox = {cardBox.pos() + Vector2D{CARD_BORDER, CARD_BORDER}, cardBox.size() - Vector2D{2 * CARD_BORDER, 2 * CARD_BORDER}};
+            const CBox previewBox = previewBoxFor(cardBox);
             CRectPassElement::SRectData cardBackground{.box = cardBox, .color = CHyprColor(0.12F, 0.15F, 0.20F, 1.F)};
             if (group.monitor == g_monitor && card.workspaceID == g_selectedWorkspaceID)
-                cardBackground.color = CHyprColor(0.42F, 0.12F, 0.62F, 1.F);
+                cardBackground.color = WAYBAR_FOCUSED;
             else if (card.workspaceID == (group.monitor->m_activeWorkspace ? group.monitor->m_activeWorkspace->m_id : 0))
-                cardBackground.color = CHyprColor(0.10F, 0.35F, 0.14F, 1.F);
+                cardBackground.color = WAYBAR_VISIBLE;
             g_pHyprRenderer->m_renderPass.add(makeUnique<CRectPassElement>(cardBackground));
 
             CRectPassElement::SRectData previewBackground{.box = previewBox, .color = CHyprColor(0.04F, 0.06F, 0.09F, 1.F)};
@@ -571,10 +630,16 @@ void renderGlobalCanvas(PHLMONITOR output) {
                     if (const auto layer = layerRef.lock())
                         renderLayer(layer, group.monitor, output, sourcePxToPreviewPx, previewBox.pos(), previewBox, time);
 
+            if (card.isTail) {
+                renderTailCrown(cardBox);
+                continue;
+            }
+
             for (const bool floating : {false, true})
                 for (const auto& window : g_pCompositor->m_windows)
                     if (window && window->m_workspace && window->m_workspace->m_monitor.lock() == group.monitor && window->m_workspace->m_id == card.workspaceID && window->m_isFloating == floating)
                         renderWindow(window, group.monitor, output, sourcePxToPreviewPx, previewBox.pos(), previewBox, time);
+            renderCardTitle(cardBox, card.workspaceID);
         }
     }
 }
