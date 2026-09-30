@@ -17,6 +17,7 @@ stdenv.mkDerivation {
   ];
   buildInputs = hyprland.buildInputs ++ [ hyprland ];
   dontUseCmakeConfigure = true;
+  doCheck = true;
 
   meta = {
     description = "Live workspace canvas plugin for Hyprland";

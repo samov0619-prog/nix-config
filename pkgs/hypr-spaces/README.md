@@ -22,8 +22,17 @@ separate upstream flake or `hyprpm` runtime build.
   focus and `Escape` closes.
 - `Enter` activates on key release intentionally. This experimental input
   policy is retained to compare with press activation later.
+- `+`/`=` and mouse-wheel up zoom in; `-` and mouse-wheel down zoom out.
+  Touchpad scrolling, pinch, pointer selection, and dragging remain reserved
+  for later handlers.
+- `F12` saves the current canvas output to `~/Pictures/hypr-spaces-<timestamp>.png`.
 
-Pseudotile tile frames, special-workspace cards, search, and zoom are planned,
-not implemented. The canvas has an opaque backdrop and swallows keyboard and
-pointer input until Escape closes it. It is loaded declaratively by the Linux
-Hyprland module.
+Pseudotile tile frames, special-workspace cards, search, and pointer gestures
+are planned, not implemented. The canvas has an opaque backdrop and swallows
+keyboard and pointer input until Escape closes it. It is loaded declaratively
+by the Linux Hyprland module.
+
+## Foundations
+
+Pure C++ tests cover the future global workspace allocator and physical
+monitor row ordering. They run in the Nix check phase without Hyprland.

@@ -8,3 +8,13 @@ shared_module('hypr-spaces', 'src/main.cpp',
   cpp_args: ['-DWLR_USE_UNSTABLE'],
   install: true,
 )
+
+monitor_layout_test = executable('monitor-layout-test', 'tests/monitor_layout_test.cpp',
+  include_directories: include_directories('src'),
+)
+test('monitor layout', monitor_layout_test)
+
+workspace_allocator_test = executable('workspace-allocator-test', 'tests/workspace_allocator_test.cpp',
+  include_directories: include_directories('src'),
+)
+test('workspace allocator', workspace_allocator_test)
