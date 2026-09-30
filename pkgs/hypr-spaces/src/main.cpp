@@ -648,7 +648,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
                 break;
             case KEY_F12:
                 // The canvas remains open while grim captures the rendered output.
-                HyprlandAPI::invokeHyprctlCommand("dispatch", "exec grim -o " + g_monitor->m_name + " \"$HOME/Pictures/hypr-spaces-$(date +%Y%m%d-%H%M%S).png\"");
+                HyprlandAPI::invokeHyprctlCommand("dispatch", "exec grim -o " + g_monitor->m_name + " \"$HOME/Screenshots/hypr-spaces-$(date +%Y%m%d-%H%M%S).png\"");
                 break;
             case KEY_TAB:
                 if (globalCanvas())

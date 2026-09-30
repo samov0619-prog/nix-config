@@ -32,7 +32,7 @@ separate upstream flake or `hyprpm` runtime build.
 - `+`/`=` and mouse-wheel up zoom in; `-` and mouse-wheel down zoom out.
   Touchpad scrolling, pinch, pointer selection, and dragging remain reserved
   for later handlers.
-- `F12` saves the current canvas output to `~/Pictures/hypr-spaces-<timestamp>.png`.
+- `F12` saves the current canvas output to `~/Screenshots/hypr-spaces-<timestamp>.png`.
 
 Pseudotile tile frames, special-workspace cards, search, and pointer gestures
 are planned, not implemented. The canvas has an opaque backdrop and swallows
