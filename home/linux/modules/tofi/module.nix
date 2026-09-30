@@ -75,10 +75,12 @@ in
           Super+N             new Kitty nvim window
           Super+E             new Yazi window
           Super+Shift+E       sudo Yazi window
-            Super+W             semantic workspace/window switcher
-            Super+Space         live workspace canvas (MVP: active workspace)
+           Super+W             semantic workspace/window switcher
+           Super+Space         live multi-output workspace canvas
+           Canvas: H/J/K/L select, Tab/Shift+Tab monitor, Enter activate,
+                   Esc close, +/- or wheel zoom, F12 screenshot
 
-            Super+H/J/K/L       focus left/down/up/right
+           Super+H/J/K/L       focus left/down/up/right
           Super+Arrow         focus left/down/up/right
           Super+Shift+H/J/K/L move active window
           Super+LMB           move window with pointer
