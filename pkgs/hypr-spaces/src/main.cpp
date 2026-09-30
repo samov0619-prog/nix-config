@@ -63,6 +63,16 @@ void damage() {
         g_pHyprRenderer->damageMonitor(g_monitor);
 }
 
+void zoom(float steps) {
+    constexpr float minScale = 0.55F;
+    constexpr float maxScale = 2.50F;
+
+    g_camera.targetScale = std::clamp(g_camera.targetScale * std::pow(1.12F, steps), minScale, maxScale);
+    // Keep zoom immediate until camera animation has a dedicated damage loop.
+    g_camera.currentScale = g_camera.targetScale;
+    damage();
+}
+
 void close() {
     g_open = false;
     g_pendingOpenerSpaceRelease = false;
@@ -393,6 +403,18 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
         }
 
         switch (event.keycode) {
+            case KEY_EQUAL:
+            case KEY_KPPLUS:
+                zoom(1.F);
+                break;
+            case KEY_MINUS:
+            case KEY_KPMINUS:
+                zoom(-1.F);
+                break;
+            case KEY_F12:
+                // The canvas remains open while grim captures the rendered output.
+                HyprlandAPI::invokeHyprctlCommand("dispatch", "exec grim -o " + g_monitor->m_name + " \"$HOME/Pictures/hypr-spaces-$(date +%Y%m%d-%H%M%S).png\"");
+                break;
             case KEY_H:
                 selectCard(-1, 0);
                 break;
@@ -414,8 +436,22 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     g_mouseButtonHook = Event::bus()->m_events.input.mouse.button.listen([](const IPointer::SButtonEvent&, Event::SCallbackInfo& info) {
         info.cancelled = g_open;
     });
-    g_mouseAxisHook = Event::bus()->m_events.input.mouse.axis.listen([](const IPointer::SAxisEvent&, Event::SCallbackInfo& info) {
-        info.cancelled = g_open;
+    g_mouseAxisHook = Event::bus()->m_events.input.mouse.axis.listen([](const IPointer::SAxisEvent& event, Event::SCallbackInfo& info) {
+        if (!g_open)
+            return;
+
+        info.cancelled = true;
+        // Two-finger scrolling and pinch remain available to a future canvas
+        // pan/zoom handler. Wheel input is the only zoom gesture for now.
+        if (event.source != WL_POINTER_AXIS_SOURCE_WHEEL || event.axis != WL_POINTER_AXIS_VERTICAL_SCROLL)
+            return;
+
+        // This event is emitted before CInputManager normalizes high-resolution
+        // wheel units (such as +/-120) to application-facing +/-1 discrete steps.
+        const float steps = event.deltaDiscrete != 0 ? -std::copysign(1.F, static_cast<float>(event.deltaDiscrete)) : -static_cast<float>(event.delta) / 15.F;
+        if (steps == 0.F)
+            return;
+        zoom(steps * 0.08F);
     });
     g_mouseMoveHook = Event::bus()->m_events.input.mouse.move.listen([](const Vector2D&, Event::SCallbackInfo& info) {
         info.cancelled = g_open;

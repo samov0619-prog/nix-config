@@ -33,6 +33,17 @@ in
     configType = lib.mkIf (lib.versionOlder config.home.stateVersion "26.05") "hyprlang";
   };
 
+  services.hyprpaper = {
+    enable = true;
+    settings = {
+      splash = false;
+      wallpaper = {
+        monitor = "*";
+        path = "${pkgs.hyprland}/share/hypr/wall2.png";
+      };
+    };
+  };
+
   xdg.configFile."uwsm/env".source =
     "${config.home.sessionVariablesPackage}/etc/profile.d/hm-session-vars.sh";
 
