@@ -2,6 +2,7 @@
 #include <hyprland/src/devices/IPointer.hpp>
 #include <hyprland/src/Compositor.hpp>
 #include <hyprland/src/config/shared/actions/ConfigActions.hpp>
+#include <hyprland/src/desktop/state/FocusState.hpp>
 #include <hyprland/src/desktop/Workspace.hpp>
 #include <hyprland/src/desktop/view/LayerSurface.hpp>
 #include <hyprland/src/desktop/view/Window.hpp>
@@ -17,6 +18,7 @@
 #include <linux/input-event-codes.h>
 
 #include "monitor_layout.hpp"
+#include "preview_geometry.hpp"
 #include "workspace_allocator.hpp"
 
 #include <algorithm>
@@ -59,6 +61,27 @@ struct SMonitorGroup {
     std::vector<int>           rowColumns;
 };
 
+class CCanvasSurfacePassElement final : public CSurfacePassElement {
+  public:
+    CCanvasSurfacePassElement(const SRenderData& data, const CBox& bounds, float targetScale) : CSurfacePassElement(data) {
+        const auto logical = hypr_spaces::targetPixelsToLogical({static_cast<float>(bounds.x), static_cast<float>(bounds.y), static_cast<float>(bounds.w), static_cast<float>(bounds.h)}, targetScale);
+        m_bounds = {logical.x, logical.y, logical.width, logical.height};
+    }
+
+    std::optional<CBox> boundingBox() override {
+        return m_bounds;
+    }
+
+    CRegion opaqueRegion() override {
+        // Renderer hints transform this surface into its card after pass
+        // simplification, so source-space opacity is invalid here.
+        return {};
+    }
+
+  private:
+    CBox m_bounds;
+};
+
 SCameraState                g_camera;
 std::vector<SWorkspaceCard> g_cards;
 std::vector<int>            g_rowColumns;
@@ -95,7 +118,7 @@ void damage() {
 }
 
 void zoom(float steps) {
-    constexpr float minScale = 0.55F;
+    constexpr float minScale = 0.35F;
     constexpr float maxScale = 2.50F;
 
     g_camera.targetScale = std::clamp(g_camera.targetScale * std::pow(1.12F, steps), minScale, maxScale);
@@ -156,16 +179,15 @@ void renderWindow(PHLWINDOW window, PHLMONITOR source, PHLMONITOR target, float 
 
     const float scale = sourcePxToPreviewPx * source->m_scale / target->m_scale;
     const Vector2D sourcePosition = (position - source->m_position) * source->m_scale;
-    const Vector2D targetPosition = (position - target->m_position) * target->m_scale;
     const Vector2D destination = previewOrigin + sourcePosition * sourcePxToPreviewPx;
     Render::SRenderModifData transform;
     transform.enabled = true;
-    transform.modifs.push_back({Render::SRenderModifData::eRenderModifType::RMOD_TYPE_TRANSLATE, std::any(destination / scale - targetPosition)});
+    transform.modifs.push_back({Render::SRenderModifData::eRenderModifType::RMOD_TYPE_TRANSLATE, std::any(destination / scale - destination)});
     transform.modifs.push_back({Render::SRenderModifData::eRenderModifType::RMOD_TYPE_SCALE, std::any(scale)});
     g_pHyprRenderer->m_renderPass.add(makeUnique<CRendererHintsPassElement>(CRendererHintsPassElement::SData{.renderModif = transform}));
 
     CSurfacePassElement::SRenderData data = {target, time};
-    data.pos = position;
+    data.pos = target->m_position + destination / target->m_scale;
     data.w = size.x;
     data.h = size.y;
     data.surface = window->wlSurface()->resource();
@@ -173,19 +195,23 @@ void renderWindow(PHLWINDOW window, PHLMONITOR source, PHLMONITOR target, float 
     data.clipBox = clipBox;
     data.decorate = false;
     data.blur = false;
-    data.alpha = 1.F;
+    // Focus remains in Hyprland while the canvas is open, but the window's
+    // animated alpha can have already transitioned to inactive. Preserve the
+    // focused thumbnail as opaque and use the configured inactive opacity for
+    // the rest.
+    data.alpha = Desktop::focusState()->window() == window ? 1.F : window->alphaValue(Desktop::View::WINDOW_ALPHA_ACTIVE);
     data.fadeAlpha = 1.F;
     data.surfaceCounter = 0;
 
     window->wlSurface()->resource()->breadthfirst(
-        [&data, &window](SP<CWLSurfaceResource> surface, const Vector2D& offset, void*) {
+        [&data, &window, &clipBox, &target](SP<CWLSurfaceResource> surface, const Vector2D& offset, void*) {
             if (!surface || !surface->m_current.texture || surface->m_current.size.x < 1 || surface->m_current.size.y < 1)
                 return;
             data.localPos = offset;
             data.texture = surface->m_current.texture;
             data.surface = surface;
             data.mainSurface = surface == window->wlSurface()->resource();
-            g_pHyprRenderer->m_renderPass.add(makeUnique<CSurfacePassElement>(data));
+            g_pHyprRenderer->m_renderPass.add(makeUnique<CCanvasSurfacePassElement>(data, clipBox, target->m_scale));
             data.surfaceCounter++;
         },
         nullptr);
@@ -206,14 +232,13 @@ void renderLayer(PHLLS layer, PHLMONITOR source, PHLMONITOR target, float source
     Render::SRenderModifData transform;
     transform.enabled = true;
     const Vector2D sourcePosition = (position - source->m_position) * source->m_scale;
-    const Vector2D targetPosition = (position - target->m_position) * target->m_scale;
     const Vector2D destination = previewOrigin + sourcePosition * sourcePxToPreviewPx;
-    transform.modifs.push_back({Render::SRenderModifData::eRenderModifType::RMOD_TYPE_TRANSLATE, std::any(destination / scale - targetPosition)});
+    transform.modifs.push_back({Render::SRenderModifData::eRenderModifType::RMOD_TYPE_TRANSLATE, std::any(destination / scale - destination)});
     transform.modifs.push_back({Render::SRenderModifData::eRenderModifType::RMOD_TYPE_SCALE, std::any(scale)});
     g_pHyprRenderer->m_renderPass.add(makeUnique<CRendererHintsPassElement>(CRendererHintsPassElement::SData{.renderModif = transform}));
 
     CSurfacePassElement::SRenderData data = {target, time, position};
-    data.pos = position;
+    data.pos = target->m_position + destination / target->m_scale;
     data.w = size.x;
     data.h = size.y;
     data.surface = layer->wlSurface()->resource();
@@ -226,14 +251,14 @@ void renderLayer(PHLLS layer, PHLMONITOR source, PHLMONITOR target, float source
     data.surfaceCounter = 0;
 
     layer->wlSurface()->resource()->breadthfirst(
-        [&data, &layer](SP<CWLSurfaceResource> surface, const Vector2D& offset, void*) {
+        [&data, &layer, &clipBox, &target](SP<CWLSurfaceResource> surface, const Vector2D& offset, void*) {
             if (!surface || !surface->m_current.texture || surface->m_current.size.x < 1 || surface->m_current.size.y < 1)
                 return;
             data.localPos = offset;
             data.texture = surface->m_current.texture;
             data.surface = surface;
             data.mainSurface = surface == layer->wlSurface()->resource();
-            g_pHyprRenderer->m_renderPass.add(makeUnique<CSurfacePassElement>(data));
+            g_pHyprRenderer->m_renderPass.add(makeUnique<CCanvasSurfacePassElement>(data, clipBox, target->m_scale));
             data.surfaceCounter++;
         },
         &data);
@@ -378,7 +403,7 @@ void focusGlobalCamera() {
         return;
 
     g_camera.center = group->box.pos() + group->box.size() / 2.F;
-    g_camera.currentScale = 0.90F;
+    g_camera.currentScale = 0.8064F;
     g_camera.targetScale = g_camera.currentScale;
     g_camera.currentOffset = {};
     g_camera.targetOffset = {};

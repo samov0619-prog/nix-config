@@ -5,6 +5,8 @@
 - Render readable workspace number labels, optionally as card headers.
 - Render one distinct `+` crown card after the global maximum real workspace.
   It must never appear inside a numeric gap or once per monitor.
+- Recheck the apparent extra empty card on a newly created headless output
+  after workspace labels make real and virtual cards distinguishable.
 - Decide whether `Enter` should keep its current release activation or move to
   press activation after comparing both workflows.
 - Add search when the numeric canvas has enough cards to require it.
