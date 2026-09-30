@@ -6,9 +6,16 @@ separate upstream flake or `hyprpm` runtime build.
 
 ## Product contract
 
-- `Super+Space` opens a fit-all canvas of numeric regular-workspace slots on
-  the current monitor. If the highest existing regular workspace is `N`, the
-  canvas contains every slot from `1` through `N`, in numeric order.
+- `Super+Space` opens a fit-all canvas. With one output it shows that output's
+  numeric slots; with multiple outputs it renders one shared logical canvas on
+  every output. The output below the pointer selects the initial monitor group.
+- Multi-output groups follow physical row-major order: vertically overlapping
+  outputs form a row and each row sorts left to right. `Tab` and `Shift+Tab`
+  select the next or previous non-empty group; `H`, `J`, `K`, `L` stay within
+  that group's grid.
+- Regular workspaces are global positive-integer anchors. Derived cards fill
+  their numeric gaps, including the leading tail, and one head follows the
+  highest real workspace. Special workspaces are excluded.
 - Every slot is a scaled copy of the monitor work area. Layer-shell background
   and bottom-layer wallpaper surfaces are included; there is no fallback
   background renderer. Empty slots remain visible and can be selected; `Enter`
