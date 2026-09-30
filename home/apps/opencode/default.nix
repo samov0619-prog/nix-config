@@ -94,6 +94,7 @@ in
     });
 
     settings = {
+      "$schema" = "https://opencode.ai/config.json";
       autoupdate = false; # пакет иммутабелен (Nix) — не качать апдейты
       share = "disabled";
       permission = {
