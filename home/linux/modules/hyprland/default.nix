@@ -44,6 +44,13 @@ in
     };
   };
 
+  home.file."Screenshots/.keep".text = "";
+
+  xdg.configFile."swappy/config".text = ''
+    [Default]
+    save_dir=${config.home.homeDirectory}/Screenshots
+  '';
+
   xdg.configFile."uwsm/env".source =
     "${config.home.sessionVariablesPackage}/etc/profile.d/hm-session-vars.sh";
 
