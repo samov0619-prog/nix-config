@@ -17,6 +17,12 @@ struct WorkspaceCard {
     bool real;
 };
 
+struct WorkspaceState {
+    int  id;
+    int  owner;
+    bool real;
+};
+
 // Real workspaces are immutable anchors. The leading tail follows the first
 // anchor; short gaps follow their successor, while larger gaps fill the
 // predecessor's balanced global quota before continuing on the successor.
@@ -76,6 +82,21 @@ inline int nextUnoccupiedWorkspaceID(int firstID, std::vector<int> occupiedIDs) 
         ++candidate;
     }
     return candidate;
+}
+
+// Hyprland keeps an empty workspace head per output. Reuse the selected
+// output's head; otherwise reserve the first globally unoccupied ID.
+inline int workspaceHeadID(int owner, int maxRealID, const std::vector<WorkspaceState>& workspaces) {
+    std::vector<int> occupiedIDs;
+    int              localHeadID = 0;
+    for (const auto& workspace : workspaces) {
+        if (workspace.id <= 0)
+            continue;
+        occupiedIDs.push_back(workspace.id);
+        if (workspace.owner == owner && !workspace.real && workspace.id > maxRealID)
+            localHeadID = std::max(localHeadID, workspace.id);
+    }
+    return localHeadID > 0 ? localHeadID : nextUnoccupiedWorkspaceID(maxRealID + 1, std::move(occupiedIDs));
 }
 
 } // namespace hypr_spaces

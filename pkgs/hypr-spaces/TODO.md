@@ -22,7 +22,9 @@
 
 - Visually verify the shared canvas on physical outputs and a fake output with
   different scales. Check window positions, floating order, wallpaper layers,
-  `Tab`/`Shift+Tab`, and workspace activation.
+  `Tab`/`Shift+Tab`, workspace activation, and per-output empty heads. Check
+  that repeated `+` reuses a local head, switching to a real workspace drops it
+  when Hyprland does, and an occupied head on another output is skipped.
 - Investigate any repeatable canvas open/focus stall when the pointer starts on
   a headless output. Record the selected workspace, output layout, and
   `hyprctl monitors all` state before changing focus logic.
