@@ -15,12 +15,14 @@ When a task needs a large file, many files, or a whole-directory answer:
    - **Each `rlm` call is a fresh process:** `ctx` is reloaded from `path`, but variables
      from previous calls do **not** persist. Make every `code` block self-contained
      (re-derive anything you need; don't reference names from an earlier call).
-3. If a large slice needs **semantic** judgement that code can't express, and the
-   **`rlm_subquery`** tool is available (recursive variant), hand that slice to it —
-   a cheap sub-model answers and you keep only its answer.
-   - Put a **real representative slice** in `rlm_subquery.context` (head + sample + tail,
-     plus any anomalous lines) — never your own paraphrase of the content. The sub-model
-     must judge the actual data, not your summary of it.
+   - When another tool reports that its large result was preserved at an artifact path,
+     use that path with `rlm`; do not request the full result in the conversation.
+3. If a large source needs **semantic** judgement that code can't express, and the
+   **`rlm_subquery`** tool is available (recursive variant), pass it the source `path`,
+   the question, and optionally an extraction hint. The child session reads the source
+   through `rlm` itself; the parent keeps only its final answer.
+   - Never put a source fragment into a tool argument. That would copy the fragment into
+     the parent session history and defeat the memory boundary.
 4. Pull only the resulting slices into context; never the raw bulk.
 
 Prefer `rlm` over `grep`+`read` loops whenever the input is big.
@@ -30,4 +32,4 @@ Prefer `rlm` over `grep`+`read` loops whenever the input is big.
 - "Which files import `NotificationsStore`?" →
   `rlm(path=".", code="import re\n[print(f) for f,t in ctx.items() if 'NotificationsStore' in t]")`
 - "Summarise what changed in this 40k-line log around errors" →
-  `rlm` to grep error blocks + surrounding lines, then (variant 2) `rlm_subquery` on that slice.
+  `rlm_subquery(path="/path/to/log", question="What changed around errors?", extraction_hint="Find error blocks and nearby lines")`.

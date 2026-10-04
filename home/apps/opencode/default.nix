@@ -7,8 +7,13 @@
 #    - tool `rlm`      — грузит большой файл/каталог в Python-переменную `ctx`,
 #                        код грепает/слайсит и print-ит ТОЛЬКО нужный срез
 #                        (в контекст модели попадает лишь он → токены не пухнут).
-#    - plugin `rlm_subquery` (toggle rlmRecursive) — отдаёт большой срез дешёвой
-#                        суб-модели в изолированной сессии, назад берём лишь ответ.
+#    - plugin `rlm_subquery` (toggle rlmRecursive) — передаёт путь к большому
+#                        источнику дешёвой суб-модели в изолированной сессии,
+#                        назад берём лишь ответ. Сам источник не копируется в
+#                        историю основной сессии.
+#    - plugin `output-governor` — сохраняет неожиданно большие результаты tools
+#                        в XDG state и заменяет их в history коротким preview
+#                        с путём к полному артефакту.
 #    Оба .ts зависят от zod. На NixOS файлы — симлинки в /nix/store, Bun резолвит
 #    импорты из реального стор-пути → рядом с .ts вендорим node_modules/zod
 #    (см. withZod). Ставим через xdg.configFile (каталог целиком), а НЕ через
@@ -61,6 +66,7 @@ let
     mkdir -p "$out/node_modules/zod"
     tar xf ${zodTgz} -C "$out/node_modules/zod" --strip-components=1
     cp ${./rlm-plugin.ts} "$out/rlm.ts"
+    cp ${./output-governor.ts} "$out/output-governor.ts"
     cp ${./permission-stats.ts} "$out/permission-stats.ts"
   '';
 in

@@ -5,6 +5,13 @@
 - ALWAYS use OpenCode's `grep` and `glob` tools for file searches; they are backed by `rg`.
 - In shell commands, ALWAYS use `rg` instead of `grep` and `fd` instead of `find`.
 
+## Shell
+
+- The user's interactive shell is Fish. When providing commands for the user to run,
+  write Fish syntax: use `set name value` for variables and `(command)` for command
+  substitution. Do not use POSIX `name=value`, `$()` or Bash-only syntax unless the
+  command is explicitly prefixed with `bash -c`.
+
 ## Git Workflow
 
 - Before creating a branch or commit, ALWAYS inspect the user's style with `git log --author="$(git config user.name)" --oneline --branches --remotes -n 15` and follow it.
