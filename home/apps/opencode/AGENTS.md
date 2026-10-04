@@ -1,5 +1,9 @@
 # Global Rules
 
+## Discussion
+
+- For multi-turn planning or discussion, load the `discussion-map` skill.
+
 ## Tools
 
 - ALWAYS use OpenCode's `grep` and `glob` tools for file searches; they are backed by `rg`.
