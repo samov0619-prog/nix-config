@@ -15,7 +15,6 @@ struct WorkspaceCard {
     int  id;
     int  owner;
     bool real;
-    bool isTail = false;
 };
 
 // Real workspaces are immutable anchors. The leading tail follows the first
@@ -63,10 +62,20 @@ inline std::vector<WorkspaceCard> allocateWorkspaceCards(std::vector<WorkspaceAn
         counts[std::ranges::find(owners, successor.owner) - owners.begin()] += gapLength - predecessorCards;
         cards.push_back({successor.id, successor.owner, true});
     }
-    // One global creation tail follows the final real ID. It belongs to the
-    // final owner only; it must not be repeated for every monitor.
-    cards.push_back({maxID + 1, anchors.back().owner, false, true});
     return cards;
+}
+
+inline int nextUnoccupiedWorkspaceID(int firstID, std::vector<int> occupiedIDs) {
+    std::ranges::sort(occupiedIDs);
+    int candidate = std::max(1, firstID);
+    for (const int id : occupiedIDs) {
+        if (id < candidate)
+            continue;
+        if (id > candidate)
+            break;
+        ++candidate;
+    }
+    return candidate;
 }
 
 } // namespace hypr_spaces

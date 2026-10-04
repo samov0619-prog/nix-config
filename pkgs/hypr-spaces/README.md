@@ -12,11 +12,14 @@ separate upstream flake or `hyprpm` runtime build.
   group is centred initially, while adjacent group edges remain visible.
 - Multi-output groups follow physical row-major order: vertically overlapping
   outputs form a row and each row sorts left to right. `Tab` and `Shift+Tab`
-  select the next or previous non-empty group; `H`, `J`, `K`, `L` stay within
+  select the next or previous enabled group; `H`, `J`, `K`, `L` stay within
   that group's grid.
-- Regular workspaces are global positive-integer anchors. Derived cards fill
-  their numeric gaps, including the leading tail, and one distinct `+` creation
-  card follows the highest real workspace. Special workspaces are excluded.
+- Regular workspaces with at least one window are global positive-integer
+  anchors. Derived cards fill their numeric gaps, including the leading tail,
+  but never extend beyond the highest real workspace. One distinct `+` creation
+  card follows the currently selected monitor group and moves with `Tab`.
+  Empty Hyprland workspaces are ignored as anchors; special workspaces are
+  excluded.
 - Every slot is a scaled copy of the monitor work area. Layer-shell background
   and bottom-layer wallpaper surfaces are included; there is no fallback
   background renderer. Empty slots remain visible and can be selected; `Enter`
@@ -24,7 +27,10 @@ separate upstream flake or `hyprpm` runtime build.
   Tiled geometry is preserved; floating windows remain above tiled windows.
 - Previews are compositor-side live surfaces, not screenshots.
 - Every card has a centred numeric title at its top edge. The `+` card creates
-  the next numeric workspace when activated.
+  the first free numeric workspace after the highest real ID when activated.
+- When no workspace has a window, the canvas instead shows one active empty
+  workspace per enabled monitor and no `+` card. `Enter` only focuses that
+  monitor; it does not create or renumber a workspace.
 - `H`, `J`, `K`, `L` move through the grid with horizontal and vertical wrap.
   Vertical moves keep their exact column but never cross a missing column between
   a short row and a long row, in either direction. This deliberately simple,
