@@ -16,18 +16,22 @@ separate upstream flake or `hyprpm` runtime build.
   that group's grid.
 - Regular workspaces with at least one window are global positive-integer
   anchors. Derived cards fill their numeric gaps, including the leading tail,
-  but never extend beyond the highest real workspace. One distinct `+` creation
-  card follows the currently selected monitor group and moves with `Tab`.
-  Empty Hyprland workspaces are ignored as anchors; special workspaces are
-  excluded.
+  but never extend beyond the highest real workspace. Empty Hyprland
+  workspaces are ignored as anchors; special workspaces are excluded. One
+  distinct `+` crown follows the selected monitor group and moves with `Tab`.
+  It targets that monitor's existing empty head above the highest real ID, or
+  the first globally unused ID after it when no local head exists. Empty heads
+  never create numeric cards or extend the grid.
 - Every slot is a scaled copy of the monitor work area. Layer-shell background
   and bottom-layer wallpaper surfaces are included; there is no fallback
   background renderer. Empty slots remain visible and can be selected; `Enter`
   switches to (and creates, if needed) the selected ID on the canvas monitor.
   Tiled geometry is preserved; floating windows remain above tiled windows.
 - Previews are compositor-side live surfaces, not screenshots.
-- Every card has a centred numeric title at its top edge. The `+` card creates
-  the first free numeric workspace after the highest real ID when activated.
+- Every numeric card has a centred title at its top edge. Activating `+` uses
+  its current local head target, keeping focus on the selected monitor. Hyprland
+  may rename or drop an empty head after a workspace switch; the next canvas
+  rebuild reads that live state again rather than retaining the old ID.
 - When no workspace has a window, the canvas instead shows one active empty
   workspace per enabled monitor and no `+` card. `Enter` only focuses that
   monitor; it does not create or renumber a workspace.
@@ -39,7 +43,9 @@ separate upstream flake or `hyprpm` runtime build.
 - `Enter` activates the selected workspace and closes the canvas on key
   release intentionally. This experimental input policy is retained to compare
   with press activation later; `Escape` closes without activating.
-- `+`/`=` and mouse-wheel up zoom in; `-` and mouse-wheel down zoom out.
+- `+`/`=` and mouse-wheel up zoom in; `-` and mouse-wheel down zoom out. The
+  zoom level is preserved when `Tab` or `Shift+Tab` changes the selected output
+  group.
   Touchpad scrolling, pinch, pointer selection, and dragging remain reserved
   for later handlers.
 - `F12` saves the current canvas output to `~/Screenshots/hypr-spaces-<timestamp>.png`.
@@ -68,8 +74,8 @@ Do not use manual plugin unload/load as the routine update workflow.
 
 ## Foundations
 
-Pure C++ tests cover global workspace allocation, physical monitor row
-ordering, and target physical-to-logical preview geometry at scales `1.0`,
-`1.25`, and `2.0`. They run in the Nix check phase without Hyprland. Visual
-verification of real multi-output layouts, rotation, and full interaction
-remains manual; see `TODO.md`.
+Pure C++ tests cover global workspace allocation, per-output empty-head
+selection, physical monitor row ordering, and target physical-to-logical
+preview geometry at scales `1.0`, `1.25`, and `2.0`. They run in the Nix check
+phase without Hyprland. Visual verification of real multi-output layouts,
+rotation, and full interaction remains manual; see `TODO.md`.

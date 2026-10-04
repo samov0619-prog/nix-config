@@ -21,6 +21,7 @@ const WorkspaceCard& card(const std::vector<WorkspaceCard>& cards, int id) {
 int main() {
     using hypr_spaces::allocateWorkspaceCards;
     using hypr_spaces::nextUnoccupiedWorkspaceID;
+    using hypr_spaces::workspaceHeadID;
 
     auto cards = allocateWorkspaceCards({{1, 10}, {3, 20}});
     assert(card(cards, 2).owner == 20 && !card(cards, 2).real);
@@ -50,4 +51,16 @@ int main() {
     assert(nextUnoccupiedWorkspaceID(8, {9}) == 8);
     assert(nextUnoccupiedWorkspaceID(8, {8, 9}) == 10);
     assert(nextUnoccupiedWorkspaceID(1, {1, 3, 4}) == 2);
+
+    const std::vector<hypr_spaces::WorkspaceState> heads = {
+        {1, 10, true}, {2, 10, true}, {3, 10, true}, {4, 10, true}, {5, 20, false}, {10, 10, false},
+    };
+    assert(workspaceHeadID(10, 4, heads) == 10);
+    assert(workspaceHeadID(20, 4, heads) == 5);
+    assert(workspaceHeadID(30, 4, heads) == 6);
+
+    const std::vector<hypr_spaces::WorkspaceState> droppedHead = {
+        {1, 10, true}, {2, 10, true}, {3, 10, true}, {4, 10, true}, {5, 20, false},
+    };
+    assert(workspaceHeadID(10, 4, droppedHead) == 6);
 }

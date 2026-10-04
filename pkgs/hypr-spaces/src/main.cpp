@@ -367,13 +367,14 @@ void renderSingleMonitor() {
             workspaces[workspace->m_id - 1] = workspace;
     }
 
-    std::vector<int> occupiedWorkspaceIDs;
+    std::vector<hypr_spaces::WorkspaceState> workspaceStates;
     for (const auto& workspaceRef : g_pCompositor->getWorkspaces()) {
         const auto workspace = workspaceRef.lock();
+        const auto owner = workspace ? workspace->m_monitor.lock() : nullptr;
         if (workspace && workspace->m_id > 0)
-            occupiedWorkspaceIDs.push_back(workspace->m_id);
+            workspaceStates.push_back({static_cast<int>(workspace->m_id), owner ? static_cast<int>(owner->m_id) : -1, workspace->getWindows() > 0});
     }
-    const int tailID = hypr_spaces::nextUnoccupiedWorkspaceID(highestWorkspaceID + 1, occupiedWorkspaceIDs);
+    const int tailID = hypr_spaces::workspaceHeadID(static_cast<int>(g_monitor->m_id), highestWorkspaceID, workspaceStates);
 
     constexpr float padding = 48.F;
     constexpr float gap = 24.F;
@@ -480,14 +481,16 @@ SMonitorGroup* groupFor(PHLMONITOR monitor) {
     return group == g_groups.end() ? nullptr : &*group;
 }
 
-void focusGlobalCamera() {
+void focusGlobalCamera(bool resetZoom = false) {
     const auto* group = groupFor(g_monitor);
     if (!group)
         return;
 
     g_camera.center = group->box.pos() + group->box.size() / 2.F;
-    g_camera.currentScale = 0.8064F;
-    g_camera.targetScale = g_camera.currentScale;
+    if (resetZoom) {
+        g_camera.currentScale = 0.8064F;
+        g_camera.targetScale = g_camera.currentScale;
+    }
     g_camera.currentOffset = {};
     g_camera.targetOffset = {};
 }
@@ -527,12 +530,12 @@ void rebuildGlobalCanvas() {
     }
 
     std::vector<hypr_spaces::WorkspaceAnchor> anchors;
-    std::vector<int> occupiedWorkspaceIDs;
+    std::vector<hypr_spaces::WorkspaceState>  workspaceStates;
     for (const auto& workspaceRef : g_pCompositor->getWorkspaces()) {
         const auto workspace = workspaceRef.lock();
         const auto owner = workspace ? workspace->m_monitor.lock() : nullptr;
         if (workspace && workspace->m_id > 0)
-            occupiedWorkspaceIDs.push_back(workspace->m_id);
+            workspaceStates.push_back({static_cast<int>(workspace->m_id), owner ? static_cast<int>(owner->m_id) : -1, workspace->getWindows() > 0});
         if (workspace && workspace->m_id > 0 && workspace->getWindows() > 0 && owner && owner->m_enabled)
             anchors.push_back({static_cast<int>(workspace->m_id), static_cast<int>(owner->m_id)});
     }
@@ -556,10 +559,9 @@ void rebuildGlobalCanvas() {
 
     if (!g_emptyWorkspaceMode) {
         const int maxRealID = std::ranges::max(anchors, {}, &hypr_spaces::WorkspaceAnchor::id).id;
-        const int tailID = hypr_spaces::nextUnoccupiedWorkspaceID(maxRealID + 1, occupiedWorkspaceIDs);
         const auto crownGroup = std::ranges::find(g_groups, g_monitor, &SMonitorGroup::monitor);
         if (crownGroup != g_groups.end())
-            crownGroup->cards.emplace_back(tailID, CBox{}, 0, 0, true);
+            crownGroup->cards.emplace_back(hypr_spaces::workspaceHeadID(static_cast<int>(g_monitor->m_id), maxRealID, workspaceStates), CBox{}, 0, 0, true);
     }
 
     for (auto& group : g_groups) {
@@ -710,7 +712,7 @@ SDispatchResult toggle(std::string) {
         resetCamera();
         if (globalCanvas()) {
             rebuildGlobalCanvas();
-            focusGlobalCamera();
+            focusGlobalCamera(true);
         }
         damage();
     }
