@@ -38,15 +38,19 @@ export const RLM = async ({ client }: { client: any }) => {
 		tool: {
 			rlm_subquery: {
 				description:
-					"Delegate analysis of a large context slice to the configured small model and return ONLY " +
-					"its answer (keeps the root context small). Use for semantic aggregation over a slice that " +
-					"can't be expressed as code. For pure extraction use the `rlm` tool instead.",
+					"Delegate semantic analysis of a large local file or directory to the configured small model. " +
+					"Pass its path, never its contents: the child session can use only `rlm`, and the parent receives " +
+					"only the final answer. For pure extraction use the `rlm` tool directly.",
 				args: {
-					context: z.string().describe("The slice of text to analyze"),
+					path: z.string().describe("Absolute or ~ path to the file or directory to analyze"),
 					question: z.string().describe("What to extract/answer over that slice"),
+					extraction_hint: z
+						.string()
+						.optional()
+						.describe("Optional guidance for narrowing the source before analysis"),
 				},
 				async execute(
-					args: { context: string; question: string },
+					args: { path: string; question: string; extraction_hint?: string },
 					context: { sessionID: string },
 				) {
 					const model =
@@ -67,11 +71,19 @@ export const RLM = async ({ client }: { client: any }) => {
 							body: {
 								// Prefer configured small_model; fall back to the parent's actual model.
 								model,
-								tools: { rlm: false, rlm_subquery: false },
+								// The child has no direct read/bash access, so the source never enters
+								// the parent session as a large tool argument.
+								tools: { rlm: true, rlm_subquery: false },
 								parts: [
 									{
 										type: "text",
-										text: `Context:\n${args.context}\n\nAnswer ONLY this, tersely:\n${args.question}`,
+											text:
+												"Analyze the local source at this path using the `rlm` tool before answering. " +
+												"Do not answer from the path alone. Extract only the evidence needed for the question, " +
+												"then answer tersely.\n\n" +
+												`Path: ${args.path}\n` +
+												`Question: ${args.question}` +
+												(args.extraction_hint ? `\nExtraction hint: ${args.extraction_hint}` : ""),
 									},
 								],
 							},
