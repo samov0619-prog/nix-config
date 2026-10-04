@@ -153,6 +153,7 @@ in
 
     # Скилл — просто markdown, node_modules не нужен → оставляем через модуль.
     skills.rlm = ./rlm-skill.md; # → ~/.config/opencode/skills/rlm/SKILL.md
+    skills.discussion-map = ./discussion-map-skill.md;
     skills.git-regression-rollback = ./git-regression-rollback-skill.md;
   };
 
