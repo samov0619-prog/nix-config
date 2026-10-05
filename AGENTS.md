@@ -117,7 +117,7 @@ not import Disko.
 
 ### Kitty langmap
 
-- `home/modules/kitty/default.nix` собирает version-matched template из ${pkgs.kitty} с common и Linux/macOS fragments, затем `build.py` дублирует каждую `map`-строку с русской раскладкой. Не возвращать полную snapshot-копию upstream `kitty.conf` в репозиторий.
+- `home/modules/kitty/default.nix` собирает version-matched template из `${pkgs.kitty}` с common и Linux/macOS fragments, затем `build.py` дублирует каждую active `map`-строку с русской раскладкой. Commented upstream examples никогда не активировать. Не возвращать полную snapshot-копию upstream `kitty.conf` в репозиторий.
 - `map.txt`: две строки — латиница и транслит (йцукен→qwerty).
 - Активные настройки в сгенерированном конфиге: Fish, 10k scrollback, nvim pager, font size 14, NotoSansM Nerd Font Mono, grid layout, remote control, powerline tabs. Linux сохраняет stock Kitty shortcuts; macOS `kitty_mod = Cmd+Shift`, `Cmd+N`/`kitty_mod+N` создают nvim tab, `Cmd+E` — Yazi, panes `kitty_mod+Left/Right`.
 
@@ -137,7 +137,7 @@ not import Disko.
 ### Window management policy
 
 - Не добавлять manual resize bindings или resize-by-mouse: workflow использует Dwindle без ручной подгонки размеров. Fullscreen и app maximize policy сохраняются.
-- Основные window controls: `Super+T` (Dwindle split), `Super+F`/`Super+Shift+F` (floating/tiled focus), `Super(+Shift)+HJKL`, workspaces и переносы между ними. Laptop: horizontal three-finger touchpad swipe переключает workspace.
+- Основные window controls: `Super+T` (Dwindle split), `Super+F`/`Super+Shift+F` (floating/tiled focus), `Super(+Shift)+HJKL`, workspaces и переносы между ними. `Super+N` открывает отдельное Kitty nvim window. Laptop: horizontal three-finger touchpad swipe переключает workspace. `Super+W` открывает semantic workspace/window switcher.
 - `F1` открывает read-only `hypr-controls` через Tofi; поддерживать его список в соответствии с фактическими bind-ами laptop/desktop.
 
 ### Minecraft server
@@ -204,7 +204,7 @@ not import Disko.
 
 - Никакого Docker: AWG3.1 использует NixOS `wg-quick`, AdGuard Home и Caddy — обычные systemd services.
 - `settings.nix` содержит незасекреченные VPS-specific значения. `server-preflight` сначала показывает read-only inventory и открывает wizard только при валидных disk/IPv4 candidates; administrator key всегда вводится вручную полным OpenSSH public key. При отсутствии global IPv6 с default route wizard требует явное `y` для продолжения без IPv6; по умолчанию выходит без записи settings. После явного подтверждения он записывает локальный, некоммитящийся settings-файл. Private keys и профили живут вне Git в `/var/lib/amneziawg` и `/var/lib/naiveproxy`.
-- `hosts/server/settings.nix` описывает ровно один VPS и участвует в каждом `nixosConfigurations.server` evaluation/build/deploy. Перед любой server evaluation, build или deploy агент обязан сверить целевой SSH host с `diskDevice`, WAN interface, IPv4 endpoint и IPv6 VPN ULA в settings; при несовпадении или двух одновременно обслуживаемых VPS остановиться и запросить отдельный host configuration. Никогда не переключать settings между live VPS для обычного обновления.
+- `hosts/server/settings.nix` описывает ровно один VPS и участвует в каждом `nixosConfigurations.server` evaluation/build/deploy. Локальные evaluation/build не подключаются к VPS и безопасны для общей verification matrix. Перед server deploy агент обязан сверить целевой SSH host с `diskDevice`, WAN interface, IPv4 endpoint и IPv6 VPN ULA в settings; при несовпадении или двух одновременно обслуживаемых VPS остановиться и запросить отдельный host configuration. Никогда не переключать settings между live VPS для обычного обновления.
 - `awg-add-client <name>` публикует structured AmneziaVPN `.vpn` и QR, а также native `.conf` и QR; `naive-add-client <name>` публикует Karing/sing-box JSON.
 - `vpn-download` разрешает только `internal-sftp` по одному ключу в `/srv/vpn-download/files`; shell и forwarding запрещены.
 - AdGuard DNS доступен только через `awg0` и localhost; UI — через SSH tunnel на `127.0.0.1:8008`.
@@ -219,8 +219,11 @@ not import Disko.
   используют `pkgs.amnezia-vpn`, а daemon PATH содержит `iptables`,
   `ip6tables` и `gawk`.
 - При обновлении `nixpkgs-unstable` NixOS warning появляется только если его
-  официальный `amnezia-vpn` новее локального. Перед удалением override
-  проверить backend AWG и service PATH; автоматически на upstream не
+  официальный `amnezia-vpn` новее нерабочего upstream 5.0.3.0. Этот release
+  завершает AWG3.1 handshake, но не назначает `amn0` VPN IPv4 из dual-stack
+  `Address`, оставляя DNS недоступным. Перед удалением override проверить
+  включение upstream PR #2840 (IPv4 assignment) и #3231 (endpoint routes),
+  затем проверить backend AWG и service PATH; автоматически на upstream не
   переключаться.
 
 ### Disko + nixos-anywhere

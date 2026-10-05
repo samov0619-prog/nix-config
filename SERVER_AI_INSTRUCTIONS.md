@@ -24,10 +24,11 @@
   local, uncommitted change.
 - This repository's `server` configuration represents exactly one live VPS.
   `settings.nix` is read by every server evaluation, build, and deploy, not
-  only by Disko. Before any such action, compare its disk, WAN interface, IPv4
-  endpoint, and IPv6 VPN ULA with the intended SSH target. Do not rotate one
-  settings file between live VPSes; add a separate NixOS host and settings
-  module for a second server.
+  only by Disko. Local evaluation and build do not contact or modify that VPS,
+  so they are safe in the shared verification matrix. Before a deploy, compare
+  its disk, WAN interface, IPv4 endpoint, and IPv6 VPN ULA with the intended
+  SSH target. Do not rotate one settings file between live VPSes; add a
+  separate NixOS host and settings module for a second server.
 - `hosts/server/vpn.nix` owns forwarding, NAT, and the AmneziaWG interface.
 - `pkgs/amneziawg-3.1/` pins the matched AWG 3.1.20260812 kernel module and
   tools. Both are server-only overrides because `wg-quick` needs the module
