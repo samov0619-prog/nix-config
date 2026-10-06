@@ -19,6 +19,11 @@ workspace_allocator_test = executable('workspace-allocator-test', 'tests/workspa
 )
 test('workspace allocator', workspace_allocator_test)
 
+canvas_model_test = executable('canvas-model-test', 'tests/canvas_model_test.cpp',
+  include_directories: include_directories('src'),
+)
+test('canvas model and activation', canvas_model_test)
+
 preview_geometry_test = executable('preview-geometry-test', 'tests/preview_geometry_test.cpp',
   include_directories: include_directories('src'),
 )
