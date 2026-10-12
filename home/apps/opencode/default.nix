@@ -67,6 +67,8 @@ let
     mkdir -p "$out/node_modules/zod"
     tar xf ${zodTgz} -C "$out/node_modules/zod" --strip-components=1
     cp ${./rlm-plugin.ts} "$out/rlm.ts"
+    mkdir -p "$out/lib"
+    cp ${./lib/task-usage.ts} "$out/lib/task-usage.ts"
     cp ${./output-governor.ts} "$out/output-governor.ts"
     cp ${./permission-stats.ts} "$out/permission-stats.ts"
   '';
@@ -169,6 +171,13 @@ in
   };
 
   home.packages = [
+    (pkgs.writeShellApplication {
+      name = "opencode-task-report";
+      runtimeInputs = [ pkgs.python3 ];
+      text = ''
+        exec python3 ${./task-report.py} "$@"
+      '';
+    })
     (pkgs.writeShellApplication {
       name = "opencode-permission-stats";
       runtimeInputs = with pkgs; [ coreutils gawk jq ];

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { saveSubqueryUsage } from "./lib/task-usage.ts";
 // OpenCode injects the client; Zod is the only external runtime dependency.
 // Global exploration policy belongs in AGENTS.md, not a second system prompt.
 
@@ -42,7 +43,7 @@ export const RLM = async ({ client }: { client: any }) => {
 				},
 				async execute(
 					args: { path: string; question: string; extraction_hint?: string },
-					context: { sessionID: string },
+					context: { sessionID: string; messageID?: string },
 				) {
 					const model =
 						parseModel(process.env.RLM_SUBQUERY_MODEL) ??
@@ -51,6 +52,7 @@ export const RLM = async ({ client }: { client: any }) => {
 					if (!model) {
 						return "[rlm_subquery: parent session model is unavailable]";
 					}
+					const started = Date.now();
 					const created = await client.session.create({
 						body: { title: "rlm-subquery" },
 					});
@@ -89,7 +91,16 @@ export const RLM = async ({ client }: { client: any }) => {
 							.trim();
 						return text || "[rlm_subquery: empty answer]";
 					} finally {
-						await client.session.delete({ path: { id } }).catch(() => {});
+						try {
+							await saveSubqueryUsage(client, {
+								parentSessionID: context.sessionID, parentMessageID: context.messageID,
+								childSessionID: id, started,
+							});
+							await client.session.delete({ path: { id } }).catch(() => {});
+						} catch {
+							// Preserve the session if accounting fails; do not discard unrecorded usage.
+							console.warn(`[rlm_subquery: usage capture failed; retained ${id}]`);
+						}
 					}
 				},
 			},

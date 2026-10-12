@@ -129,6 +129,10 @@ not import Disko.
 - tools/plugin ставятся через `xdg.configFile`, а НЕ через `programs.opencode.tools`.
 - Модели: main `openai/gpt-5.6-terra`, small `opencode/deepseek-v4-flash-free`.
 - `rlmRecursive = true` включает plugin-tool `rlm_subquery`.
+- `opencode-task-report --session <id>` — read-only per-task accounting; методика
+  в `home/apps/opencode/BENCHMARK.md`. RLM сохраняет только usage counters перед
+  удалением дочерней сессии в XDG state `opencode/task-usage`; при ошибке учёта
+  сессия сохраняется. Символы tool output не считать токенами или доказанной экономией.
 - Проверка после правок: `opencode run "ping"`, в логе `plugin rlm.ts loading`, file.watcher backend=inotify без ERROR.
 
 ### Kitty langmap
