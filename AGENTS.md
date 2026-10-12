@@ -108,6 +108,22 @@ not import Disko.
 
 ### OpenCode + RLM
 
+- Shared exploration policy lives in `home/apps/opencode/AGENTS.md`; detailed
+  usage and limits live in `rlm-skill.md`. Do not restore a separate
+  `rlm-instructions.md` or a duplicate system reminder in the RLM plugin.
+  Focused glob/grep/read calls are normal; RLM is for bounded extraction and
+  aggregation, without a fixed call-count trigger. Preserve corporate Mac rules
+  when copying this policy into its complete configuration archive.
+
+- Ручной порт на корпоративный Mac: актуальный снимок `~/.config/opencode`
+  → объединить общие Linux-улучшения с корпоративными особенностями → полный
+  архив для замены всей папки конфигурации. Сохранять модели, proxy, MCP,
+  voice/TUI, permissions и npm-манифесты; перенос global-rules → AGENTS
+  выполнять внутри архива. `node_modules` не включать: OpenCode устанавливает
+  зависимости из package.json при запуске. Короткая инструкция — только
+  README архива; отдельного сборщика/мигратора нет. Полные снимки/архивы могут
+  содержать авторизацию: держать вне Git, не выводить секреты в логи.
+
 - `home/core-set/devtools/opencode/default.nix` — кастомная установка с `LD_LIBRARY_PATH`-фикс file watcher (nix-ld не помогает, т.к. opencode уже пропатчен).
 - RLM tool и plugin вендорят `node_modules/zod` рядом через `withZod`, т.к. на NixOS файлы — симлинки в /nix/store.
 - tools/plugin ставятся через `xdg.configFile`, а НЕ через `programs.opencode.tools`.

@@ -128,7 +128,8 @@ in
           "git config --get*" = "allow";
         };
       };
-      instructions = [ "${./rlm-instructions.md}" ];
+      # Global exploration policy is loaded once from opencode/AGENTS.md.
+      # Detailed RLM usage is loaded on demand through the rlm skill.
 
       # ─── МОДЕЛИ ───────────────────────────────────────────────────────────
       # Не заданы → дефолт opencode zen (big-pickle и пр.). Переключить декларативно:

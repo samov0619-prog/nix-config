@@ -36,9 +36,13 @@ export const OutputGovernor = async () => {
 
 	return {
 		"tool.execute.after": async (
-		input: { tool: string; sessionID: string; callID: string },
-		output: { title: string; output: string; metadata?: Record<string, unknown> },
-	) => {
+			input: { tool: string; sessionID: string; callID: string },
+			output: { title?: string; output?: unknown; metadata?: Record<string, unknown> } | null | undefined,
+		) => {
+			// MCP/structured results may expose content rather than a text output.
+			// Leave their original shape intact; only govern the supported string form.
+			if (typeof output?.output !== "string") return;
+
 			const nativePath =
 				typeof output.metadata?.outputPath === "string" && output.metadata.truncated === true
 					? output.metadata.outputPath

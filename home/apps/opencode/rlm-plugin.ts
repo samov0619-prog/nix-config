@@ -1,10 +1,6 @@
 import { z } from "zod";
-// type Plugin из @opencode-ai/plugin — type-only, стирается Bun'ом; `client` инжектится,
-// поэтому рантайму снова нужен только zod.
-
-const rlmReminder =
-	"RLM is installed. Before repeated read/grep/glob calls, you MUST use `rlm` for logs, " +
-	"directories, repository-wide analysis, unknown-size files, or more than two related files.";
+// OpenCode injects the client; Zod is the only external runtime dependency.
+// Global exploration policy belongs in AGENTS.md, not a second system prompt.
 
 export const RLM = async ({ client }: { client: any }) => {
 	const sessionModels = new Map<string, { providerID: string; modelID: string }>();
@@ -29,18 +25,13 @@ export const RLM = async ({ client }: { client: any }) => {
 		config: async (config: { small_model?: unknown }) => {
 			smallModel = parseModel(config.small_model);
 		},
-		"experimental.chat.system.transform": async (
-			_: { sessionID: string },
-			output: { system: string[] },
-		) => {
-			output.system.push(rlmReminder);
-		},
 		tool: {
 			rlm_subquery: {
 				description:
 					"Delegate semantic analysis of a large local file or directory to the configured small model. " +
-					"Pass its path, never its contents: the child session can use only `rlm`, and the parent receives " +
-					"only the final answer. For pure extraction use the `rlm` tool directly.",
+					"Pass its path, never its contents: the child is instructed to extract evidence with `rlm`, " +
+					"and the parent receives its text answer. Use only when delegation is permitted. " +
+					"For mechanical extraction use direct tools instead.",
 				args: {
 					path: z.string().describe("Absolute or ~ path to the file or directory to analyze"),
 					question: z.string().describe("What to extract/answer over that slice"),
@@ -71,19 +62,21 @@ export const RLM = async ({ client }: { client: any }) => {
 							body: {
 								// Prefer configured small_model; fall back to the parent's actual model.
 								model,
-								// The child has no direct read/bash access, so the source never enters
-								// the parent session as a large tool argument.
+								// Enable source extraction and disable recursive subqueries.
+								// This map is not a sandbox or an exhaustive tool allowlist.
 								tools: { rlm: true, rlm_subquery: false },
 								parts: [
 									{
 										type: "text",
-											text:
-												"Analyze the local source at this path using the `rlm` tool before answering. " +
-												"Do not answer from the path alone. Extract only the evidence needed for the question, " +
-												"then answer tersely.\n\n" +
-												`Path: ${args.path}\n` +
-												`Question: ${args.question}` +
-												(args.extraction_hint ? `\nExtraction hint: ${args.extraction_hint}` : ""),
+										text:
+											"Analyze the local source at this path using the `rlm` tool before answering. " +
+											"Do not answer from the path alone. Extract only the evidence needed for the question. " +
+											"Inspect the load report and mention relevant skipped sources, tool failures, or " +
+											"incomplete coverage in your answer. Do not infer absence from a partial result. " +
+											"Do not modify files. Answer tersely with source references.\n\n" +
+											`Path: ${args.path}\n` +
+											`Question: ${args.question}` +
+											(args.extraction_hint ? `\nExtraction hint: ${args.extraction_hint}` : ""),
 									},
 								],
 							},

@@ -16,6 +16,28 @@
   substitution. Do not use POSIX `name=value`, `$()` or Bash-only syntax unless the
   command is explicitly prefixed with `bash -c`.
 
+## Source Exploration
+
+- Use `glob` for filename discovery, `grep` for targeted content searches, and
+  `read` for small, selected passages. Continue direct lookups while they narrow
+  the search or verify a concrete finding; there is no tool-call quota.
+- Use `rlm` to aggregate content across files or extract evidence from a large
+  source without copying the bulk into the conversation. Load the `rlm` skill
+  when this workflow is needed. Do not invoke RLM merely because a directory,
+  an unknown-size file, or more than two files are involved.
+- If exploration repeats without new evidence or a narrower scope, change the
+  approach: test a specific hypothesis or use a focused RLM query. Reuse prior
+  findings instead of repeatedly retrieving the same material.
+- Keep large source files and logs out of the conversation. When a tool saves a
+  large result as an artifact, extract only the relevant evidence from that
+  artifact. Select the narrowest useful source, never a home directory just to
+  discover a filename.
+- Check RLM's load report. A partial result cannot establish absence in the
+  source; inspect relevant skipped files separately before making that claim.
+- Use `rlm_subquery` only when semantic analysis benefits from a separate model
+  and delegation is permitted. Pass a source path and a focused question, not
+  copied source text. Use direct extraction for mechanical searches or counts.
+
 ## Git Workflow
 
 - Before creating a branch or commit, ALWAYS inspect the user's style with `git log --author="$(git config user.name)" --oneline --branches --remotes -n 15` and follow it.
