@@ -1,6 +1,5 @@
 {
   pkgs,
-  lib,
   config,
   ...
 }:
@@ -14,7 +13,6 @@
     ../modules/waybar
   ];
   home.packages = with pkgs; [
-    dragon-drop
     rose-pine-hyprcursor
     grim
     slurp
@@ -54,14 +52,6 @@
   home.sessionVariables = {
     NIX_FLAKE = "${config.home.homeDirectory}/nix-config";
   };
-
-  programs.yazi.keymap.mgr.prepend_keymap = lib.mkAfter [
-    {
-      on = [ "<c-n>" ];
-      run = "shell -- dragon-drop -x -i -T %h";
-      desc = "Dragon-drop";
-    }
-  ];
 
   services.pass-secret-service.enable = true;
 }
