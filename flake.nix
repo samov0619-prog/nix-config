@@ -44,6 +44,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nix-gc-env.url = "github:Julow/nix-gc-env";
+    hermes-agent.url = "github:NousResearch/hermes-agent";
   };
 
   outputs =
@@ -58,6 +59,7 @@
       freesm,
       nix-gc-env,
       xremap-flake,
+      hermes-agent,
       ...
     }:
     let
@@ -92,7 +94,7 @@
           inherit pkgs modules;
           extraSpecialArgs = {
             # To re-enable declarative Neovim, also pass nvim-config here.
-            inherit username xremap-flake;
+            inherit username xremap-flake hermes-agent;
             pkgsUnstable = pkgsUnstableFor pkgs.stdenv.hostPlatform.system;
             browserPreviews = browserPreviewsFor pkgs.stdenv.hostPlatform.system;
           };
@@ -204,6 +206,7 @@
             ./home/core-set/devtools/github.nix
             ./home/apps/aider
             ./home/apps/opencode
+            ./home/apps/hermes
             ./home/gui-set
             ./home/modules/minecraft/server
             ./home/apps/minecraft
@@ -233,6 +236,7 @@
             ./home/core-set/devtools/github.nix
             ./home/apps/aider
             ./home/apps/opencode
+            ./home/apps/hermes
             ./home/gui-set
             ./home/modules/minecraft/server
             ./home/apps/minecraft
