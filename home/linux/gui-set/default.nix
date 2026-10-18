@@ -9,6 +9,7 @@
     ./security.nix
     ../modules/filemanager1-common
     ../modules/hyprland
+    ../modules/swayimg
     ../modules/tofi
     ../modules/waybar
   ];
