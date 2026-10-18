@@ -30,7 +30,14 @@
     enable = true;
     package = pkgsUnstable.yazi;
     plugins = {
-      inherit (pkgsUnstable.yaziPlugins) compress;
+      compress = pkgsUnstable.yaziPlugins.compress.overrideAttrs (old: {
+        postPatch = (old.postPatch or "") + ''
+          substituteInPlace main.lua \
+            --replace-fail 'tostring(u.parent)' 'tostring(u.url.parent)' \
+            --replace-fail 'fs.unique_name(Url(temp_dir))' 'fs.unique("dir", Url(temp_dir))' \
+            --replace-fail 'fs.unique_name(Url(final_output_url))' 'fs.unique("file", Url(final_output_url))'
+        '';
+      });
     };
     keymap = {
       mgr.prepend_keymap = [
