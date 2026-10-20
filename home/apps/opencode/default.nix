@@ -8,18 +8,15 @@ let
   workAgent = {
     model = "openai/gpt-6.1-sol";
     variant = workEffort;
-    options.reasoningEffort = workEffort;
   };
   planAgent = {
     model = "openai/gpt-6.1-sol-plan";
     variant = planEffort;
-    options.reasoningEffort = planEffort;
   };
   summaryAgent = {
     # Native alias of the same API model, isolated from the primary variant.
     model = "openai/gpt-6.1-sol-high";
     variant = "high";
-    options.reasoningEffort = "high";
   };
   solModel = effort: {
     limit = compactionLimit;
@@ -65,7 +62,7 @@ in
       "$schema" = "https://opencode.ai/config.json";
       autoupdate = false;
       share = "disabled";
-      enabled_providers = [ "openai" ];
+      # enabled_providers = [ "openai" ];
       model = workAgent.model;
       small_model = "openai/gpt-6-luna";
       provider.openai.models = {
@@ -84,9 +81,20 @@ in
         };
         "gpt-6-luna" = {
           limit = compactionLimit;
-          # small:true ignores the selected variant; model options pin Low.
           options.reasoningEffort = "low";
-          reasoning_options = [ { type = "effort"; values = [ "low" "high" "max" ]; } ];
+          reasoning_options = [
+            { type = "effort"; values = [ "low" ]; }
+          ];
+        };
+
+        "gpt-6-luna-max" = {
+          id = "gpt-6-luna";
+          name = "GPT-6 Luna Max (explore)";
+          limit = compactionLimit;
+          options.reasoningEffort = "max";
+          reasoning_options = [
+            { type = "effort"; values = [ "max" ]; }
+          ];
         };
       };
       agent = {
@@ -116,9 +124,8 @@ in
           '';
         };
         explore = {
-          model = "openai/gpt-6-luna";
+          model = "openai/gpt-6-luna-max";
           variant = "max";
-          options.reasoningEffort = "max";
           permission = analysisPermission // { skill = "deny"; };
           description = "Bounded read-only fact collection: paths, line references and explicit coverage gaps. Specify the source scope and question.";
           prompt = ''
@@ -135,7 +142,6 @@ in
         title = {
           model = "openai/gpt-6-luna";
           variant = "low";
-          options.reasoningEffort = "low";
         };
       };
       compaction = {
