@@ -1,6 +1,12 @@
 # Home OpenCode: native OpenAI routing, compaction, skills and manual accounting.
 # Verified against OpenCode 1.19.3; see BENCHMARK.md for runtime checks.
-{ pkgs, pkgsUnstable, lib, config, ... }:
+{
+  pkgs,
+  pkgsUnstable,
+  lib,
+  config,
+  ...
+}:
 let
   # Independent role defaults; each accepts high / xhigh / max. See README.md.
   workEffort = "high"; # build / general / research / review
@@ -21,7 +27,12 @@ let
   solModel = effort: {
     limit = compactionLimit;
     options.reasoningEffort = effort;
-    reasoning_options = [ { type = "effort"; values = [ effort ]; } ];
+    reasoning_options = [
+      {
+        type = "effort";
+        values = [ effort ];
+      }
+    ];
   };
   analysisPermission = {
     edit = "deny";
@@ -39,7 +50,20 @@ in
 {
   assertions = [
     {
-      assertion = builtins.all (effort: builtins.elem effort [ "high" "xhigh" "max" ]) [ workEffort planEffort ];
+      assertion =
+        builtins.all
+          (
+            effort:
+            builtins.elem effort [
+              "high"
+              "xhigh"
+              "max"
+            ]
+          )
+          [
+            workEffort
+            planEffort
+          ];
       message = "Home OpenCode workEffort and planEffort must be high, xhigh or max.";
     }
   ];
@@ -83,7 +107,10 @@ in
           limit = compactionLimit;
           options.reasoningEffort = "low";
           reasoning_options = [
-            { type = "effort"; values = [ "low" ]; }
+            {
+              type = "effort";
+              values = [ "low" ];
+            }
           ];
         };
 
@@ -93,13 +120,18 @@ in
           limit = compactionLimit;
           options.reasoningEffort = "max";
           reasoning_options = [
-            { type = "effort"; values = [ "max" ]; }
+            {
+              type = "effort";
+              values = [ "max" ];
+            }
           ];
         };
       };
       agent = {
         build = workAgent;
-        plan = planAgent // { permission.edit = "deny"; };
+        plan = planAgent // {
+          permission.edit = "deny";
+        };
         general = workAgent;
         research = workAgent // {
           mode = "subagent";
@@ -126,7 +158,9 @@ in
         explore = {
           model = "openai/gpt-6-luna-max";
           variant = "max";
-          permission = analysisPermission // { skill = "deny"; };
+          permission = analysisPermission // {
+            skill = "deny";
+          };
           description = "Bounded read-only fact collection: paths, line references and explicit coverage gaps. Specify the source scope and question.";
           prompt = ''
             Collect facts only within the delegated source scope. Prefer glob for filenames,
@@ -175,7 +209,11 @@ in
       };
     };
 
-    extraPackages = with pkgs; [ python3 ripgrep fd ];
+    extraPackages = with pkgs; [
+      python3
+      ripgrep
+      fd
+    ];
     skills.discussion-map = ./discussion-map-skill.md;
     skills.git-regression-rollback = ./git-regression-rollback-skill.md;
   };
@@ -193,7 +231,11 @@ in
     })
     (pkgs.writeShellApplication {
       name = "opencode-permission-stats";
-      runtimeInputs = with pkgs; [ coreutils gawk jq ];
+      runtimeInputs = with pkgs; [
+        coreutils
+        gawk
+        jq
+      ];
       text = ''
         history="${config.xdg.stateHome}/opencode/permission-history.jsonl"
         if test ! -s "$history"; then
