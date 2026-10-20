@@ -5,39 +5,7 @@
 # Здесь НЕТ пользовательских системных промптов, RLM, governor, MCP или принудительного workflow.
 # Комментарии рядом с активными параметрами: ДЕФОЛТ → ИЗМЕНЕНИЕ → ПРИЧИНА.
 # Поскольку flake следует за main, после обновления lock значения по умолчанию стоит сверять заново.
-{ pkgs, hermes-agent, ... }:
-let
-  # Не Hermes-плагин: отдельная оболочка, вызываемая ТОЛЬКО вручную.
-  # Сбор отчёта не расходует токены на дополнительное обращение к модели.
-  hermesTask = pkgs.writeShellApplication {
-    name = "hermes-task"; # Новая локальная команда (в upstream такой команды нет); не влияет на обычный `hermes`.
-    runtimeInputs = [
-      pkgs.coreutils
-      pkgs.jq
-    ]; # Используются для даты/каталогов и просмотра JSON; без AI-библиотек.
-    text = ''
-      if (( $# == 0 )); then
-        echo 'Usage: hermes-task "task description"' >&2
-        exit 2
-      fi
-
-      reports="''${XDG_STATE_HOME:-$HOME/.local/state}/hermes/task-usage"
-      mkdir -p "$reports"
-      report="$reports/$(date -u +%Y%m%dT%H%M%S)-$$.json"
-      result=0
-      hermes -z "$*" --usage-file "$report" || result=$?
-
-      if [[ -s "$report" ]]; then
-        echo >&2
-        echo "Usage report: $report" >&2
-        jq '{model, provider, completed, failed, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, reasoning_tokens, api_calls, estimated_cost_usd, auxiliary, total_including_auxiliary}' "$report" >&2 || true
-      else
-        echo 'No usage report was written by Hermes.' >&2
-      fi
-      exit "$result"
-    ''; # Bash-скрипт для разовых задач. Использует штатный Hermes --usage-file.
-  };
-in
+{ hermes-agent, ... }:
 {
   imports = [
     hermes-agent.homeManagerModules.default
@@ -173,7 +141,5 @@ in
       #    opencode-free не следует считать доступным стороннему Hermes-клиенту.
     };
   };
-
-  home.packages = [ hermesTask ]; # Дефолт HM [] → добавить только ручной помощник с JSON-отчётом;
   # штатный Hermes CLI устанавливает programs.hermes-agent.enable.
 }
