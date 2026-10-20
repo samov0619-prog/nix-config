@@ -1,97 +1,56 @@
-# ─────────────────────────────────────────────────────────────────────────────
-# OpenCode + RLM (Recursive Language Model) — декларативная интеграция.
-#
-# Что здесь настроено:
-#
-# 1. RLM-инструменты (идея arXiv «context as a variable in a REPL»):
-#    - tool `rlm`      — грузит большой файл/каталог в Python-переменную `ctx`,
-#                        код грепает/слайсит и print-ит ТОЛЬКО нужный срез
-#                        (в контекст модели попадает лишь он → токены не пухнут).
-#    - plugin `rlm_subquery` (toggle rlmRecursive) — передаёт путь к большому
-#                        источнику дешёвой суб-модели в изолированной сессии,
-#                        назад берём лишь ответ. Сам источник не копируется в
-#                        историю основной сессии.
-#    - plugin `output-governor` — заменяет неожиданно большие результаты tools
-#                        в history коротким preview с путём к полному артефакту.
-#                        Переиспользует native `tool-output` OpenCode, иначе
-#                        сохраняет полный результат в XDG state.
-#    Оба .ts зависят от zod. На NixOS файлы — симлинки в /nix/store, Bun резолвит
-#    импорты из реального стор-пути → рядом с .ts вендорим node_modules/zod
-#    (см. withZod). Ставим через xdg.configFile (каталог целиком), а НЕ через
-#    programs.opencode.tools: тот принял бы derivation за attrs и развалился.
-#    @opencode-ai/plugin НЕ импортируем — tool() это passthrough, а tool.schema=zod.
-#
-# 2. small_model = OpenAI GPT-5.6 Luna (НЕ дефолт):
-#    GPT-5.4 mini больше не поддерживается Codex с ChatGPT OAuth. Luna — его
-#    поддерживаемая дешёвая замена для заголовков, суммаризации и RLM subquery.
-#
-# 3. package override — фикс file-watcher (libstdc++ через LD_LIBRARY_PATH).
-#    Подробности — в комменте у самого override ниже.
-#
-# Смежное (в СИСТЕМНОЙ конфиге, не тут): programs.nix-ld со stdenv.cc.cc.lib —
-# чинит ВНЕШНИЕ prebuilt-бинари (Mason-LSP для nvim). opencode-вотчер — не его
-# класс (пропатченный бинарь), поэтому у него отдельный LD_LIBRARY_PATH-wrap.
-#
-# large-модель = big-pickle (осознанно): единственная реально проверенная в
-# агентном режиме; flash/mini годятся для суб-вызовов, но не как драйвер агента.
-#
-# Проверка после правок: opencode run "ping" → без пустоты и без трейса rlm.ts;
-# в свежем логе plugin rlm.ts loading + tool.registry rlm/rlm_subquery, титулы
-# на deepseek-…-free без 401, file.watcher backend=inotify без ERROR.
-# ─────────────────────────────────────────────────────────────────────────────
-
+# Home OpenCode: native OpenAI routing, compaction, skills and manual accounting.
+# Verified against OpenCode 1.19.3; see BENCHMARK.md for runtime checks.
 { pkgs, pkgsUnstable, lib, config, ... }:
 let
-  # ─── ПЕРЕКЛЮЧАТЕЛЬ RLM ──────────────────────────────────────────────────
-  # false → только tool `rlm` (depth-0). true → + plugin-tool `rlm_subquery` (рекурсия).
-  rlmRecursive = true;
-
-  # zod вендорим РЯДОМ с tool/plugin: на NixOS файлы — симлинки в /nix/store,
-  # Bun резолвит импорты из реального стор-пути, где иначе нет node_modules.
-  # Обновить hash: nix store prefetch-file https://registry.npmjs.org/zod/-/zod-4.4.3.tgz
-  zodTgz = pkgs.fetchurl {
-    url = "https://registry.npmjs.org/zod/-/zod-4.4.3.tgz";
-    hash = "sha256-7jjxf1M/1QBhBoWkg64vQTwm9OszpRaEMUVjyNYPJ5w=";
+  # Independent role defaults; each accepts high / xhigh / max. See README.md.
+  workEffort = "high"; # build / general / research / review
+  planEffort = "xhigh";
+  workAgent = {
+    model = "openai/gpt-6.1-sol";
+    variant = workEffort;
+    options.reasoningEffort = workEffort;
   };
-  # Плоский каталог: <name>.ts и node_modules/zod — СОСЕДИ (Bun резолвит zod
-  # от реального стор-пути вверх → находит ./node_modules/zod). node_modules
-  # opencode как плагины/тулы не сканирует, так что .d.ts из zod не подхватятся.
-  withZod =
-    name: file:
-    pkgs.runCommand "opencode-${name}" { } ''
-      mkdir -p "$out/node_modules/zod"
-      tar xf ${zodTgz} -C "$out/node_modules/zod" --strip-components=1
-      cp ${file} "$out/${name}.ts"
-    '';
-  pluginDirectory = pkgs.runCommand "opencode-plugins" { } ''
-    mkdir -p "$out/node_modules/zod"
-    tar xf ${zodTgz} -C "$out/node_modules/zod" --strip-components=1
-    cp ${./rlm-plugin.ts} "$out/rlm.ts"
-    mkdir -p "$out/lib"
-    cp ${./lib/task-usage.ts} "$out/lib/task-usage.ts"
-    cp ${./output-governor.ts} "$out/output-governor.ts"
-    cp ${./permission-stats.ts} "$out/permission-stats.ts"
-  '';
+  planAgent = {
+    model = "openai/gpt-6.1-sol-plan";
+    variant = planEffort;
+    options.reasoningEffort = planEffort;
+  };
+  summaryAgent = {
+    # Native alias of the same API model, isolated from the primary variant.
+    model = "openai/gpt-6.1-sol-high";
+    variant = "high";
+    options.reasoningEffort = "high";
+  };
+  solModel = effort: {
+    limit = compactionLimit;
+    options.reasoningEffort = effort;
+    reasoning_options = [ { type = "effort"; values = [ effort ]; } ];
+  };
+  analysisPermission = {
+    edit = "deny";
+    task = "deny";
+    todowrite = "deny";
+  };
+  # A soft input ceiling for native overflow, not the provider's physical limit.
+  # overflow.ts: 244000 - compaction.reserved (32000) = 212000 tokens.
+  compactionLimit = {
+    context = 1050000;
+    input = 244000;
+    output = 128000;
+  };
 in
 {
+  assertions = [
+    {
+      assertion = builtins.all (effort: builtins.elem effort [ "high" "xhigh" "max" ]) [ workEffort planEffort ];
+      message = "Home OpenCode workEffort and planEffort must be high, xhigh or max.";
+    }
+  ];
+
   programs.opencode = {
     enable = true;
-    # file-watcher opencode — нативный аддон (.node), слинкованный с libstdc++.
-    # На NixOS его нет в стандартном пути → аддон падает на dlopen, вотчер
-    # молча отключается (ERROR service=file.watcher ... libstdc++.so.6 ...),
-    # и opencode не видит ВНЕШНИХ правок файлов (из nvim/git/форматтера).
-    #
-    # nix-ld тут НЕ помогает: он перехватывает dlopen только у непатченных
-    # бинарей (интерпретатор /lib64/ld-linux…), а opencode из nixpkgs уже
-    # пропатчен (nix-store ld.so) → идёт мимо nix-ld. Поэтому чиним через
-    # LD_LIBRARY_PATH — его ld.so читает при dlopen у ЛЮБОГО процесса.
-    #
-    # Оборачиваем ВНУТРЕННИЙ .opencode-wrapped__ (external opencode — это уже
-    # обёртка nixpkgs). Проверка держит ли фикс — только из чистого окружения:
-    #   env -i HOME=$HOME PATH=/run/current-system/sw/bin (which opencode) run "ping"
-    #   grep -iE "watcher|libstdc" <свежий лог>   # backend=inotify без ERROR
-    # (если запускать из грязного шелла, libstdc++ может подтянуться транзитивом
-    #  и замаскировать поломку — тестируй только через env -i.)
+    # The native file-watcher addon needs libstdc++ at dlopen time. nix-ld cannot
+    # fix an already patched Nix binary; keep the library path in its wrapper.
     package = pkgsUnstable.opencode.overrideAttrs (old: {
       nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkgs.makeWrapper ];
       postFixup = (old.postFixup or "") + ''
@@ -104,11 +63,89 @@ in
 
     settings = {
       "$schema" = "https://opencode.ai/config.json";
-      autoupdate = false; # пакет иммутабелен (Nix) — не качать апдейты
+      autoupdate = false;
       share = "disabled";
+      enabled_providers = [ "openai" ];
+      model = workAgent.model;
+      small_model = "openai/gpt-6-luna";
+      provider.openai.models = {
+        "gpt-6.1-sol" = solModel workEffort;
+        # The TUI remembers a selected variant per model ID, not per agent.
+        # A native alias keeps plan and work defaults independent.
+        "gpt-6.1-sol-plan" = solModel planEffort // {
+          id = "gpt-6.1-sol";
+          name = "GPT-6.1 Sol (plan)";
+        };
+        # Compaction inherits the source variant in 1.19.3. This alias exposes
+        # only High, so a source XHigh/Max cannot override it.
+        "gpt-6.1-sol-high" = solModel "high" // {
+          id = "gpt-6.1-sol";
+          name = "GPT-6.1 Sol High (compaction/summary)";
+        };
+        "gpt-6-luna" = {
+          limit = compactionLimit;
+          # small:true ignores the selected variant; model options pin Low.
+          options.reasoningEffort = "low";
+          reasoning_options = [ { type = "effort"; values = [ "low" "high" "max" ]; } ];
+        };
+      };
+      agent = {
+        build = workAgent;
+        plan = planAgent // { permission.edit = "deny"; };
+        general = workAgent;
+        research = workAgent // {
+          mode = "subagent";
+          description = "Separate evidence-based analysis when synthesis across sources or competing hypotheses is justified.";
+          permission = analysisPermission;
+          prompt = ''
+            Investigate only the delegated question. Use tools for mechanical extraction.
+            Do not edit files or delegate further. Respect the requested source and time scope.
+            Return findings with file:line or URL references, distinguish facts from inference,
+            and state uncertainty, unexamined sources and unresolved questions explicitly.
+          '';
+        };
+        review = workAgent // {
+          mode = "subagent";
+          description = "Independent read-only review when a separate correctness or regression analysis is justified.";
+          permission = analysisPermission;
+          prompt = ''
+            Review only the delegated change or claim. Do not edit files or delegate further.
+            Prioritize concrete correctness issues and regressions, with file:line evidence,
+            impact and a reproducible check where possible. Separate verified findings from
+            hypotheses; report coverage gaps and say explicitly when no issue was found.
+          '';
+        };
+        explore = {
+          model = "openai/gpt-6-luna";
+          variant = "max";
+          options.reasoningEffort = "max";
+          permission = analysisPermission // { skill = "deny"; };
+          description = "Bounded read-only fact collection: paths, line references and explicit coverage gaps. Specify the source scope and question.";
+          prompt = ''
+            Collect facts only within the delegated source scope. Prefer glob for filenames,
+            grep for targeted searches and read for selected passages. Use mechanical tools
+            for counts and extraction. Do not edit, delegate or perform open-ended research.
+            Return concise findings with paths and line numbers, what was searched, and
+            explicit gaps or truncation. Absence from a partial search is not proof of absence.
+            Stop once the requested facts are established; do not repeat unchanged retrievals.
+          '';
+        };
+        compaction = summaryAgent;
+        summary = summaryAgent;
+        title = {
+          model = "openai/gpt-6-luna";
+          variant = "low";
+          options.reasoningEffort = "low";
+        };
+      };
+      compaction = {
+        auto = true;
+        prune = false;
+        reserved = 32000;
+        preserve_recent_tokens = 15000;
+      };
       permission = {
-        # Read-only project exploration does not require confirmation. Access outside
-        # the current project remains guarded by external_directory below.
+        # Access outside the current project remains guarded independently.
         read = "allow";
         glob = "allow";
         grep = "allow";
@@ -130,45 +167,15 @@ in
           "git config --get*" = "allow";
         };
       };
-      # Global exploration policy is loaded once from opencode/AGENTS.md.
-      # Detailed RLM usage is loaded on demand through the rlm skill.
-
-      # ─── МОДЕЛИ ───────────────────────────────────────────────────────────
-      # Не заданы → дефолт opencode zen (big-pickle и пр.). Переключить декларативно:
-      # раскомментируй строку и заведи креды `opencode auth login` (ключ ляжет вне store).
-      # НЕ клади ключ в settings/sessionVariables — уйдёт в world-readable /nix/store.
-      #   model = "anthropic/claude-sonnet-4-5";   # ANTHROPIC_API_KEY
-      #   model = "deepseek/deepseek-chat";        # DEEPSEEK_API_KEY  ("deepseek-reasoner" — reasoning)
-      #   model = "openai/gpt-5.5";                 # OPENAI_API_KEY
-      # small_model — заголовки, суммаризация и RLM subquery.
-      #   small_model = "anthropic/claude-haiku-4-5";
-      # Основная модель: код, рефакторинг, отладка, агентные задачи.
-      model = "openai/gpt-5.6-terra";
-
-      # Лёгкие служебные и изолированные RLM-задачи выполняет дешёвая Luna.
-      small_model = "openai/gpt-5.6-luna";
     };
 
-    extraPackages = with pkgs; [
-      python3
-      ripgrep
-      fd
-    ];
-
-    # Скилл — просто markdown, node_modules не нужен → оставляем через модуль.
-    skills.rlm = ./rlm-skill.md; # → ~/.config/opencode/skills/rlm/SKILL.md
+    extraPackages = with pkgs; [ python3 ripgrep fd ];
     skills.discussion-map = ./discussion-map-skill.md;
     skills.git-regression-rollback = ./git-regression-rollback-skill.md;
   };
 
-  # tools/plugin ставим НАПРЯМУЮ (каталог с node_modules/zod), а не через
-  # programs.opencode.tools: тот принимает либо path-литерал, либо attrs, а derivation
-  # он ошибочно примет за attrs и развалится.
-  xdg.configFile."opencode/tools".source = withZod "rlm" ./rlm-tool.ts;
   xdg.configFile."opencode/AGENTS.md".source = ./AGENTS.md;
-  xdg.configFile."opencode/plugin" = lib.mkIf rlmRecursive {
-    source = pluginDirectory;
-  };
+  xdg.configFile."opencode/plugin/permission-stats.ts".source = ./permission-stats.ts;
 
   home.packages = [
     (pkgs.writeShellApplication {

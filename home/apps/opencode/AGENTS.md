@@ -21,22 +21,23 @@
 - Use `glob` for filename discovery, `grep` for targeted content searches, and
   `read` for small, selected passages. Continue direct lookups while they narrow
   the search or verify a concrete finding; there is no tool-call quota.
-- Use `rlm` to aggregate content across files or extract evidence from a large
-  source without copying the bulk into the conversation. Load the `rlm` skill
-  when this workflow is needed. Do not invoke RLM merely because a directory,
-  an unknown-size file, or more than two files are involved.
 - If exploration repeats without new evidence or a narrower scope, change the
-  approach: test a specific hypothesis or use a focused RLM query. Reuse prior
+  approach: test a specific hypothesis or narrow the source and query. Reuse prior
   findings instead of repeatedly retrieving the same material.
 - Keep large source files and logs out of the conversation. When a tool saves a
   large result as an artifact, extract only the relevant evidence from that
   artifact. Select the narrowest useful source, never a home directory just to
   discover a filename.
-- Check RLM's load report. A partial result cannot establish absence in the
-  source; inspect relevant skipped files separately before making that claim.
-- Use `rlm_subquery` only when semantic analysis benefits from a separate model
-  and delegation is permitted. Pass a source path and a focused question, not
-  copied source text. Use direct extraction for mechanical searches or counts.
+- Use native tool-output artifacts with targeted `grep` and `read`; do not reload
+  a large result just because a preview was truncated. A partial search cannot
+  establish absence; state coverage gaps and inspect missing sources when needed.
+- Use tools for mechanical extraction, counting and transformation, without an
+  extra model call. Delegate bounded fact collection to `explore`, substantive
+  source synthesis to `research`, and independent correctness checks to `review`
+  only when separate analysis is justified and delegation is permitted. Give the
+  child a source scope, question and expected evidence; avoid duplicating its work.
+- Load skills only when their descriptions match the task. Keep skill permission
+  restrictions intact; a subagent is not a permission bypass.
 
 ## Git Workflow
 

@@ -77,59 +77,78 @@ def report(db, session, usage_dir, turn=None):
 
     totals = Counter()
     by_model = {}
+    by_route = {}
     tools = {}
     seen_outputs = set()
     message_ids = set()
-    missing_usage = inflight = compactions = 0
+    missing_usage = inflight = compactions = retry_parts = failed_messages = summary_messages = 0
     root_totals = Counter()
     missing_cost = 0
 
-    def account(info, sid, mid):
-        nonlocal missing_usage, inflight, missing_cost
+    def account(info, sid, mid, steps=()):
+        nonlocal missing_usage, inflight, missing_cost, failed_messages, summary_messages
         key = (sid, mid)
         if key in message_ids:
             return
         message_ids.add(key)
-        token = info.get("tokens")
-        if not isinstance(token, dict):
-            missing_usage += 1
-            return
-        cache = token.get("cache") or {}
-        counts = {
-            "input": token.get("input", 0), "cache_read": cache.get("read", 0),
-            "cache_write": cache.get("write", 0), "output": token.get("output", 0),
-            "reasoning": token.get("reasoning", 0), "cost_reported": info.get("cost") or 0,
-            "assistant_messages": 1,
-        }
-        if info.get("cost") is None:
-            missing_cost += 1
+        failed_messages += bool(info.get("error"))
+        summary_messages += bool(info.get("summary"))
         if not (info.get("time", {}).get("completed") or info.get("completed")):
             inflight += 1
+        # A retried message can contain multiple finished steps. Its tokens field
+        # is overwritten, while step-finish parts retain the individual counters.
+        samples = list(steps) or [info]
+        counts = Counter(assistant_messages=1)
+        for sample in samples:
+            token = sample.get("tokens")
+            if not isinstance(token, dict):
+                missing_usage += 1
+                continue
+            cache = token.get("cache") or {}
+            counts.update({
+                "input": token.get("input", 0), "cache_read": cache.get("read", 0),
+                "cache_write": cache.get("write", 0), "output": token.get("output", 0),
+                "reasoning": token.get("reasoning", 0), "recorded_steps": 1,
+            })
+        if not counts.get("recorded_steps"):
+            return
+        # Message cost is accumulated by OpenCode; never add both representations.
+        counts["cost_reported"] = info.get("cost") or 0
+        if info.get("cost") is None:
+            missing_cost += 1
         totals.update(counts)
         if sid == session:
             root_totals.update(counts)
         model = f'{info.get("providerID", "?")}/{info.get("modelID", "?")}'
         by_model.setdefault(model, Counter()).update(counts)
+        route = f'{info.get("agent", info.get("mode", "?"))}|{model}|{info.get("variant") or "default/unknown"}'
+        by_route.setdefault(route, Counter()).update(counts)
 
     for sid in sorted(selected):
         messages = load_messages(db, sid) if sid in sessions else []
         eligible = {mid: m for mid, ts, m in messages if start <= ts < end}
+        parts = [(row["message_id"], json.loads(row["data"])) for row in db.execute(
+            "SELECT message_id,data FROM part WHERE session_id=? ORDER BY time_created,id", (sid,)
+        ) if row["message_id"] in eligible] if sid in sessions else []
+        steps = {}
+        for mid, part in parts:
+            if part.get("type") == "step-finish":
+                steps.setdefault(mid, []).append(part)
         for mid, info in eligible.items():
             if info.get("role") == "assistant":
-                account(info, sid, mid)
+                account(info, sid, mid, steps.get(mid, ()))
         # Archived counters are a fallback; never count a retained child twice.
         for info in records.get(sid, {}).get("messages", []):
             account(info, sid, info["id"])
         if sid not in sessions:
             continue
-        for row in db.execute("SELECT message_id,data FROM part WHERE session_id=? ORDER BY time_created,id", (sid,)):
-            if row["message_id"] not in eligible:
-                continue
-            part = json.loads(row["data"])
+        for mid, part in parts:
             kind = part.get("type")
             if kind == "compaction":
                 compactions += 1
-            if kind in ("text", "reasoning") and eligible[row["message_id"]].get("role") == "assistant":
+            if kind == "retry":
+                retry_parts += 1
+            if kind in ("text", "reasoning") and eligible[mid].get("role") == "assistant":
                 totals[f"assistant_{kind}_chars"] += len(part.get("text", ""))
             if kind != "tool":
                 continue
@@ -159,19 +178,24 @@ def report(db, session, usage_dir, turn=None):
         warnings.append("Child attribution for --turn uses start timestamps; use a fresh session per benchmark task")
     if compactions:
         warnings.append("Compaction detected: stored character counts are not a replay of actual model inputs")
+    warnings.append("Title and some failed/retried requests have no stored usage; full task accounting requires provider/trace reconciliation")
+    warnings.append("Stored variants are labels, not proof of resolved reasoning effort; retry parts do not cover all transport retries")
     warnings.append("Reported cost may be zero/unpriced (e.g. subscription); not an invoice")
     warnings.append("Deleted/unlinked historical sessions and out-of-band model calls cannot be reconstructed")
     return {
-        "version": 1, "session": session, "turn": turn_id,
+        "version": 2, "session": session, "turn": turn_id,
         "sessions": sorted(selected), "archived_children": len(records),
         "totals": dict(totals), "root_tokens": dict(root_totals),
         "by_model": {k: dict(v) for k, v in by_model.items()},
+        "by_route": {k: dict(v) for k, v in by_route.items()},
         "processed_input_tokens": sum(totals[k] for k in ("input", "cache_read", "cache_write")),
         "processed_total_tokens": sum(totals[k] for k in ("input", "cache_read", "cache_write", "output", "reasoning")),
         "tools": {k: dict(v) for k, v in tools.items()},
         "unaccounted_rlm_calls": unaccounted, "missing_usage_messages": missing_usage,
         "unfinished_messages": inflight, "missing_cost_messages": missing_cost,
-        "compactions": compactions, "warnings": warnings,
+        "compactions": compactions, "summary_messages": summary_messages,
+        "retry_parts": retry_parts, "failed_messages": failed_messages,
+        "full_task_usage_complete": False, "warnings": warnings,
     }
 
 
@@ -205,6 +229,12 @@ def main():
     print(f'Processed total (including output + reasoning): {result["processed_total_tokens"]:,}')
     for key, value in result["totals"].items():
         print(f"  {key}: {value:,}")
+    print("Routes (agent|model|stored variant): processed input / output + reasoning")
+    for route, counts in sorted(result["by_route"].items()):
+        processed = sum(counts.get(k, 0) for k in ("input", "cache_read", "cache_write"))
+        print(f'  {route}: {processed:,} / {counts.get("output", 0) + counts.get("reasoning", 0):,}')
+    print(f'Compaction requests: {result["compactions"]}; summaries: {result["summary_messages"]}; '
+          f'retry parts: {result["retry_parts"]}; failed messages: {result["failed_messages"]}')
     print("Tools: calls / errors / stored output chars / exact repeat chars")
     for name, stat in sorted(result["tools"].items()):
         print(f'  {name}: {stat["calls"]} / {stat.get("errors", 0)} / {stat.get("stored_output_chars", 0)} / {stat.get("exact_repeat_chars", 0)}')

@@ -76,6 +76,41 @@ class ReportTests(unittest.TestCase):
             module.connect(target)
         self.assertFalse(target.exists())
 
+    def test_retried_steps_replace_last_message_tokens_without_double_counting(self):
+        for index, n in enumerate([7, 10]):
+            self.db.execute("INSERT INTO part VALUES (?,?,?,?,?)", (
+                f"step{index}", "a1", "root", 10,
+                json.dumps({"type": "step-finish", "tokens": self.assistant(n)["tokens"]})))
+        result = module.report(self.db, "root", self.path)
+        self.assertEqual(result["totals"]["input"], 17 + 20 + 30)
+        self.assertEqual(result["totals"]["assistant_messages"], 3)
+        self.assertEqual(result["totals"]["recorded_steps"], 4)
+
+    def test_compaction_errors_routes_and_retry_counts(self):
+        info = {**self.assistant(8), "agent": "compaction", "variant": "max", "summary": True,
+                "error": {"name": "APIError"}}
+        self.message("summary", "root", 120, info)
+        for kind in ["compaction", "retry"]:
+            self.db.execute("INSERT INTO part VALUES (?,?,?,?,?)", (
+                kind, "summary", "root", 120, json.dumps({"type": kind})))
+        result = module.report(self.db, "root", self.path)
+        self.assertEqual(result["by_route"]["compaction|p/m|max"]["input"], 8)
+        self.assertEqual(result["compactions"], 1)
+        self.assertEqual(result["summary_messages"], 1)
+        self.assertEqual(result["retry_parts"], 1)
+        self.assertEqual(result["failed_messages"], 1)
+        self.assertFalse(result["full_task_usage_complete"])
+
+    def test_readonly_connection_rejects_writes_and_preserves_database(self):
+        target = self.path / "existing.db"
+        with sqlite3.connect(target) as db:
+            db.execute("CREATE TABLE example(value TEXT)")
+        before = target.read_bytes()
+        with module.connect(target) as db:
+            with self.assertRaises(sqlite3.OperationalError):
+                db.execute("INSERT INTO example VALUES ('no')")
+        self.assertEqual(target.read_bytes(), before)
+
 
 if __name__ == "__main__":
     unittest.main()

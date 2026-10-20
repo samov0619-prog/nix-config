@@ -106,14 +106,12 @@ not import Disko.
 
 На новых хостах с stateVersion >= 26.05 условия ложны, поведение по умолчанию.
 
-### OpenCode + RLM
+### Home OpenCode
 
-- Shared exploration policy lives in `home/apps/opencode/AGENTS.md`; detailed
-  usage and limits live in `rlm-skill.md`. Do not restore a separate
-  `rlm-instructions.md` or a duplicate system reminder in the RLM plugin.
-  Focused glob/grep/read calls are normal; RLM is for bounded extraction and
-  aggregation, without a fixed call-count trigger. Preserve corporate Mac rules
-  when copying this policy into its complete configuration archive.
+- Shared exploration policy lives in `home/apps/opencode/AGENTS.md`. Use native
+  glob/grep/read and tool-output artifacts; mechanical extraction needs no extra
+  model. RLM is archived under `archive/rlm-disabled`, excluded from installation
+  and normal tests. Home changes do not update the corporate Mac profile.
 
 - Ручной порт на корпоративный Mac: актуальный снимок `~/.config/opencode`
   → объединить общие Linux-улучшения с корпоративными особенностями → полный
@@ -124,16 +122,30 @@ not import Disko.
   README архива; отдельного сборщика/мигратора нет. Полные снимки/архивы могут
   содержать авторизацию: держать вне Git, не выводить секреты в логи.
 
-- `home/core-set/devtools/opencode/default.nix` — кастомная установка с `LD_LIBRARY_PATH`-фикс file watcher (nix-ld не помогает, т.к. opencode уже пропатчен).
-- RLM tool и plugin вендорят `node_modules/zod` рядом через `withZod`, т.к. на NixOS файлы — симлинки в /nix/store.
-- tools/plugin ставятся через `xdg.configFile`, а НЕ через `programs.opencode.tools`.
-- Модели: main `openai/gpt-5.6-terra`, small `opencode/deepseek-v4-flash-free`.
-- `rlmRecursive = true` включает plugin-tool `rlm_subquery`.
+- `home/apps/opencode/default.nix` — домашний модуль laptop/desktop, проверенный
+  с OpenCode 1.19.3; сохраняет `LD_LIBRARY_PATH` fix file watcher.
+- Только OpenAI Responses. Build/general/research/review: Sol `workEffort = "high"`;
+  plan: `planEffort = "xhigh"`. Оба принимают `high`/`xhigh`/`max` в модуле.
+  Plan использует штатный alias `gpt-6.1-sol-plan` с API ID `gpt-6.1-sol`:
+  TUI хранит выбранный variant по model ID, а не по агенту.
+  Compaction/summary: Sol High; explore: `gpt-6-luna` Max (проверять против High);
+  title/small_model: Luna Low. Small model не маршрутизирует task/compaction.
+- Compaction/summary используют штатный alias `gpt-6.1-sol-high` с API ID
+  `gpt-6.1-sol` и единственным variant High: compaction в 1.19.3 наследует variant
+  исходного сообщения, который иначе перекрывает agent.options. Краткие выводы
+  исследований — `home/apps/opencode/README.md`, подробности — `BENCHMARK.md`.
+- Auto compaction: soft input 244000 − reserved 32000 = порог 212000;
+  output 128000 не уменьшен, recent tail 15000, prune=false. Реальная проверка
+  происходит между шагами, поэтому возможен скачок за порог.
+- `permission-stats.ts` подключён самостоятельно через `xdg.configFile`, без
+  RLM и vendored зависимостей. Остальные зависимости OpenCode — штатные.
 - `opencode-task-report --session <id>` — read-only per-task accounting; методика
-  в `home/apps/opencode/BENCHMARK.md`. RLM сохраняет только usage counters перед
-  удалением дочерней сессии в XDG state `opencode/task-usage`; при ошибке учёта
-  сессия сохраняется. Символы tool output не считать токенами или доказанной экономией.
-- Проверка после правок: `opencode run "ping"`, в логе `plugin rlm.ts loading`, file.watcher backend=inotify без ERROR.
+  в `home/apps/opencode/BENCHMARK.md`. Старые ledger-файлы XDG state
+  `opencode/task-usage` сохраняются. DB не содержит полного учёта title и всех
+  retries: отчёт не является invoice или измерителем подписочной квоты.
+- Проверка после правок: build без activation, изолированный запуск 1.19.3,
+  resolved agents/variants/tools/skills и Responses requests; RLM отсутствует,
+  permission-stats загружен, file.watcher backend=inotify без ERROR.
 
 ### Kitty langmap
 
