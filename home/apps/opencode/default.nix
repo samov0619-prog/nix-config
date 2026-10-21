@@ -220,6 +220,13 @@ in
 
   xdg.configFile."opencode/AGENTS.md".source = ./AGENTS.md;
   xdg.configFile."opencode/plugin/permission-stats.ts".source = ./permission-stats.ts;
+  xdg.configFile."opencode/plugin/completion-sound.ts".source = pkgs.replaceVars ./completion-sound.ts {
+    player = "${pkgs.pipewire}/bin/pw-play";
+    sound = ./completion-sound.mp3;
+    errorSound = ./error-sound.mp3;
+  };
+  xdg.configFile."opencode/sounds/completion.mp3".source = ./completion-sound.mp3;
+  xdg.configFile."opencode/sounds/error.mp3".source = ./error-sound.mp3;
 
   home.packages = [
     (pkgs.writeShellApplication {

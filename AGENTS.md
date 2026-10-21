@@ -139,6 +139,11 @@ not import Disko.
   происходит между шагами, поэтому возможен скачок за порог.
 - `permission-stats.ts` подключён самостоятельно через `xdg.configFile`, без
   RLM и vendored зависимостей. Остальные зависимости OpenCode — штатные.
+- `completion-sound.ts` через `pw-play` воспроизводит сохранённые в Nix store
+  anime wow MP3 после успешного ответа основной сессии и anime girl senpai при
+  её ошибке; оба звука ожидают `session.idle`. Дочерние задачи, compaction,
+  промежуточные retries, ручные отмены и дубли событий отфильтрованы. Проверка:
+  `node --test home/apps/opencode/tests/test_completion_sound.mjs`.
 - `opencode-task-report --session <id>` — read-only per-task accounting; методика
   в `home/apps/opencode/BENCHMARK.md`. Старые ledger-файлы XDG state
   `opencode/task-usage` сохраняются. DB не содержит полного учёта title и всех
