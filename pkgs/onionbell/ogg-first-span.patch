@@ -1,0 +1,45 @@
+diff --git a/src/app.rs b/src/app.rs
+--- a/src/app.rs
++++ b/src/app.rs
+@@ -227,6 +227,6 @@ impl App {
+     fn play_sound(&mut self, sfx_path: &PathBuf, volume: f32) {
+         if let Some(data) = self.sound_map.get(sfx_path) {
+-            match Decoder::try_from(io::Cursor::new(data.clone())) {
++            match decode_sound(data.clone()) {
+                 Ok(audio) => {
+                     self.audio_stream_handle
+                         .mixer()
+@@ -244,3 +244,33 @@ impl App {
+         }
+     }
+ }
++
++fn decode_sound(
++    data: Vec<u8>,
++) -> Result<rodio::buffer::SamplesBuffer, rodio::decoder::DecoderError> {
++    let audio = Decoder::try_from(io::Cursor::new(data))?;
++    let channels = audio.channels();
++    let sample_rate = audio.sample_rate();
++    // Vorbis may begin with an empty decoded span. Rodio 0.21's mixer treats
++    // that span as EOF before asking the decoder for its first audio sample.
++    // Bell clips are short: decode them completely before passing to the mixer.
++    Ok(rodio::buffer::SamplesBuffer::new(
++        channels,
++        sample_rate,
++        audio.collect::<Vec<_>>(),
++    ))
++}
++
++#[cfg(test)]
++mod playback_tests {
++    use super::*;
++
++    #[test]
++    fn freedesktop_ogg_bell_reaches_output_mixer() {
++        let data = include_bytes!(env!("ONIONBELL_TEST_SOUND")).to_vec();
++        let (mixer, output) = rodio::mixer::mixer(2, 48_000);
++        mixer.add(decode_sound(data).unwrap().amplify_normalized(1.0));
++        let peak = output.fold(0.0_f32, |peak, sample| peak.max(sample.abs()));
++        assert!(peak > 0.01, "bell was discarded or silent: peak={peak}");
++    }
++}

@@ -128,6 +128,32 @@ Title не учтён, токены не равны API-стоимости ил�
 проверки. Эксперимент не измерял качество Sol High/Max и поведение длинных задач с
 реальной компактизацией; последнее проверялось отдельно на native runtime fixture.
 
+## Bell при запросах разрешения
+
+`permission-stats.ts` отправляет один BEL (`\x07`) в `/dev/tty` на каждое событие
+`permission.asked`, включая запросы дочерних сессий, независимо от фокуса окна.
+Вывод идёт прямо в управляющий терминал, поскольку stdout backend может быть
+перехвачен TUI. В headless-запуске без терминала bell пропускается; учёт решений
+и обработка разрешений продолжают работать.
+
+В `home/modules/kitty/common.conf` явно включён штатный audio bell Kitty:
+`enable_audio_bell yes`. Настройка действует на BEL от любых приложений в Kitty.
+Hyprland 0.55/0.56 только публикует системные bell-события; общий звук обеспечивает
+готовый `onionbell`, подключённый в `home/linux/modules/hyprland/default.nix` как
+user service графической сессии. Он воспроизводит `bell.oga` из freedesktop sound
+theme для всех клиентов `xdg-system-bell-v1`, а не только Kitty или OpenCode.
+Пакет закреплён в `pkgs/onionbell`; локальная compatibility-правка допускает
+отсутствующее поле `pseudo` в JSON текущего Hyprland. Штатное воспроизведение
+в самом Hyprland добавлено [upstream PR #15502](https://github.com/hyprwm/Hyprland/pull/15502),
+но отсутствует в используемых версиях 0.55/0.56. При переходе на версию с этим
+воспроизведением удалить onionbell service, чтобы bell не звучал дважды.
+
+После применения Home Manager проверить `systemctl --user status onionbell.service`
+и перезапустить Kitty и OpenCode. Проверка в Fish:
+`printf '\a'`, затем реальный запрос разрешения в OpenCode, в том числе при
+переключении на другое окно. При `opencode attach` к отдельному headless server
+этот backend-плагин не может подать bell в терминал клиента.
+
 ## Применение
 
 1. После изменения `workEffort` или `planEffort` выполнить build без активации:

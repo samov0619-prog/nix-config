@@ -165,6 +165,9 @@ not import Disko.
 - Laptop: без compose:ralt (xremap перехватывает), есть `on_focus_under_fullscreen`.
 - Desktop: compose:ralt активен, есть `new_window_takes_over_fullscreen`.
 - Оба: dwindle, zero gaps/borders, UWSM autostart, waybar, terminal-layout-en.sh.
+- Системный Wayland bell: `onionbell.service` в HM-модуле Hyprland воспроизводит общий `xdg-system-bell-v1` (не только Kitty). Пакет pinned в `pkgs/onionbell`, с compatibility-правкой для отсутствующего `clients.pseudo` и `ogg-first-span.patch`: Rodio 0.21 принимает пустой первый Vorbis span за EOF; полное декодирование короткого bell в PCM устраняет тишину. Регрессионный тест пропускает настоящий freedesktop `bell.oga` через output mixer. Kitty использует `enable_audio_bell yes` в `common.conf`. После перехода с 0.55/0.56 на Hyprland со встроенным звуком bell (upstream PR #15502) удалить onionbell service, чтобы исключить двойное воспроизведение.
+- Для живой проверки выхода через `pw-record` обязательно задавать `--properties '{ stream.capture.sink = true }'` вместе с `--target <sink-name>` и проверять PipeWire links от `monitor_FL/FR`: без этого WirePlumber может записывать микрофон вместо выхода. Ненулевой peak сам по себе не доказывает воспроизведение bell.
+- HM-модуль предупреждает `ONIONBELL CLEANUP`, когда выбранный Hyprland получает зависимость `libcanberra` — признак native bell из PR #15502, включая backports. Проверка выполняется при evaluation/build/switch без сетевых запросов. Сначала применить NixOS update и перезайти в Hyprland, остановить onionbell и проверить `printf '\a'`; после успешной проверки удалить пакет, конфиг, службу и сам reminder из HM, затем применить HM.
 
 ### Window management policy
 

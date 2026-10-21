@@ -1,4 +1,4 @@
-import { appendFile, mkdir } from "node:fs/promises";
+import { appendFile, mkdir, open } from "node:fs/promises";
 import { join } from "node:path";
 
 type PermissionRequest = {
@@ -12,10 +12,25 @@ const stateHome =
 const historyPath = join(stateHome, "opencode", "permission-history.jsonl");
 const requests = new Map<string, PermissionRequest>();
 
+async function ringBell() {
+	try {
+		// The TUI backend may capture stdout; write BEL to the controlling terminal.
+		const tty = await open("/dev/tty", "w");
+		try {
+			await tty.write("\x07");
+		} finally {
+			await tty.close();
+		}
+	} catch {
+		// Headless servers have no controlling terminal. Permissions still work.
+	}
+}
+
 export default async () => ({
 	event: async ({ event }: { event: any }) => {
 		if (event.type === "permission.asked") {
 			requests.set(event.properties.id, event.properties);
+			await ringBell();
 			return;
 		}
 
