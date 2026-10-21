@@ -6,6 +6,7 @@
     enable = true;
     settings = {
       core.editor = "nvim";
+      merge.conflictStyle = "zdiff3";
     };
   };
 
