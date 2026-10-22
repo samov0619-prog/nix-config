@@ -1,0 +1,17 @@
+diff --git a/src/app.rs b/src/app.rs
+--- a/src/app.rs
++++ b/src/app.rs
+@@ -151,3 +151,3 @@ impl App {
+             let mut character_buf = [0u8; 4];
+-            socket.read(&mut character_buf[0..1])?;
++            socket.read_exact(&mut character_buf[0..1])?;
+             trace!("Read byte {:02X}", character_buf[0]);
+@@ -165,7 +165,7 @@ impl App {
+             // is present. It's pretty weird because IMHO read() should just return when 0-sized
+             // slice is passed, but anyway it is what it is.
+             if len > 1 {
+-                socket.read(&mut character_buf[1..len])?;
++                socket.read_exact(&mut character_buf[1..len])?;
+             }
+             let character = &character_buf[0..len];
+             trace!("character: {:02X?}", character);

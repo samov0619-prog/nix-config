@@ -197,6 +197,11 @@ Hyprland 0.55/0.56 публикует системные bell-события; `o
 со штатным воспроизведением из [PR #15502](https://github.com/hyprwm/Hyprland/pull/15502)
 удалить onionbell по reminder в HM-модуле, чтобы системный bell не звучал дважды.
 
+Локальный `ipc-eof.patch` обеспечивает выход onionbell при закрытии IPC вместо
+busy loop с ростом памяти; существующий `Restart=on-failure` перезапускает службу.
+Независимые EOF-тесты и порядок удаления этого фикса после обновления upstream
+описаны в [`pkgs/onionbell/README.md`](../../../pkgs/onionbell/README.md).
+
 ## Применение
 
 1. После изменения `workEffort` или `planEffort` выполнить build без активации:

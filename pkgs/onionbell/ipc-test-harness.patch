@@ -1,0 +1,22 @@
+diff --git a/src/app.rs b/src/app.rs
+--- a/src/app.rs
++++ b/src/app.rs
+@@ -16,3 +16,7 @@
++#[cfg(test)]
++#[path = "ipc-tests.rs"]
++mod ipc_tests;
++
+ pub struct App {
+     pub socket_path: PathBuf,
+     pub socket2_path: PathBuf,
+@@ -143,4 +147,4 @@ impl App {
+-    pub fn get_event(&self, socket: &mut UnixStream) -> Result<String, AppError> {
++    pub fn get_event(socket: &mut impl Read) -> Result<String, AppError> {
+         trace!("Waiting for an event");
+         let mut buffer = Vec::new();
+         loop {
+@@ -178,3 +182,3 @@ impl App {
+         loop {
+-            let event = self.get_event(&mut socket2)?;
++            let event = Self::get_event(&mut socket2)?;
+             debug!("{}", event);
