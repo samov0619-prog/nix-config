@@ -139,11 +139,22 @@ not import Disko.
   происходит между шагами, поэтому возможен скачок за порог.
 - `permission-stats.ts` подключён самостоятельно через `xdg.configFile`, без
   RLM и vendored зависимостей. Остальные зависимости OpenCode — штатные.
-- `completion-sound.ts` через `pw-play` воспроизводит сохранённые в Nix store
-  anime wow MP3 после успешного ответа основной сессии и anime girl senpai при
-  её ошибке; оба звука ожидают `session.idle`. Дочерние задачи, compaction,
-  промежуточные retries, ручные отмены и дубли событий отфильтрованы. Проверка:
-  `node --test home/apps/opencode/tests/test_completion_sound.mjs`.
+- `notifications.ts` обрабатывает permission, success и error через общий
+  `notify(kind)`: тихая workspace/tab urgency Kitty плюс `pw-play` с bell.oga,
+  anime wow или anime girl senpai. OpenCode не отправляет BEL; системный
+  onionbell остаётся для других приложений. `permission-stats.ts` — только учёт.
+  Ответы/ошибки дочерних задач, compaction, retries, отмены и дубли отфильтрованы.
+  Один SessionState на сессию; актуальность проверяется после SDK await, ранние
+  ошибки уже idle не ждут нового idle, replay различается по runtime bus ID.
+  Проверка: `node --test home/apps/opencode/tests/test_notifications.mjs`.
+- `/mute` и `/unmute` — локальные TUI-команды из `notification-commands.ts`,
+  подключённые через `programs.opencode.tui.plugin`, без запроса к модели.
+  `notification-state.ts` хранит общий persistent mute текущего пользователя
+  в XDG state `opencode/notifications-muted`; backend читает его перед звуком.
+  Mute выключает все три звука, сохраняя workspace/tab urgency всех событий.
+  No-UI `silent-attention.py` через fire-and-forget remote control не вызывает
+  audio bell или command_on_bell; проверка: `python3 home/apps/opencode/tests/test_silent_attention.py`.
+  Проверка: `node --test home/apps/opencode/tests/test_notification_mute.mjs`.
 - `opencode-task-report --session <id>` — read-only per-task accounting; методика
   в `home/apps/opencode/BENCHMARK.md`. Старые ledger-файлы XDG state
   `opencode/task-usage` сохраняются. DB не содержит полного учёта title и всех

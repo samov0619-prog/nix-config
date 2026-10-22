@@ -128,59 +128,74 @@ Title не учтён, токены не равны API-стоимости ил�
 проверки. Эксперимент не измерял качество Sol High/Max и поведение длинных задач с
 реальной компактизацией; последнее проверялось отдельно на native runtime fixture.
 
-## Bell при запросах разрешения
+## Уведомления: разрешение, завершение и ошибка
 
-`permission-stats.ts` отправляет один BEL (`\x07`) в `/dev/tty` на каждое событие
-`permission.asked`, включая запросы дочерних сессий, независимо от фокуса окна.
-Вывод идёт прямо в управляющий терминал, поскольку stdout backend может быть
-перехвачен TUI. В headless-запуске без терминала bell пропускается; учёт решений
-и обработка разрешений продолжают работать.
+`notifications.ts` обрабатывает все три события через одну функцию `notify(kind)`:
+тихий запрос внимания Kitty плюс воспроизведение выбранного аудиофайла через
+`pw-play`. Подсветка workspace и вкладки запрашивается независимо от mute и
+не переключает фокус. Ошибка аудио не блокирует подсветку, ошибка терминала
+не блокирует звук. `permission-stats.ts` занимается только учётом разрешений.
 
-В `home/modules/kitty/common.conf` явно включён штатный audio bell Kitty:
-`enable_audio_bell yes`. Настройка действует на BEL от любых приложений в Kitty.
-Hyprland 0.55/0.56 только публикует системные bell-события; общий звук обеспечивает
-готовый `onionbell`, подключённый в `home/linux/modules/hyprland/default.nix` как
-user service графической сессии. Он воспроизводит `bell.oga` из freedesktop sound
-theme для всех клиентов `xdg-system-bell-v1`, а не только Kitty или OpenCode.
-Пакет закреплён в `pkgs/onionbell`; локальная compatibility-правка допускает
-отсутствующее поле `pseudo` в JSON текущего Hyprland. Штатное воспроизведение
-в самом Hyprland добавлено [upstream PR #15502](https://github.com/hyprwm/Hyprland/pull/15502),
-но отсутствует в используемых версиях 0.55/0.56. При переходе на версию с этим
-воспроизведением удалить onionbell service, чтобы bell не звучал дважды.
+| Событие | Звук | Момент уведомления |
+|---|---|---|
+| `permission.asked`, включая дочерние сессии | freedesktop `bell.oga` | Сразу, один раз на request ID |
+| Успешный ответ основной сессии | anime wow | Завершённый ответ и `session.idle` |
+| Окончательная ошибка основной сессии | anime girl senpai | При переходе в idle либо сразу, если сессия уже idle |
 
-После применения Home Manager проверить `systemctl --user status onionbell.service`
-и перезапустить Kitty и OpenCode. Проверка в Fish:
-`printf '\a'`, затем реальный запрос разрешения в OpenCode, в том числе при
-переключении на другое окно. При `opencode attach` к отдельному headless server
-этот backend-плагин не может подать bell в терминал клиента.
+Все аудиофайлы и проигрыватель заданы абсолютными Nix store paths. MP3 хранятся
+в репозитории; исходники в Downloads не нужны. OpenCode не отправляет BEL:
+permission sound, wow и senpai используют один и тот же путь воспроизведения.
+В headless-режиме без Kitty пропускается только подсветка. При подключении
+к отдельному server уведомления выполняются на стороне backend.
 
-## Звуки завершения ответа и ошибки
+Для завершения и ошибки один `SessionState` хранит последнее сообщение, статус,
+отложенное уведомление, выполняющийся lookup и ключи уже отправленных событий.
+Повторные idle/error/message cleanup не дублируют уведомления. Для ранних ошибок
+без assistant message используется runtime bus event ID: replay подавляется,
+а новая операция с таким же текстом ошибки получает отдельное уведомление.
+После асинхронного lookup повторно проверяется актуальность: новый prompt,
+удаление сессии, отмена и retry отменяют устаревшее уведомление. Финальный
+служебный `busy` сохраняет успешное завершение. Дочерние ответы, compaction,
+промежуточные вызовы инструментов, retries и ручные отмены остаются без звука
+и подсветки завершения.
 
-`completion-sound.ts` воспроизводит `sounds/completion.mp3` (anime wow) через
-PipeWire, когда OpenCode закончил ответ и сессия перешла в `session.idle`.
-Срабатывает один раз на успешно завершённый ответ основной сессии, независимо
-от фокуса окна. Если основная сессия завершилась ошибкой, вместо anime wow
-воспроизводится `sounds/error.mp3` (anime girl senpai). Ошибка отмечается по
-`session.error` или ошибке assistant message, звук ожидает `session.idle`.
-Повторное событие ошибки и последующее обновление того же сообщения не дают
-дублирующего звука. После успешного восстановления звучит обычный anime wow.
-Финальный служебный `session.status: busy` перед `idle` сохраняет уведомление
-об успешном ответе; продолжение работы сбрасывает только промежуточную ошибку.
+### `/mute` и `/unmute`
 
-Промежуточные вызовы инструментов, повторы запросов, дочерние задачи, compaction
-и ручные прерывания не воспроизводят эти уведомления.
+Локальные TUI-команды `/mute` и `/unmute` выключают и включают звуки OpenCode:
+anime wow, anime girl senpai и bell запроса разрешения. Они доступны также
+в command palette, показывают toast и не создают запрос к модели.
 
-Аудиофайл хранится в репозитории и попадает в Nix store; исходный файл в Downloads
-для работы не нужен. Home Manager подставляет абсолютные пути `pw-play` и MP3
-в плагин. Проигрыватель запускается в фоне, без вывода в TUI; недоступный звук
-не прерывает работу OpenCode. При подключении к отдельному server звук играет
-на стороне backend, где загружен плагин.
+Настройка общая для OpenCode текущего пользователя на этой машине и сохраняется
+между запусками в `$XDG_STATE_HOME/opencode/notifications-muted` (по умолчанию
+`~/.local/state/opencode/notifications-muted`). `notification-state.ts` читается
+и TUI, и backend-плагинами; уже запущенные экземпляры замечают изменение при
+следующем уведомлении. `/unmute` не воспроизводит пропущенные уведомления.
 
-После применения Home Manager полностью перезапустить OpenCode. Проверка файла:
-`pw-play ~/.config/opencode/sounds/completion.mp3` и
-`pw-play ~/.config/opencode/sounds/error.mp3`, затем обычный короткий запрос
-в OpenCode. Проверка событий без запуска аудио:
-`node --test home/apps/opencode/tests/test_completion_sound.mjs`.
+Для всех трёх событий, с mute и без него, плагин через Kitty remote control
+запускает `silent-attention.py` для своего `KITTY_WINDOW_ID`. No-UI kitten
+отмечает вкладку и запрашивает внимание у compositor, не вызывая audio bell
+или `command_on_bell`. Используется существующий `allow_remote_control yes`;
+ответ remote control не запрашивается, чтобы не попадать в ввод TUI.
+
+После Home Manager switch полностью перезапустить OpenCode. Проверка:
+`/mute`, короткий запрос при переходе на другой workspace — подсветка без wow;
+запрос разрешения и ошибка — также подсветка без звука. `/unmute` возвращает
+все три звука. Проверки без настоящего аудио:
+
+```sh
+node --test home/apps/opencode/tests/test_notifications.mjs home/apps/opencode/tests/test_notification_mute.mjs
+python3 home/apps/opencode/tests/test_silent_attention.py
+```
+
+### Системный bell других приложений
+
+В `home/modules/kitty/common.conf` включён `enable_audio_bell yes`.
+Hyprland 0.55/0.56 публикует системные bell-события; `onionbell.service` из
+`home/linux/modules/hyprland/default.nix` воспроизводит freedesktop `bell.oga`
+для клиентов `xdg-system-bell-v1`. Проверка в Fish: `printf '\a'`.
+Эта служба не участвует в уведомлениях OpenCode. После перехода на Hyprland
+со штатным воспроизведением из [PR #15502](https://github.com/hyprwm/Hyprland/pull/15502)
+удалить onionbell по reminder в HM-модуле, чтобы системный bell не звучал дважды.
 
 ## Применение
 

@@ -46,6 +46,10 @@ let
     input = 244000;
     output = 128000;
   };
+  notificationState = ./notification-state.ts;
+  notificationCommands = pkgs.replaceVars ./notification-commands.ts {
+    inherit notificationState;
+  };
 in
 {
   assertions = [
@@ -216,12 +220,16 @@ in
     ];
     skills.discussion-map = ./discussion-map-skill.md;
     skills.git-regression-rollback = ./git-regression-rollback-skill.md;
+    tui.plugin = [ "${notificationCommands}" ];
   };
 
   xdg.configFile."opencode/AGENTS.md".source = ./AGENTS.md;
   xdg.configFile."opencode/plugin/permission-stats.ts".source = ./permission-stats.ts;
-  xdg.configFile."opencode/plugin/completion-sound.ts".source = pkgs.replaceVars ./completion-sound.ts {
+  xdg.configFile."opencode/plugin/notifications.ts".source = pkgs.replaceVars ./notifications.ts {
+    inherit notificationState;
+    silentAttention = ./silent-attention.py;
     player = "${pkgs.pipewire}/bin/pw-play";
+    bellSound = "${pkgs.sound-theme-freedesktop}/share/sounds/freedesktop/stereo/bell.oga";
     sound = ./completion-sound.mp3;
     errorSound = ./error-sound.mp3;
   };
