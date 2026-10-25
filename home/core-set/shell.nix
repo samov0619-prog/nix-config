@@ -1,4 +1,9 @@
-{ pkgsUnstable, lib, config, ... }:
+{
+  pkgsUnstable,
+  lib,
+  config,
+  ...
+}:
 {
   programs.fish = {
     enable = true;
@@ -72,6 +77,17 @@
           return info
       end, 1500, Header.RIGHT)
     '';
+    # Archive extensions must extract even when `file` reports a MIME that
+    # misses Yazi's built-in archive rule. Otherwise xdg-open reopens Yazi.
+    settings.open.prepend_rules = [
+      {
+        url = "*.{zip,7z,rar,tar,gz,gzip,tgz,xz,txz,zst,zstd,tzst,bz,bz2,bzip,bzip2,tbz,tbz2,lzma,tlz,Z,taz,ar,a,cpio,arj,xar,cab}";
+        use = [
+          "extract"
+          "reveal"
+        ];
+      }
+    ];
     shellWrapperName = lib.mkIf (lib.versionOlder config.home.stateVersion "26.05") "yy";
   };
   programs.direnv = {
