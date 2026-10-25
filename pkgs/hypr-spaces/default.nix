@@ -4,6 +4,7 @@
   meson,
   ninja,
   pkg-config,
+  nlohmann_json,
 }:
 stdenv.mkDerivation {
   pname = "hypr-spaces";
@@ -15,7 +16,10 @@ stdenv.mkDerivation {
     ninja
     pkg-config
   ];
-  buildInputs = hyprland.buildInputs ++ [ hyprland ];
+  buildInputs = hyprland.buildInputs ++ [
+    hyprland
+    nlohmann_json
+  ];
   dontUseCmakeConfigure = true;
   doCheck = true;
 

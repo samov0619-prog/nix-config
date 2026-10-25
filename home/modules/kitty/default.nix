@@ -11,7 +11,7 @@ let
       if pkgs.stdenv.isDarwin then
         ''cat ${./darwin-prelude.conf} "''${templates[0]}" ${./common.conf} ${./darwin.conf} > source.conf''
       else
-        ''cat "''${templates[0]}" ${./common.conf} > source.conf''
+        ''cat "''${templates[0]}" ${./common.conf} ${./linux-context.conf} > source.conf''
     }
     ${pkgs.python3}/bin/python3 ${./kitty-langmap/build.py} \
       source.conf ${./kitty-langmap/map.txt} > "$out"

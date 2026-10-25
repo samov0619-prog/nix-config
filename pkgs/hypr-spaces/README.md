@@ -38,7 +38,13 @@ separate upstream flake or `hyprpm` runtime build.
   output, including negative monitor origins and off-monitor floating windows.
   While open, every canvas output is fully redrawn at its own refresh cadence;
   closing the canvas stops this redraw loop.
-- Every card has its numeric ID centred in the top header, including `+`.
+- Every card keeps its numeric ID at the left of a Waybar-style header, including
+  `+`. Regular cards use their workspace's last-focused mapped window as the
+  semantic title source, with Hyprland's normal focus-candidate fallback after
+  an exit or move. Headers contain content, not application labels: a session
+  or document title, optionally followed by a quieter directory line, or just
+  a single directory line. Empty cards retain only their number; the crown
+  retains its number and central `+` without an explanatory label.
   Activating `+` uses its current local head target, keeping focus on the
   selected monitor. Hyprland may rename or drop an empty head after a workspace
   switch; the next canvas rebuild reads that live state again rather than
@@ -108,6 +114,76 @@ hyprctl reload
 
 Do not use manual plugin unload/load as the routine update workflow.
 
+## Semantic titles
+
+- OpenCode: full title of the session currently viewed in the TUI, plus its
+  project directory. Navigating to another session or renaming it updates the
+  title even while idle; the home screen has no remembered session title.
+  No `OpenCode` prefix is added. Default `New session - ...` names are preserved,
+  as are actual session names that happen to be `OpenCode` or start with `OC | `.
+- Neovim: the effective CWD of the active editor
+  window, including `:lcd` and `:tcd`. A standard user-site runtime plugin
+  supplies this data; Home Manager does not manage `~/.config/nvim`. Headless
+  Neovim tools do not publish visible-window context.
+- Yazi: directory of the active tab, including tab switches without a directory
+  change event. Its process startup directory is not used as a substitute.
+- Fish: working directory alone. Other CLI: a meaningful terminal title and
+  working directory, omitting bare executable labels and duplicate paths. Other
+  terminal emulators fall back to their ordinary window title.
+- Browsers: page title, removing common duplicated browser suffixes. Other GUI
+  apps use their content/window title, without an application-name subtitle.
+
+The ID stays separate from the text. Text uses 20/16 logical-pixel lines in a
+68-pixel header at the output's scale, with a four-pixel right inset; long titles
+ellipsize at the end and paths in the middle. Home
+paths use `~`. Small cards retain the ID and omit text when there is no space;
+they never shrink the font to fit. The fixed workspace outline remains numeric.
+
+Kitty's per-process Unix socket supplies the active pane of each active tab.
+Multiple OS windows in one Kitty process are matched by their pane titles;
+ambiguous matches fall back to the compositor title. Local app publishers write
+small atomic records in `$XDG_RUNTIME_DIR/hypr-spaces/apps/`. The collector only
+accepts a foreground PID with matching `/proc` starttime and Kitty pane ID. A
+nested application's record takes precedence over its blocking opener's record.
+Terminated/background applications cannot leave a remembered label on the shell.
+
+For an old Kitty process without a socket, a bounded `/proc` fallback accepts
+only a single directly owned terminal session and its foreground process group.
+It reads the group's current directories and the shell's Kitty pane ID, so a
+restarted app can publish context without restarting that single-pane terminal.
+Multiple terminal sessions are ambiguous and retain the compositor fallback.
+Nix-wrapped executable names are normalized. Yazi still requires its publisher
+for an active directory; its process directory is never used as a substitute.
+
+The compositor thread uses cached results. A background worker performs bounded
+socket requests and `/proc`/record reads approximately every 400 ms while the
+canvas is open; it sleeps when closed and is joined on plugin unload. App data
+and terminal queries can take roughly a second to appear after opening or a
+change; finished worker results are consumed on the next frame without waiting
+for the next poll. Budget-limited batches continue from the next unvisited window
+and retain matching cached context for windows not yet revisited, so slow
+terminals cannot starve the tail of the window list. No subprocess or application
+RPC runs in the render loop. Textures remain under the existing LRU budget.
+
+After the Home Manager update, **open a new Kitty process**: `listen_on` cannot
+be enabled by Kitty config reload. Restart OpenCode, Neovim and Yazi in it to
+load their publishers. A single-pane old terminal can supply process CWD through
+the fallback above, but full session titles still require the OpenCode publisher.
+No NixOS activation is needed.
+
+If session names or directory paths are absent, check whether that process has
+loaded its publisher. Application-only labels such as `Kitty`, `OpenCode` and
+`Fish` are deliberately hidden, including in the compositor fallback.
+In a newly opened Kitty shell, check the socket with
+`test -S "$XDG_RUNTIME_DIR/hypr-spaces-kitty-$KITTY_PID"`; the app publishers
+should then create records under `$XDG_RUNTIME_DIR/hypr-spaces/apps/`. Restarting
+only the app in an old terminal cannot add the missing Kitty socket. An old
+OpenCode window title may already end in `…`: this is source truncation, not an
+extra right margin in the canvas, and only the full-title publisher restores the
+missing text. OpenCode's
+ordinary window title can be just `OpenCode` for a default `New session - ...`
+session; the TUI publisher supplies its actual title without that suppression.
+
 ## Foundations
 
 One pure canvas model builds groups, crown and selection from a current
@@ -123,3 +199,18 @@ origins, floating windows across output edges, and scales `1.0`, `1.25`, `2.0`.
 They run in the Nix check phase without Hyprland. Actual compositor transfers,
 damage scheduling, keyboard modifiers, DPI and rendering remain runtime checks;
 see `TODO.md`.
+
+Semantic-title tests also exercise Unicode labels, path boundaries, active
+Kitty panes, ambiguous OS-window matches, stale records and fragmented Kitty
+IPC. Real controlling-PTY tests also cover old-process CWD collection, pane-ID
+publisher matching, rejection of multiple terminals and asynchronous result
+delivery. App integration checks:
+
+```sh
+node --test home/apps/opencode/tests/test_workspace_context.mjs
+nvim --headless -u NONE -l home/linux/modules/hyprland/tests/workspace-context.lua
+python3 home/linux/modules/hyprland/tests/test_context_tui.py
+```
+
+The PTY tests launch isolated Yazi/OpenCode instances without user storage or a
+compositor; they verify the real plugin APIs and Yazi directory/tab updates.

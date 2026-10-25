@@ -220,7 +220,10 @@ in
     ];
     skills.discussion-map = ./discussion-map-skill.md;
     skills.git-regression-rollback = ./git-regression-rollback-skill.md;
-    tui.plugin = [ "${notificationCommands}" ];
+    tui.plugin = [
+      "${notificationCommands}"
+    ]
+    ++ lib.optionals pkgs.stdenv.isLinux [ "${./workspace-context.ts}" ];
   };
 
   xdg.configFile."opencode/AGENTS.md".source = ./AGENTS.md;

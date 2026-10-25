@@ -2,6 +2,13 @@
 
 ## Workspace UI
 
+- Runtime-check semantic headers after opening a new Kitty process and restarting
+  OpenCode/Neovim/Yazi: focus changes inside a workspace, source close/move,
+  OpenCode session switches/renames, Neovim window/tab-local CWDs, Yazi tab
+  switches, long Unicode titles/paths, zoom and mixed DPI. Confirm stale app
+  context disappears after returning to the shell. Check the old single-pane
+  Kitty `/proc` fallback separately from full publisher-backed titles, and the
+  20/16 typography with the reduced right inset. Pointer work follows this.
 - Verify cancellable Enter release: hold Enter, navigate/Tab, release Enter
   (must stay open), then press/release Enter again to activate the new selection.
 - Iterate card-header and `+` crown visuals after longer daily use; preserve

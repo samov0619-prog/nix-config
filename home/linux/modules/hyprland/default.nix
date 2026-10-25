@@ -6,6 +6,9 @@
 }:
 let
   hyprSpaces = pkgs.callPackage ../../../../pkgs/hypr-spaces { };
+  contextPublisher = ./app-context.lua;
+  nvimContext = pkgs.replaceVars ./nvim-context.lua { publisher = contextPublisher; };
+  yaziContext = pkgs.replaceVars ./yazi-context.lua { publisher = contextPublisher; };
   onionbell = pkgs.callPackage ../../../../pkgs/onionbell { };
   # With package = null, NixOS supplies pkgs.hyprland from the same flake input.
   hyprlandPackage =
@@ -50,6 +53,12 @@ in
     semanticSwitcherTofi
     onionbell
   ];
+
+  # Read-only app context for canvas headers, without owning ~/.config/nvim.
+  xdg.dataFile."nvim/site/plugin/hypr-spaces.lua".source = nvimContext;
+  programs.yazi.initLua = lib.mkAfter ''
+    dofile("${yaziContext}")
+  '';
 
   # Hyprland 0.55/0.56 publishes system bell events without playing a sound.
   # Use an upstream event listener for all xdg-system-bell-v1 clients.

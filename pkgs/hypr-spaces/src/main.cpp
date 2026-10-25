@@ -19,11 +19,13 @@
 #include <hyprland/src/render/pass/SurfacePassElement.hpp>
 #include <hyprland/src/render/pass/TexPassElement.hpp>
 #include <linux/input-event-codes.h>
+#include <pango/pangocairo.h>
 
 #include "monitor_layout.hpp"
 #include "canvas_model.hpp"
 #include "preview_geometry.hpp"
 #include "workspace_allocator.hpp"
+#include "title_context.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -106,13 +108,16 @@ hypr_spaces::CanvasActivationLatch g_activation;
 int                         g_gridRows = 0;
 int                         g_gridColumns = 0;
 bool                        g_emptyWorkspaceMode = false;
+hypr_spaces::TitleContext    g_titleContext;
+hypr_spaces::TitleResults    g_terminalTitles;
+std::chrono::steady_clock::time_point g_nextTitleRefresh;
 
 constexpr Vector2D GLOBAL_VIEWPORT = {1920.F, 1080.F};
 constexpr float GROUP_GAP = 96.F;
 constexpr float GROUP_PADDING = 48.F;
 constexpr float CARD_GAP = 24.F;
 constexpr float CARD_BORDER = 2.F;
-constexpr float CARD_TITLE_HEIGHT = 56.F;
+constexpr float CARD_TITLE_HEIGHT = 68.F;
 
 const CHyprColor WAYBAR_FOCUSED = CHyprColor(0.392F, 0.447F, 0.490F, 1.F); // #64727d
 const CHyprColor WAYBAR_VISIBLE = CHyprColor(0.502F, 0.502F, 0.502F, 1.F); // #808080
@@ -134,13 +139,51 @@ void damage() {
             g_pHyprRenderer->damageMonitor(monitor);
 }
 
-SP<Render::ITexture> titleTexture(const std::string& title, int pointSize, bool accent = false, int weight = 400) {
-    const auto key = title + ":" + std::to_string(pointSize) + ":" + std::to_string(accent) + ":" + std::to_string(weight);
+SP<Render::ITexture> titleTexture(const std::string& title, int pointSize, bool accent = false, int weight = 400, int maxWidth = 0, bool middle = false) {
+    const auto key = std::to_string(title.size()) + ":" + title + ":" + std::to_string(pointSize) + ":" + std::to_string(accent) + ":" +
+        std::to_string(weight) + ":" + std::to_string(maxWidth) + ":" + std::to_string(middle);
     if (auto it = g_titleTextures.find(key); it != g_titleTextures.end()) {
         it->second.lastUse = ++g_textUse;
         return it->second.texture;
     }
-    auto texture = g_pHyprRenderer->renderText(title, accent ? WAYBAR_FOCUSED : WAYBAR_TEXT, std::max(1, pointSize), false, "Noto Sans", 0, weight);
+    // Hyprland 0.55's maxWidth path measures ellipsis but omits it from the
+    // final drawing layout. Keep measurement and drawing on the same layout.
+    auto* surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
+    auto* cairo = cairo_create(surface);
+    auto* layout = pango_cairo_create_layout(cairo);
+    auto* font = pango_font_description_new();
+    pango_font_description_set_family(font, "Noto Sans");
+    pango_font_description_set_absolute_size(font, std::max(1, pointSize) * PANGO_SCALE);
+    pango_font_description_set_weight(font, static_cast<PangoWeight>(weight));
+    pango_layout_set_font_description(layout, font);
+    pango_font_description_free(font);
+    auto clean = title;
+    // Outline fragments include meaningful leading/trailing spaces.
+    for (auto& ch : clean)
+        if (static_cast<unsigned char>(ch) < 32 || ch == 127) ch = ' ';
+    auto* utf8 = g_utf8_make_valid(clean.c_str(), clean.size());
+    pango_layout_set_text(layout, utf8, -1);
+    g_free(utf8);
+    pango_layout_set_single_paragraph_mode(layout, true);
+    if (maxWidth > 0) {
+        pango_layout_set_width(layout, maxWidth * PANGO_SCALE);
+        pango_layout_set_ellipsize(layout, middle ? PANGO_ELLIPSIZE_MIDDLE : PANGO_ELLIPSIZE_END);
+    }
+    int width = 0, height = 0;
+    pango_layout_get_pixel_size(layout, &width, &height);
+    cairo_destroy(cairo);
+    cairo_surface_destroy(surface);
+    surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, std::max(1, width), std::max(1, height));
+    cairo = cairo_create(surface);
+    const auto& color = accent ? WAYBAR_FOCUSED : WAYBAR_TEXT;
+    cairo_set_source_rgba(cairo, color.r, color.g, color.b, color.a);
+    pango_cairo_update_layout(cairo, layout);
+    pango_cairo_show_layout(cairo, layout);
+    cairo_surface_flush(surface);
+    auto texture = g_pHyprRenderer->createTexture(surface);
+    g_object_unref(layout);
+    cairo_destroy(cairo);
+    cairo_surface_destroy(surface);
     if (!texture)
         return texture;
     const size_t bytes = static_cast<size_t>(texture->m_size.x) * static_cast<size_t>(texture->m_size.y) * 4;
@@ -158,11 +201,34 @@ SP<Render::ITexture> titleTexture(const std::string& title, int pointSize, bool 
     return texture;
 }
 
-void renderCardTitle(const CBox& cardBox, int workspaceID, bool active, float outputScale) {
-    const std::string title = std::to_string(workspaceID);
-    const auto texture = titleTexture(title, std::lround(26 * outputScale), false, active ? 600 : 400);
-    if (!texture)
-        return;
+hypr_spaces::WorkspaceTitle workspaceTitle(int workspaceID) {
+    const auto workspace = g_pCompositor->getWorkspaceByID(workspaceID);
+    const auto window = workspace ? workspace->getFocusCandidate() : nullptr;
+    if (!window || !window->m_isMapped || window->workspaceID() != workspaceID)
+        return {};
+    const auto key = reinterpret_cast<uintptr_t>(window.get());
+    if (const auto it = g_terminalTitles.find(key); it != g_terminalTitles.end())
+        if (it->second.pid == window->getPID() && it->second.title == window->m_title)
+            return it->second.context;
+    return hypr_spaces::windowTitle(window->m_class, window->m_title);
+}
+
+void refreshTitleContext() {
+    // Consume completed work on the next frame, not only on the next poll:
+    // otherwise an already available CWD stays invisible for another 400 ms.
+    if (auto results = g_titleContext.takeResults()) g_terminalTitles = std::move(*results);
+    const auto now = std::chrono::steady_clock::now();
+    if (now < g_nextTitleRefresh) return;
+    g_nextTitleRefresh = now + std::chrono::milliseconds(400);
+    std::vector<hypr_spaces::TitleRequest> requests;
+    for (const auto& window : g_pCompositor->m_windows)
+        if (window && window->m_isMapped && window->workspaceID() > 0 && window->m_class == "kitty")
+            requests.push_back({reinterpret_cast<uintptr_t>(window.get()), window->getPID(), window->m_title});
+    g_titleContext.request(std::move(requests));
+}
+
+void renderCardTitle(const CBox& cardBox, int workspaceID, bool active, float outputScale, bool crown = false) {
+    const auto title = crown ? hypr_spaces::WorkspaceTitle{} : workspaceTitle(workspaceID);
 
     const float headerHeight = std::min(CARD_TITLE_HEIGHT * outputScale, std::max(0.F, static_cast<float>(cardBox.h) - 2 * CARD_BORDER));
     if (headerHeight < 2.F)
@@ -173,12 +239,33 @@ void renderCardTitle(const CBox& cardBox, int workspaceID, bool active, float ou
     CRectPassElement::SRectData headerBorder{.box = {Vector2D{headerBox.x, headerBox.y + headerBox.h - 1.F}, Vector2D{headerBox.w, 1.F}}, .color = CHyprColor(0.392F, 0.447F, 0.490F, 0.62F)};
     g_pHyprRenderer->m_renderPass.add(makeUnique<CRectPassElement>(headerBorder));
 
-    CTexPassElement::SRenderData data;
-    data.tex = texture;
-    data.box = {cardBox.x + (cardBox.w - texture->m_size.x) / 2.F, headerBox.y + (headerBox.h - texture->m_size.y) / 2.F, texture->m_size.x, texture->m_size.y};
-    data.clipBox = headerBox;
-    data.a = 1.F;
-    g_pHyprRenderer->m_renderPass.add(makeUnique<CTexPassElement>(std::move(data)));
+    const float padding = 10.F * outputScale;
+    const auto number = titleTexture(std::to_string(workspaceID), std::lround(23 * outputScale), false, active ? 600 : 400);
+    if (!number) return;
+    const float numberWidth = std::max(25.F * outputScale, static_cast<float>(number->m_size.x));
+    const float textX = headerBox.x + 2 * padding + numberWidth;
+    const int textWidth = static_cast<int>(std::floor(headerBox.x + headerBox.w - 4.F * outputScale - textX));
+    auto draw = [&](const SP<Render::ITexture>& texture, float x, float y, float alpha = 1.F) {
+        if (!texture) return;
+        CTexPassElement::SRenderData data;
+        data.tex = texture;
+        data.box = {x, y, texture->m_size.x, texture->m_size.y};
+        data.clipBox = headerBox;
+        data.a = alpha;
+        g_pHyprRenderer->m_renderPass.add(makeUnique<CTexPassElement>(std::move(data)));
+    };
+    draw(number, headerBox.x + padding, headerBox.y + (headerBox.h - number->m_size.y) / 2.F);
+    if (textWidth < 20 * outputScale || title.primary.empty()) return;
+    const bool twoLines = !title.secondary.empty() && headerHeight >= 58 * outputScale;
+    const auto primary = titleTexture(title.primary, std::lround(20 * outputScale), false, active ? 600 : 400, textWidth,
+                                     title.primary.starts_with("/") || title.primary.starts_with("~"));
+    if (!primary) return;
+    const float primaryY = twoLines ? headerBox.y + 6 * outputScale : headerBox.y + (headerBox.h - primary->m_size.y) / 2.F;
+    draw(primary, textX, primaryY);
+    if (twoLines) {
+        const auto secondary = titleTexture(title.secondary, std::lround(16 * outputScale), false, 400, textWidth, title.secondary.starts_with("/") || title.secondary.starts_with("~"));
+        draw(secondary, textX, headerBox.y + 38 * outputScale, 0.72F);
+    }
 }
 
 void renderTailCrown(const CBox& cardBox) {
@@ -223,6 +310,8 @@ void close() {
     g_selectedTail = false;
     g_activation.cancel();
     g_titleTextures.clear();
+    g_terminalTitles.clear();
+    g_titleContext.request({});
     g_textBytes = 0;
     g_gridRows = 0;
     g_gridColumns = 0;
@@ -698,7 +787,7 @@ void renderGlobalCanvas(PHLMONITOR output) {
                         renderLayer(layer, group.monitor, output, sourcePxToPreviewPx, previewBox.pos(), previewBox, time);
 
             if (card.isTail) {
-                renderCardTitle(cardBox, card.workspaceID, card.workspaceID == (group.monitor->m_activeWorkspace ? group.monitor->m_activeWorkspace->m_id : 0), output->m_scale);
+                renderCardTitle(cardBox, card.workspaceID, card.workspaceID == (group.monitor->m_activeWorkspace ? group.monitor->m_activeWorkspace->m_id : 0), output->m_scale, true);
                 renderTailCrown(cardBox);
                 continue;
             }
@@ -720,6 +809,7 @@ void renderGlobalCanvas(PHLMONITOR output) {
 void render() {
     if (!g_open)
         return;
+    refreshTitleContext();
     const auto output = g_pHyprRenderer->m_renderData.pMonitor.lock();
     if (output && output->m_enabled && !output->isMirror())
         renderGlobalCanvas(output);
@@ -734,6 +824,7 @@ SDispatchResult toggle(std::string) {
     g_monitor = g_pCompositor->getMonitorFromCursor();
     if (g_monitor) {
         g_open = true;
+        g_nextTitleRefresh = {};
         g_pendingOpenerSpaceRelease = true;
         g_cards.clear();
         g_rowColumns.clear();
@@ -753,6 +844,7 @@ APICALL EXPORT std::string PLUGIN_API_VERSION() {
 }
 
 APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
+    g_titleContext.start();
     HyprlandAPI::addDispatcherV2(handle, "spaces:toggle", toggle);
     HyprlandAPI::addDispatcherV2(handle, "spaces:focus-monitor", focusAdjacentMonitor);
     HyprlandAPI::addDispatcherV2(handle, "spaces:move-workspace", moveWorkspaceToAdjacentMonitor);
@@ -877,4 +969,5 @@ APICALL EXPORT void PLUGIN_EXIT() {
     g_mouseAxisHook.reset();
     g_mouseMoveHook.reset();
     close();
+    g_titleContext.clear();
 }

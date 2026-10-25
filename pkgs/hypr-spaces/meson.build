@@ -4,7 +4,7 @@ project('hypr-spaces', 'cpp',
 )
 
 shared_module('hypr-spaces', 'src/main.cpp',
-  dependencies: [dependency('hyprland')],
+  dependencies: [dependency('hyprland'), dependency('pangocairo'), dependency('nlohmann_json'), dependency('threads')],
   cpp_args: ['-DWLR_USE_UNSTABLE'],
   install: true,
 )
@@ -28,3 +28,9 @@ preview_geometry_test = executable('preview-geometry-test', 'tests/preview_geome
   include_directories: include_directories('src'),
 )
 test('preview geometry', preview_geometry_test)
+
+workspace_title_test = executable('workspace-title-test', 'tests/workspace_title_test.cpp',
+  include_directories: include_directories('src'),
+  dependencies: [dependency('nlohmann_json'), dependency('threads')],
+)
+test('semantic workspace titles and Kitty IPC', workspace_title_test)

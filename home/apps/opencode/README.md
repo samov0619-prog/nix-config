@@ -3,6 +3,26 @@
 Проверено на OpenCode **1.19.3**, 2026-10-20. Это модуль Home Manager для
 laptop/desktop. Подробная методика и результаты — [BENCHMARK.md](BENCHMARK.md).
 
+## Заголовки workspace canvas (Linux)
+
+`workspace-context.ts` — локальный TUI plugin для `hypr-spaces`. Он публикует
+полное название **просматриваемой** сессии и её directory, включая переключения
+и переименования без нового prompt. На home screen session title сбрасывается.
+Использует только TUI state; запросов к модели и чтения истории сообщений нет.
+Небольшой atomic JSON в `$XDG_RUNTIME_DIR/hypr-spaces/apps/` привязан к PID,
+starttime и Kitty pane. При dispose удаляется. Потребитель проверяет foreground
+process; crash не оставляет название на следующем приложении.
+
+После Home Manager switch открыть новый процесс Kitty и перезапустить OpenCode:
+сокет Kitty и TUI plugin не появляются в уже работающих процессах через reload.
+Старый однопанельный Kitty поддерживается через `/proc` fallback: достаточно
+перезапустить сам OpenCode. Полное имя `New session - ...` публикуется как есть,
+без префикса `OpenCode`. Если процесс запущен до установки plugin, обычный window
+title может быть лишь `OpenCode`; тогда canvas покажет только доступный CWD.
+Подробнее: [hypr-spaces README](../../../pkgs/hypr-spaces/README.md#semantic-titles).
+Проверка: `node --test home/apps/opencode/tests/test_workspace_context.mjs`;
+изолированный PTY smoke: `python3 home/linux/modules/hyprland/tests/test_context_tui.py`.
+
 ## Sol 6.1: рабочие агенты High, plan XHigh
 
 **Baseline — build/general/research/review High, plan XHigh.** Это рабочая гипотеза:
