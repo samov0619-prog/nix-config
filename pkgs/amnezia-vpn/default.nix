@@ -112,6 +112,21 @@ stdenv.mkDerivation (finalAttrs: {
     substituteInPlace client/mozilla/localsocketcontroller.cpp \
       --replace-fail $'  json.insert("deviceIpv4Address", wgConfig.value(amnezia::configKey::clientIp));\n  m_deviceIpv4 = wgConfig.value(amnezia::configKey::clientIp).toString();' $'  const QString clientIp = wgConfig.value(amnezia::configKey::clientIp).toString();\n  json.insert("deviceIpv4Address", clientIp.section(\',\', 0, 0).trimmed());\n  m_deviceIpv4 = clientIp.section(\',\', 0, 0).trimmed();'
 
+    # An empty DNS must not become allowed_ip=/32 in the Linux AWG backend.
+    substituteInPlace client/vpnConnection.cpp \
+      --replace-fail \
+        'sitesJsonArray.append(m_vpnConfiguration.value(configKey::dns1).toString());
+                    sitesJsonArray.append(m_vpnConfiguration.value(configKey::dns2).toString());' \
+        'const QStringList dnsServers = {
+                        m_vpnConfiguration.value(configKey::dns1).toString().trimmed(),
+                        m_vpnConfiguration.value(configKey::dns2).toString().trimmed()
+                    };
+                    for (const QString &dns : dnsServers) {
+                        if (!dns.isEmpty() && !sitesJsonArray.contains(dns)) {
+                            sitesJsonArray.append(dns);
+                        }
+                    }'
+
     substituteInPlace client/cmake/3rdparty.cmake \
       --replace-fail 'list(APPEND LIBS ssh::ssh)' 'list(APPEND LIBS ssh)'
 
