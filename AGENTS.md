@@ -267,6 +267,11 @@ not import Disko.
 - `pkgs/amnezia-vpn/` вендорит Linux-клиент `5.0.1.5` с `amneziawg-go`
   `v3.1.20260814`, который upstream release использует для AWG 3.1.
 - Локальный клиент `5.0.1.5` проверенно работает с deployed AWG3.1 server.
+- Linux split fixes в `pkgs/amnezia-vpn`: пустой DNS не добавляется в
+  AllowedIPs; `linux-routing.patch` + `linux-default-route.h` читают netlink
+  dump без общего лимита 8 KiB и исправляют dangling `qPrintable` в маршрутах.
+  `checkPhase` запускает socket fixtures и ASan/UBSan на реальном
+  `buildAllowedIp`; ручная проверка обоих режимов описана в README пакета.
 - Overlay подключён только к NixOS desktop/laptop в `flake.nix`; оба хоста
   используют `pkgs.amnezia-vpn`, а daemon PATH содержит `iptables`,
   `ip6tables` и `gawk`.

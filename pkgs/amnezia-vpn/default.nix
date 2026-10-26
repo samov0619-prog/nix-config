@@ -16,6 +16,7 @@
   runtimeShell,
   callPackage,
   nix-update-script,
+  python3,
 }:
 let
   # The 5.0.1.5 Linux release explicitly requires this AWG 3.1 backend.
@@ -92,7 +93,15 @@ stdenv.mkDerivation (finalAttrs: {
     '';
   };
 
+  patches = [ ./linux-routing.patch ];
+  patchFlags = [
+    "-p1"
+    "--fuzz=0"
+  ];
+
   postPatch = ''
+    cp ${./linux-default-route.h} client/core/utils/linux-default-route.h
+
     substituteInPlace CMakeLists.txt \
       --replace-fail "\''${CMAKE_SOURCE_DIR}/cmake/recipes_bootstrap.cmake" "" \
       --replace-fail "\''${CMAKE_SOURCE_DIR}/cmake/conan_provider.cmake" ""
@@ -187,6 +196,16 @@ stdenv.mkDerivation (finalAttrs: {
     libssh
     openssl
   ];
+
+  doCheck = true;
+  nativeCheckInputs = [ python3 ];
+  checkPhase = ''
+    runHook preCheck
+    cp ${./test_linux_routing.py} test_linux_routing.py
+    cp ${./test_linux_routing.cpp} test_linux_routing.cpp
+    python3 test_linux_routing.py --source "$NIX_BUILD_TOP/$sourceRoot" --build "$PWD"
+    runHook postCheck
+  '';
 
   preConfigure = ''
     export SOURCE_DATE_EPOCH="$(< .source-date-epoch)"
