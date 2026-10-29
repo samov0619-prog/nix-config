@@ -43,17 +43,17 @@ in
     enable = true;
 
     defaultApplications = (lib.genAttrs archiveMimeTypes (_: [ "yazi-xdg.desktop" ])) // {
-      "text/html" = [ "firefox.desktop" ];
-      "application/xhtml+xml" = [ "firefox.desktop" ];
-      "x-scheme-handler/http" = [ "firefox.desktop" ];
-      "x-scheme-handler/https" = [ "firefox.desktop" ];
-      "x-scheme-handler/about" = [ "firefox.desktop" ];
-      "x-scheme-handler/unknown" = [ "firefox.desktop" ];
+      "text/html" = [ "google-chrome.desktop" ];
+      "application/xhtml+xml" = [ "google-chrome.desktop" ];
+      "x-scheme-handler/http" = [ "google-chrome.desktop" ];
+      "x-scheme-handler/https" = [ "google-chrome.desktop" ];
+      "x-scheme-handler/about" = [ "google-chrome.desktop" ];
+      "x-scheme-handler/unknown" = [ "google-chrome.desktop" ];
 
       "text/plain" = [ "nvim.desktop" ];
 
-      "x-scheme-handler/tg" = [ "firefox.desktop" ];
-      "x-scheme-handler/tonsite" = [ "firefox.desktop" ];
+      "x-scheme-handler/tg" = [ "google-chrome.desktop" ];
+      "x-scheme-handler/tonsite" = [ "google-chrome.desktop" ];
     };
   };
 
