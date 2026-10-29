@@ -3,7 +3,8 @@ import { mkdtempSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mock, test } from "node:test";
-import plugin from "../workspace-context.ts";
+import "./plugin-loader.mjs";
+const { default: plugin } = await import("../workspace-context.ts");
 
 test("publishes viewed session, full Unicode title, route changes and cleanup", async () => {
   const runtime = mkdtempSync(join(tmpdir(), "workspace-context-"));
@@ -19,14 +20,14 @@ test("publishes viewed session, full Unicode title, route changes and cleanup", 
   try {
     const titles = { one: "Название сессии без усечения — кириллица", two: "Другая сессия" };
     const api = {
-      route: { current: { name: "session", params: { sessionID: "one" } } },
-      state: { path: { directory: "/fallback" }, session: { get: (id) => ({
+      route: { type: "session", sessionID: "one" },
+      ui: { router: { current: () => api.route } },
+      data: { location: { default: () => ({ directory: "/fallback" }) }, session: { get: (id) => ({
         title: titles[id],
-        directory: `/${id}`,
+        location: { directory: `/${id}` },
       }) } },
-      lifecycle: { onDispose: (callback) => { dispose = callback; } },
     };
-    await plugin.tui(api);
+    dispose = plugin.setup(api);
     const path = join(runtime, "hypr-spaces/apps", `${process.pid}.json`);
     const read = () => JSON.parse(readFileSync(path));
     assert.equal(read().title, "Название сессии без усечения — кириллица");
@@ -38,11 +39,11 @@ test("publishes viewed session, full Unicode title, route changes and cleanup", 
     titles.one = "New session - 2026-10-23T10:19:12.809Z";
     tick();
     assert.equal(read().title, titles.one); // Default titles are real session names too.
-    api.route.current.params.sessionID = "two";
+    api.route.sessionID = "two";
     tick();
     assert.equal(read().title, "Другая сессия");
     assert.equal(read().cwd, "/two");
-    api.route.current = { name: "home" };
+    api.route = { type: "home" };
     tick();
     assert.equal(read().title, "");
     assert.equal(read().cwd, "/fallback");

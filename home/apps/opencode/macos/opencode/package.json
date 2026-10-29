@@ -1,0 +1,6 @@
+{
+  "name": "opencode-corporate-config",
+  "private": true,
+  "type": "module",
+  "dependencies": {}
+}

@@ -1,0 +1,121 @@
+diff --git a/packages/core/src/session/runner/model.ts b/packages/core/src/session/runner/model.ts
+--- a/packages/core/src/session/runner/model.ts
++++ b/packages/core/src/session/runner/model.ts
+@@ -8,6 +8,8 @@
+ import { Agent } from "../../agent.js"
+ import { ModelResolver } from "../../model-resolver.js"
+ import { SessionSchema } from "../schema.js"
++import { SessionStore } from "../store.js"
++import { routedModel } from "@opencode/schema/local-model-routing"
+ 
+ export class ModelNotSelectedError extends Schema.TaggedError<ModelNotSelectedError>()(
+   "SessionRunnerModel.ModelNotSelectedError",
+@@ -73,8 +75,21 @@
+   Effect.gen(function* () {
+     const resolver = yield* ModelResolver.Service
+     const agents = yield* Agent.Service
++    const store = yield* SessionStore.Service
+     return Service.of({
+       resolve: Effect.fn("SessionRunnerModel.resolve")(function* (session, available) {
++        // Read the live root policy, not the metadata snapshot inherited by children.
++        let root = (yield* store.get(session.id)) ?? session
++        const seen = new Set<string>([root.id])
++        while (root.parentID && !seen.has(root.parentID)) {
++          seen.add(root.parentID)
++          const parent = yield* store.get(root.parentID)
++          if (!parent) break
++          root = parent
++        }
++        const role = session.agent ?? (yield* agents.select(undefined)).id
++        const routed = routedModel(root.metadata, role)
++        if (routed) session = { ...session, model: Model.Ref.make(routed) }
+         // Location plugins populate and filter the catalog asynchronously during layer startup.
+         if (!session.model) {
+           const agent = (yield* agents.select(session.agent)).info?.model
+@@ -102,3 +117,3 @@
+ )
+ 
+-export const node = makeLocationNode({ service: Service, layer, deps: [ModelResolver.node, Agent.node] })
++export const node = makeLocationNode({ service: Service, layer, deps: [ModelResolver.node, Agent.node, SessionStore.node] })
+diff --git a/packages/core/src/session/context.ts b/packages/core/src/session/context.ts
+--- a/packages/core/src/session/context.ts
++++ b/packages/core/src/session/context.ts
+@@ -112,6 +112,7 @@
+         candidate &&
+         (yield* resolveModel({
+           ...session,
++          agent: Agent.ID.make("title"),
+           model: Model.Ref.make({
+             providerID: candidate.info.providerID,
+             id: candidate.info.id,
+diff --git a/packages/core/src/session/compaction.ts b/packages/core/src/session/compaction.ts
+--- a/packages/core/src/session/compaction.ts
++++ b/packages/core/src/session/compaction.ts
+@@ -269,8 +269,10 @@
+       const agent = native ? undefined : yield* agents.get(Agent.ID.make("compaction"))
+-      const model =
+-        (agent?.model &&
+-          (yield* models
+-            .resolve({ ...context.session, model: agent.model }, catalog.available)
+-            .pipe(Effect.orElseSucceed(() => undefined)))) ??
+-        context.model
++      const model = yield* models.resolve(
++        {
++          ...context.session,
++          agent: Agent.ID.make("compaction"),
++          model: agent?.model ?? context.model.ref,
++        },
++        catalog.available,
++      )
+       const ceiling = calculateCeiling(model.limit, buffer)
+diff --git a/packages/core/src/session/generate.ts b/packages/core/src/session/generate.ts
+--- a/packages/core/src/session/generate.ts
++++ b/packages/core/src/session/generate.ts
+@@ -3,6 +3,7 @@
+ import type { FileSystem } from "../filesystem.js"
+ import { LLMClient, Message, type AIError } from "@opencode/ai"
+ import { Effect } from "effect"
++import { Agent } from "../agent.js"
+ import { Database } from "../database/database.js"
+ import { Instance } from "../instance/service.js"
+ import { Plugin } from "../plugin/service.js"
+@@ -35,7 +36,7 @@
+     yield* Plugin.awaitActivation
+     const context = yield* SessionContext.Service
+     const selection = yield* context.select(input.session.id)
+-    const model = yield* context.resolveModel(selection.session)
++    const model = yield* context.resolveModel({ ...selection.session, agent: Agent.ID.make("summary") })
+     const history = yield* SessionHistory.preview(database.db, selection.session.id, selection.instructions, model.ref)
+     const transcript = SessionModelRequest.baseTranscript({
+       agent: selection.agent.info,
+diff --git a/packages/tui/src/context/local.tsx b/packages/tui/src/context/local.tsx
+--- a/packages/tui/src/context/local.tsx
++++ b/packages/tui/src/context/local.tsx
+@@ -1,2 +1,3 @@
++import { routedModel } from "@opencode/schema/local-model-routing"
+ import { createStore } from "solid-js/store"
+ import { dedupeWith } from "effect/Array"
+@@ -267,6 +268,23 @@
+         const current = agent.current()
+         if (!current) return
+         const session = data.session.get(sessionID)
++        let root = session
++        const seen = new Set<string>([sessionID])
++        while (root?.parentID && !seen.has(root.parentID)) {
++          seen.add(root.parentID)
++          const parent = data.session.get(root.parentID)
++          if (!parent) {
++            void data.session.sync(root.parentID).catch(() => {})
++            return
++          }
++          root = parent
++        }
++        const routed = routedModel(root?.metadata, current.id)
++        if (routed) return {
++          providerID: routed.providerID,
++          modelID: routed.id,
++          variant: routed.variant,
++        }
+         const selected =
+           selectionState.selectionBySessionAgent[sessionID]?.[current.id] ??
+           (!session?.agent || session.agent === current.id ? durableSelection(sessionID) : undefined)

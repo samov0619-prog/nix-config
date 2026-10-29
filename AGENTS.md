@@ -122,46 +122,68 @@ not import Disko.
   README архива; отдельного сборщика/мигратора нет. Полные снимки/архивы могут
   содержать авторизацию: держать вне Git, не выводить секреты в логи.
 
-- `home/apps/opencode/default.nix` — домашний модуль laptop/desktop, проверенный
-  с OpenCode 1.19.3; сохраняет `LD_LIBRARY_PATH` fix file watcher.
-- Только OpenAI Responses. Build/general/research/review: Sol `workEffort = "high"`;
-  plan: `planEffort = "xhigh"`. Оба принимают `high`/`xhigh`/`max` в модуле.
-  Plan использует штатный alias `gpt-6.1-sol-plan` с API ID `gpt-6.1-sol`:
-  TUI хранит выбранный variant по model ID, а не по агенту.
-  Compaction/summary: Sol High; explore: `gpt-6-luna` Max (проверять против High);
-  title/small_model: Luna Low. Small model не маршрутизирует task/compaction.
-- Compaction/summary используют штатный alias `gpt-6.1-sol-high` с API ID
-  `gpt-6.1-sol` и единственным variant High: compaction в 1.19.3 наследует variant
-  исходного сообщения, который иначе перекрывает agent.options. Краткие выводы
-  исследований — `home/apps/opencode/README.md`, подробности — `BENCHMARK.md`.
-- Auto compaction: soft input 244000 − reserved 32000 = порог 212000;
-  output 128000 не уменьшен, recent tail 15000, prune=false. Реальная проверка
-  происходит между шагами, поэтому возможен скачок за порог.
-- `permission-stats.ts` подключён самостоятельно через `xdg.configFile`, без
-  RLM и vendored зависимостей. Остальные зависимости OpenCode — штатные.
-- `notifications.ts` обрабатывает permission, success и error через общий
-  `notify(kind)`: тихая workspace/tab urgency Kitty плюс `pw-play` с bell.oga,
-  anime wow или anime girl senpai. OpenCode не отправляет BEL; системный
-  onionbell остаётся для других приложений. `permission-stats.ts` — только учёт.
-  Ответы/ошибки дочерних задач, compaction, retries, отмены и дубли отфильтрованы.
-  Один SessionState на сессию; актуальность проверяется после SDK await, ранние
-  ошибки уже idle не ждут нового idle, replay различается по runtime bus ID.
-  Проверка: `node --test home/apps/opencode/tests/test_notifications.mjs`.
-- `/mute` и `/unmute` — локальные TUI-команды из `notification-commands.ts`,
-  подключённые через `programs.opencode.tui.plugin`, без запроса к модели.
-  `notification-state.ts` хранит общий persistent mute текущего пользователя
-  в XDG state `opencode/notifications-muted`; backend читает его перед звуком.
-  Mute выключает все три звука, сохраняя workspace/tab urgency всех событий.
-  No-UI `silent-attention.py` через fire-and-forget remote control не вызывает
-  audio bell или command_on_bell; проверка: `python3 home/apps/opencode/tests/test_silent_attention.py`.
-  Проверка: `node --test home/apps/opencode/tests/test_notification_mute.mjs`.
+- `home/apps/opencode/default.nix` — HM laptop/desktop на pinned OpenCode 2.1.4
+  (отдельный flake input, не nixpkgs-unstable). `package.nix` добавляет
+  `session-routing.patch`, `session-attention.patch` и Linux runtime libraries. V1-модуль/исследования —
+  `archive/v1`, не импортируются. README/BENCHMARK описывают текущий V2.
+- Native V2 config — `v2-settings.nix`; plugins — directories с `index.ts`/`tui.ts`
+  и API `@opencode/plugin`, не V1 `@opencode-ai/plugin`.
+  Model-routing собирается одним store-каталогом, HM `recursive = true` сохраняет
+  managed leaf paths. Отдельные store-файлы ломают относительные импорты Bun;
+  PTY проверять также с `OPENCODE_TEST_HM_GENERATION` из собранного профиля.
+  Server plugins — directory symlinks `*-v2` в store с обычным `index.ts`:
+  V2 discovery молча исключает entrypoint, чей realpath вне real plugin root.
+  Старые leaf paths убираются HM cleanup; IDs/history сохраняются. Проверять
+  server runtime также с `OPENCODE_TEST_HM_GENERATION`, не только копиями.
+- `/switch-free`/`/switch-paid` — локальные TUI-команды, без LLM. Режим живёт
+  в metadata корневой сессии и влияет на последующие запросы существующих детей.
+  Paid role table — единый `routing-models.json`: Sol High work, Sol XHigh plan,
+  Luna Max explore, Sol High compaction/summary, Luna Low title. Free — Big Pickle
+  для всех ролей, без автоматического paid fallback. Обычная compaction до
+  явного переключения сохраняет наследование session model.
+- Auto compaction: soft input 244000 − buffer 32000 = 212000; output 128000,
+  keep.tokens 15000. V2 не имеет прежнего `prune=false`; между шагами возможен overshoot.
+- Audio — только native notifications/OpenTUI; mutable `cli.json` seeded once,
+  `attention.sound`/volume/custom permission/done/error sounds. Старые V1
+  notifications/mute plugins не устанавливаются. `quiet-urgency.ts` независимо
+  от mute вызывает только `silent-attention.py`, без BEL/второго player.
+  `session-attention.patch` + общий `session-attention.ts` изолируют native
+  звук/notifications/error-toasts и local urgency по открытой сессии TUI и её
+  потомкам; не по cwd/global tabs. Home/plugin routes и неизвестная ancestry
+  молчат. Native события подагентов/остановки внутри этой области сохраняются.
+  Это не single-owner election для одной сессии в нескольких TUI. После замены
+  binary переоткрыть TUI (не только `/reload`); общий server менять не нужно.
+  Самостоятельный Mac archive с официальным binary не содержит этот patch.
+- Звуковая граница: домашние anime done/error и freedesktop permission — только
+  для личных laptop/desktop. Корпоративный Mac использует стандартные встроенные
+  звуки и штатный `opencode.notifications`; удалённый `session-notifications`
+  не восстанавливать. При Mac-порте не копировать домашний `cli.json`,
+  `attention.sounds`, аудиофайлы или `quiet-urgency`; сохранять Mac CLI preferences
+  отдельно от командного репозитория. Кастомизация native sound settings и
+  изоляция через binary patch независимы. См. `home/apps/opencode/macos/README.md`.
+- `workspace-context.ts` использует native V2 TUI data/router; реальный PTY smoke:
+  `OPENCODE_TEST_BINARY` указывает на собранный V2 binary (см. BENCHMARK).
+- Permissions — native baseline плюс Git network policies и `git-offline.ts`
+  (transport/lazy-fetch env). Cached `remote show -n` не равен сетевому `show`.
+  `permission-stats.ts` — native event stream, прежний history + session/request IDs.
 - `opencode-task-report --session <id>` — read-only per-task accounting; методика
   в `home/apps/opencode/BENCHMARK.md`. Старые ledger-файлы XDG state
-  `opencode/task-usage` сохраняются. DB не содержит полного учёта title и всех
-  retries: отчёт не является invoice или измерителем подписочной квоты.
-- Проверка после правок: build без activation, изолированный запуск 1.19.3,
-  resolved agents/variants/tools/skills и Responses requests; RLM отсутствует,
-  permission-stats загружен, file.watcher backend=inotify без ERROR.
+  `opencode/task-usage` сохраняются. `model-calls.ts` пишет отдельные session
+  transport attempts (kind, model/variant, wire model/effort, HTTP headers status)
+  в private0600 `opencode/model-calls/<session>.jsonl`, без prompts/URLs/headers.
+  Отчёт читает журнал отдельно от token totals; старые title models не восстановить.
+  Title usage есть в native V2 events, но не добавляется к message totals отчёта;
+  это не invoice или измеритель подписочной квоты. WS response.create проверен
+  unit-тестом, реальный HTTP — mock runtime с retries и обеими compaction.
+- Проверка после правок: build без activation, isolated V2 runtime/mock Responses,
+  native и summarizing compaction, title/summary/children, реальный TUI PTY.
+  `tests/test_v2_runtime.py <binary>`: обычный, `--native`, `--catalog`, `--mac`.
+  Live Kitty/audio/Waybar и Mac AVFoundation проверяются на целевой машине.
+- Mac source overlay — `home/apps/opencode/macos/`; актуальная база — `Downloads/opc.zip`.
+  Полный архив вне Git, два слоя opencode/opencode-local, native `{env:...}`,
+  `.env.example` в Fish и явный source. Для shared service нужно окружение
+  самого server/launchd, не только TUI. Локальный voice V2 использует ffmpeg +
+  whisper.cpp, V1 npm voice plugin не подключать. Инструкция — README архива.
 
 ### Kitty langmap
 

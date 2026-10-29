@@ -1,12 +1,12 @@
-import type { TuiPluginModule } from "@opencode-ai/plugin/tui";
+import { Plugin } from "@opencode/plugin/tui";
 import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 // The TUI route identifies the viewed session, including idle sessions and
 // navigation without a prompt. Backend message events cannot identify that.
-export default {
-	id: "local:workspace-context",
-	tui: async (api) => {
+export default Plugin.define({
+	id: "local.workspace-context",
+	setup: (api) => {
 		const runtime = process.env.XDG_RUNTIME_DIR;
 		const pane = process.env.KITTY_WINDOW_ID;
 		if (process.platform !== "linux" || !runtime || !pane || !/^\d+$/.test(pane)) return;
@@ -22,13 +22,13 @@ export default {
 		let previous = "";
 		const publish = () => {
 			try {
-				const route = api.route.current;
-				const id = route.name === "session" ? route.params?.sessionID : undefined;
-				const session = typeof id === "string" ? api.state.session.get(id) : undefined;
+				const route = api.ui.router.current();
+				const id = route.type === "session" ? route.sessionID : undefined;
+				const session = id ? api.data.session.get(id) : undefined;
 				const payload = JSON.stringify({
 					app: "opencode", pane, start,
 					title: session?.title || "",
-					cwd: session?.directory || api.state.path.directory,
+					cwd: session?.location.directory || api.location?.directory || api.data.location.default().directory,
 				});
 				if (payload === previous) return;
 				mkdirSync(directory, { recursive: true, mode: 0o700 });
@@ -40,11 +40,11 @@ export default {
 		publish();
 		const timer = setInterval(publish, 500);
 		timer.unref?.();
-		api.lifecycle.onDispose(() => {
+		return () => {
 			clearInterval(timer);
 			for (const file of [path, temporary]) {
 				try { unlinkSync(file); } catch { /* Already removed or never published. */ }
 			}
-		});
+		};
 	},
-} satisfies TuiPluginModule;
+});

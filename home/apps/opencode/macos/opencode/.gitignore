@@ -1,0 +1,6 @@
+.env
+.credentials/
+node_modules/
+.DS_Store
+voice.json
+*.log

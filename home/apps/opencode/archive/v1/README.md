@@ -1,0 +1,245 @@
+# Домашний OpenCode: решения и краткие результаты
+
+> Исторический снимок V1. Текущая конфигурация и проверки находятся в ../../README.md.
+
+V1 notification/mute plugins, их тесты и прежний `permission-stats.ts` хранятся
+рядом в этом архиве и не устанавливаются. Тесты используют только V1-снимки,
+не актуальный V2 plugin. Отдельный запуск из корня репозитория:
+
+```fish
+node --test home/apps/opencode/archive/v1/tests/test_*.mjs
+```
+
+Проверено на OpenCode **1.19.3**, 2026-10-20. Это модуль Home Manager для
+laptop/desktop. Подробная методика и результаты — [BENCHMARK.md](BENCHMARK.md).
+
+## Заголовки workspace canvas (Linux)
+
+`workspace-context.ts` — локальный TUI plugin для `hypr-spaces`. Он публикует
+полное название **просматриваемой** сессии и её directory, включая переключения
+и переименования без нового prompt. На home screen session title сбрасывается.
+Использует только TUI state; запросов к модели и чтения истории сообщений нет.
+Небольшой atomic JSON в `$XDG_RUNTIME_DIR/hypr-spaces/apps/` привязан к PID,
+starttime и Kitty pane. При dispose удаляется. Потребитель проверяет foreground
+process; crash не оставляет название на следующем приложении.
+
+После Home Manager switch открыть новый процесс Kitty и перезапустить OpenCode:
+сокет Kitty и TUI plugin не появляются в уже работающих процессах через reload.
+Старый однопанельный Kitty поддерживается через `/proc` fallback: достаточно
+перезапустить сам OpenCode. Полное имя `New session - ...` публикуется как есть,
+без префикса `OpenCode`. Если процесс запущен до установки plugin, обычный window
+title может быть лишь `OpenCode`; тогда canvas покажет только доступный CWD.
+Подробнее: [hypr-spaces README](../../../pkgs/hypr-spaces/README.md#semantic-titles).
+Проверка: `node --test home/apps/opencode/tests/test_workspace_context.mjs`;
+изолированный PTY smoke: `python3 home/linux/modules/hyprland/tests/test_context_tui.py`.
+
+## Sol 6.1: рабочие агенты High, plan XHigh
+
+**Baseline — build/general/research/review High, plan XHigh.** Это рабочая гипотеза:
+дополнительные рассуждения при планировании могут уменьшить последующие переделки.
+Max доступен для особенно сложных задач. Сложная диагностика или рефакторинг могут
+потребовать повышения effort и у build; роль сама по себе не определяет сложность.
+Цена API зависит от токенов и всего рабочего процесса, подписочная квота — отдельно.
+
+**Повторяемого сравнения Sol на сложных реальных задачах пока нет.** Короткий
+live-пилот ниже проверяет рабочий цикл; результаты Luna нельзя переносить на Sol.
+Следующий эксперимент — повторные полные цепочки plan → build с детьми,
+исправлениями, кешем и компактизацией: High/High против XHigh/High и Max/High.
+
+Две независимые строки в `default.nix`:
+
+```nix
+workEffort = "high";  # build / general / research / review
+planEffort = "xhigh"; # plan
+```
+
+Каждая задаёт model options, agent options и variant своей группы. Обе принимают
+`high`, `xhigh`, `max`; для plan Max достаточно заменить только `planEffort`.
+
+У plan отдельный штатный alias `openai/gpt-6.1-sol-plan`, с тем же API ID
+`gpt-6.1-sol`. TUI 1.19.3 хранит выбранный variant по model ID, а явно переданный
+variant перекрывает agent default. Разные aliases разделяют этот выбор для режимов.
+Явно выбранная пользователем другая модель по-прежнему имеет приоритет; при переходе
+со старого профиля нужно проверить модель и effort в обоих режимах.
+
+Compaction и служебный summary закреплены на High через штатный alias
+`openai/gpt-6.1-sol-high`, у которого **API ID — тот же `gpt-6.1-sol`**. Alias нужен
+потому, что compaction в 1.19.3 наследует variant исходного сообщения, а variant
+перекрывает agent options. Изоляция variants сохраняет High даже после основного
+Sol Max или explore Luna Max. Это не дополнительная модель, provider или fallback.
+В DB-отчёте aliases видны отдельно; при подсчёте цены сопоставлять оба с Sol.
+
+Ранее High и Max проверены сборкой, изолированными Responses-вызовами и коротким
+live OAuth smoke. Это проверка доступности и маршрутизации, не сравнение качества.
+Текущая схема XHigh/High собрана для laptop/desktop; проверены Responses-запросы,
+plan → build → plan в одной сессии, методы выбора variant из TUI и compaction High.
+
+### Внешнее сравнение Artificial Analysis
+
+Предоставленный `gpt-6-1-sol-comparison.md` содержит следующий срез Coding Agent
+Index v1.5 / агентных запусков Codex. Это внешние данные, не наш тест OpenCode;
+полный числовой срез агентных графиков независимо повторно не извлекался.
+
+| Sol | Coding Agent Index | Цена задачи | Время задачи |
+|---|---:|---:|---:|
+| High | 60,1 | $0,89 | 13,3 мин |
+| XHigh | 62,9 | $1,04 | 15,5 мин |
+| Max | 60,1 | $1,55 | 24,4 мин |
+
+В этом срезе XHigh сильнее по coding index при +17% цены к High; Max — +74% цены
+без выигрыша по coding index. Это аргумент проверить XHigh раньше Max, не гарантия
+для нашего проекта или отдельно стадии plan. Страница AA High/XHigh подтверждает
+Intelligence 50/51 и цену задачи Intelligence $0,32/$0,39; это другой набор тестов.
+
+**«Цену успешного решения» $1,48/$1,65/$2,58 из файла не используем как измерение.**
+Она совпадает с ценой задачи / (Coding Agent Index / 100). По методике AA индекс —
+среднее трёх benchmark scores с равными весами, а стоимость — pooled average по
+попыткам; числа задач в компонентах 113/66/124. Эти веса различаются. Для настоящей
+стоимости успеха нужны согласованные стоимость и исходы попыток, а не это отношение.
+
+OpenAI подтверждает XHigh, окно 1,05M и повышенный тариф после 272K input в одном
+запросе. Это экономическая граница, не доказанный предел точности. Наш порог 212K
+не является жёсткой гарантией оставаться ниже 272K: счётчики и момент проверки разные.
+
+Источники, проверенные 2026-10-20:
+[OpenAI Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol),
+[AA High/XHigh](https://artificialanalysis.ai/models/comparisons/gpt-6-1-sol-high-vs-gpt-6-1-sol-xhigh),
+[AA Coding Agents](https://artificialanalysis.ai/agents/coding-agents),
+[методика AA](https://artificialanalysis.ai/methodology/coding-agents-benchmarking).
+
+### Наш live-пилот Sol: plan → build
+
+Одна небольшая Python-задача: слияние полуоткрытых интервалов с заданными edge
+cases. По одному запуску каждого режима, build всегда High. Все три реализации
+прошли 12 открытых тестов и 160 дополнительных случаев с независимым graph oracle.
+
+| Plan / build | Время plan | Полный цикл | Учтённые токены |
+|---|---:|---:|---:|
+| High / High | 11,61 с | 20,25 с | 41 844 |
+| XHigh / High | 20,94 с | 33,71 с | 36 256 |
+| Max / High | 27,75 с | 39,70 с | 37 287 |
+
+В каждой цепочке одна сессия, без детей, compaction и записанных ошибок. Plan не
+изменял файлы, build редактировал только реализацию после permission reply.
+**n=1, фиксированный порядок и меняющийся кеш не позволяют ранжировать режимы.**
+Title не учтён, токены не равны API-стоимости или подписочной квоте. Это проверка
+работоспособности и пилот измерения, а не доказательство преимущества XHigh.
+
+## Итоги исследований
+
+| Вопрос | Проверенный результат / принятое решение |
+|---|---|
+| Модельные маршруты | Только OpenAI Responses; work — Sol High, plan — Sol XHigh, compaction/summary — Sol High; explore — Luna Max; title/small_model — Luna Low. Переключение и effort проверены; `small_model` не маршрутизирует task/compaction. |
+| Делегирование и навыки | Native task создаёт дочерние сессии. Research/review — read-only анализ; механика выполняется инструментами. Сохранённые навыки загружаются; skill у explore по-прежнему запрещён. Permissions не ослаблены. |
+| RLM и governor | Governor и Zod-обвязка удалены. RLM, его skill, writer и тесты — отключённый архив. Независимый permission-stats и native tool-output артефакты проверены. Старые usage-данные сохранены. |
+| Окно маршрута | Каталог и OAuth-адаптер объявляют context 1,050,000 / input 922,000 / output 128,000. Это не экспериментальное доказательство серверного приёма всего окна. |
+| Порог компактизации | Локальный soft input 244,000 − reserved 32,000 = **212,000** по `overflow.ts`. Без `limit.input` reserved не управляет порогом. Граница 211,999/212,000 проверена; между шагами возможен скачок за порог. |
+| Вывод | Каталожный output 128,000 сохранён. OpenAI hook убирает `max_output_tokens`; 32K у helper не являются передаваемым жёстким cap генерации. |
+| Хвост и pruning | Auto включён, native recent tail 15K, `prune=false`. Хвост проверен. Pruning — отдельный будущий эксперимент. |
+| Ошибка summary | API failure, overflow, частичный сбой и abort сохраняют исходные доказательства в следующем контексте. **Пустая успешная summary принимается upstream**; отсутствующего `abort_on_summary_failure` нет. |
+| Ручной отчёт | Read-only SQLite, потомки, legacy ledger, cache, маршруты, compaction и сохранённые steps/retries. Семь тестов прошли. Title и часть неуспешных запросов не восстанавливаются из DB. |
+| Полный учёт | OpenTelemetry в проверенном 1.19.3 экспортировал логи, но ноль AI spans; одного флага недостаточно. DB-отчёт не является invoice или измерителем подписочной квоты. |
+| Nix и runtime | Laptop/desktop Home Manager собраны без активации; file watcher — inotify. Корпоративный профиль не менялся. |
+
+### Luna High против Max: предварительное сравнение
+
+Одна фиксированная задача, три запуска каждого режима, каждый с Sol High-родителем
+и одним explore-потомком. Проверены факты, формулы, ссылки и границы доказательств.
+
+| Режим explore | Успех | Медиана времени | Медиана учтённых токенов всей задачи с ребёнком |
+|---|---:|---:|---:|
+| High | 3/3 | 60,20 с | 40 629 |
+| Max | 3/3 | 73,79 с | 40 527 |
+
+Преимущества Max в точности на этой задаче не обнаружено. API-equivalent медианы
+только учтённых вызовов — $0,048568 и $0,036418 соответственно; cache и поведение
+родителя различались, title не учтён. Это **не доказательство полной экономии** и
+не расход подписочной квоты. Luna Max остаётся исходной гипотезой для более широкой
+проверки. Эксперимент не измерял качество Sol High/Max и поведение длинных задач с
+реальной компактизацией; последнее проверялось отдельно на native runtime fixture.
+
+## Уведомления: разрешение, завершение и ошибка
+
+`notifications.ts` обрабатывает все три события через одну функцию `notify(kind)`:
+тихий запрос внимания Kitty плюс воспроизведение выбранного аудиофайла через
+`pw-play`. Подсветка workspace и вкладки запрашивается независимо от mute и
+не переключает фокус. Ошибка аудио не блокирует подсветку, ошибка терминала
+не блокирует звук. `permission-stats.ts` занимается только учётом разрешений.
+
+| Событие | Звук | Момент уведомления |
+|---|---|---|
+| `permission.asked`, включая дочерние сессии | freedesktop `bell.oga` | Сразу, один раз на request ID |
+| Успешный ответ основной сессии | anime wow | Завершённый ответ и `session.idle` |
+| Окончательная ошибка основной сессии | anime girl senpai | При переходе в idle либо сразу, если сессия уже idle |
+
+Все аудиофайлы и проигрыватель заданы абсолютными Nix store paths. MP3 хранятся
+в репозитории; исходники в Downloads не нужны. OpenCode не отправляет BEL:
+permission sound, wow и senpai используют один и тот же путь воспроизведения.
+В headless-режиме без Kitty пропускается только подсветка. При подключении
+к отдельному server уведомления выполняются на стороне backend.
+
+Для завершения и ошибки один `SessionState` хранит последнее сообщение, статус,
+отложенное уведомление, выполняющийся lookup и ключи уже отправленных событий.
+Повторные idle/error/message cleanup не дублируют уведомления. Для ранних ошибок
+без assistant message используется runtime bus event ID: replay подавляется,
+а новая операция с таким же текстом ошибки получает отдельное уведомление.
+После асинхронного lookup повторно проверяется актуальность: новый prompt,
+удаление сессии, отмена и retry отменяют устаревшее уведомление. Финальный
+служебный `busy` сохраняет успешное завершение. Дочерние ответы, compaction,
+промежуточные вызовы инструментов, retries и ручные отмены остаются без звука
+и подсветки завершения.
+
+### `/mute` и `/unmute`
+
+Локальные TUI-команды `/mute` и `/unmute` выключают и включают звуки OpenCode:
+anime wow, anime girl senpai и bell запроса разрешения. Они доступны также
+в command palette, показывают toast и не создают запрос к модели.
+
+Настройка общая для OpenCode текущего пользователя на этой машине и сохраняется
+между запусками в `$XDG_STATE_HOME/opencode/notifications-muted` (по умолчанию
+`~/.local/state/opencode/notifications-muted`). `notification-state.ts` читается
+и TUI, и backend-плагинами; уже запущенные экземпляры замечают изменение при
+следующем уведомлении. `/unmute` не воспроизводит пропущенные уведомления.
+
+Для всех трёх событий, с mute и без него, плагин через Kitty remote control
+запускает `silent-attention.py` для своего `KITTY_WINDOW_ID`. No-UI kitten
+отмечает вкладку и запрашивает внимание у compositor, не вызывая audio bell
+или `command_on_bell`. Используется существующий `allow_remote_control yes`;
+ответ remote control не запрашивается, чтобы не попадать в ввод TUI.
+
+После Home Manager switch полностью перезапустить OpenCode. Проверка:
+`/mute`, короткий запрос при переходе на другой workspace — подсветка без wow;
+запрос разрешения и ошибка — также подсветка без звука. `/unmute` возвращает
+все три звука. Проверки без настоящего аудио:
+
+```sh
+node --test home/apps/opencode/archive/v1/tests/test_notifications.mjs home/apps/opencode/archive/v1/tests/test_notification_mute.mjs
+python3 home/apps/opencode/tests/test_silent_attention.py
+```
+
+### Системный bell других приложений
+
+В `home/modules/kitty/common.conf` включён `enable_audio_bell yes`.
+Hyprland 0.55/0.56 публикует системные bell-события; `onionbell.service` из
+`home/linux/modules/hyprland/default.nix` воспроизводит freedesktop `bell.oga`
+для клиентов `xdg-system-bell-v1`. Проверка в Fish: `printf '\a'`.
+Эта служба не участвует в уведомлениях OpenCode. После перехода на Hyprland
+со штатным воспроизведением из [PR #15502](https://github.com/hyprwm/Hyprland/pull/15502)
+удалить onionbell по reminder в HM-модуле, чтобы системный bell не звучал дважды.
+
+Локальный `ipc-eof.patch` обеспечивает выход onionbell при закрытии IPC вместо
+busy loop с ростом памяти; существующий `Restart=on-failure` перезапускает службу.
+Независимые EOF-тесты и порядок удаления этого фикса после обновления upstream
+описаны в [`pkgs/onionbell/README.md`](../../../pkgs/onionbell/README.md).
+
+## Применение
+
+1. После изменения `workEffort` или `planEffort` выполнить build без активации:
+   `nix build --no-link .#homeConfigurations.samov-laptop.activationPackage`.
+2. После своей проверки применить нужный профиль:
+   `home-manager switch --flake .#samov-laptop` (на desktop — `samov-desktop`).
+3. Полностью перезапустить OpenCode; проверить `opencode debug agent build`,
+   `opencode debug agent plan` и `opencode debug agent compaction`. Для подтверждения effort
+   смотреть Responses-запрос, а не только сохранённую метку variant.
+
+Документация не требует активации; NixOS rebuild для этого модуля не нужен.

@@ -1,0 +1,27 @@
+diff --git a/packages/tui/src/feature-plugins/system/notifications.ts b/packages/tui/src/feature-plugins/system/notifications.ts
+--- a/packages/tui/src/feature-plugins/system/notifications.ts
++++ b/packages/tui/src/feature-plugins/system/notifications.ts
+@@ -1,5 +1,6 @@
+ import { Plugin } from "@opencode/plugin/tui"
+ import type { AttentionSoundName } from "@opencode/plugin/tui/context"
++import { sessionAttention } from "../../session-attention"
+ 
+ function notify(
+   context: Plugin.Context,
+@@ -8,6 +9,7 @@ function notify(
+   sound: AttentionSoundName,
+   title?: string,
+ ) {
++  if (!sessionAttention(context, sessionID)) return
+   const session = sessionID ? context.data.session.get(sessionID) : undefined
+   const isSubagent = session?.parentID !== undefined
+   void context.attention.notify({
+@@ -66,7 +68,7 @@ export default Plugin.define({
+           return
+         }
+         errored.add(sessionID)
+-        if (event.data.error.type !== "provider.free-limit") {
++        if (event.data.error.type !== "provider.free-limit" && sessionAttention(context, sessionID)) {
+           notify(context, sessionID, event.data.error.message, "error")
+           context.ui.toast.show({
+             sessionID,

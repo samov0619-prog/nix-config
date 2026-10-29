@@ -1,0 +1,54 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "update": "disable",
+  "share": "disabled",
+  "model": "copilot/x5-airun-code-large",
+  "agents": { "title": { "model": "copilot/x5-airun-small" } },
+  "policies": [
+    { "action": "provider.use", "resource": "*", "effect": "deny" },
+    { "action": "provider.use", "resource": "copilot", "effect": "allow" },
+    { "action": "provider.use", "resource": "openai", "effect": "allow" }
+  ],
+  "permissions": [
+    { "action": "edit", "resource": "*", "effect": "ask" },
+    { "action": "edit", "resource": "*promptLogs/*", "effect": "allow" },
+    { "action": "shell", "resource": "*", "effect": "ask" },
+    { "action": "shell", "resource": "date", "effect": "allow" },
+    { "action": "shell", "resource": "date *", "effect": "allow" }
+  ],
+  "providers": {
+    "copilot": {
+      "name": "copilot-x5",
+      "package": "@opencode/ai/providers/openai-compatible",
+      "env": ["COPILOT_API_KEY"],
+      "settings": { "baseURL": "https://api-copilot.x5.ru/v1/" },
+      "models": {
+        "x5-airun-code-large": {
+          "limit": { "context": 250000, "output": 16384 },
+          "capabilities": { "tools": true, "input": ["text", "image"], "output": ["text"] }
+        },
+        "x5-airun-small": {
+          "limit": { "context": 250000, "output": 8192 },
+          "capabilities": { "tools": true, "input": ["text", "image"], "output": ["text"] }
+        }
+      }
+    },
+    "openai": { "settings": { "baseURL": "http://127.0.0.1:8080/v1" } }
+  },
+  "mcp": {
+    "servers": {
+      "MCP-WIKI": {
+        "type": "remote", "url": "{env:MCP_WIKI_URL}",
+        "headers": { "Authorization": "{env:MCP_WIKI_AUTHORIZATION}" }
+      },
+      "MCP-KAITEN": {
+        "type": "remote", "url": "{env:MCP_KAITEN_URL}", "oauth": false,
+        "headers": { "Authorization": "{env:MCP_KAITEN_AUTHORIZATION}" }
+      },
+      "Chrome MCP": {
+        "type": "local",
+        "command": ["npx", "-y", "chrome-devtools-mcp@latest", "--browserUrl", "http://127.0.0.1:9222"]
+      }
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "*": { "providerID": "openai", "id": "gpt-6.1-sol", "variant": "high" },
+  "plan": { "providerID": "openai", "id": "gpt-6.1-sol-plan", "variant": "xhigh" },
+  "explore": { "providerID": "openai", "id": "gpt-6-luna-max", "variant": "max" },
+  "compaction": { "providerID": "openai", "id": "gpt-6.1-sol-high", "variant": "high" },
+  "summary": { "providerID": "openai", "id": "gpt-6.1-sol-high", "variant": "high" },
+  "title": { "providerID": "openai", "id": "gpt-6-luna", "variant": "low" }
+}

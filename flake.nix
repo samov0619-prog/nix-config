@@ -17,6 +17,7 @@
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-26.05";
     nixpkgs-unstable.url = "nixpkgs/nixpkgs-unstable";
+    opencode.url = "github:anomalyco/opencode/v2.1.4";
 
     home-manager = {
       url = "github:nix-community/home-manager/release-26.05";
@@ -60,6 +61,7 @@
       nix-gc-env,
       xremap-flake,
       hermes-agent,
+      opencode,
       ...
     }:
     let
@@ -97,6 +99,7 @@
             inherit username xremap-flake hermes-agent;
             pkgsUnstable = pkgsUnstableFor pkgs.stdenv.hostPlatform.system;
             browserPreviews = browserPreviewsFor pkgs.stdenv.hostPlatform.system;
+            opencodePackage = self.packages.${pkgs.stdenv.hostPlatform.system}.opencode;
           };
         };
 
@@ -116,7 +119,9 @@
               nixpkgs.overlays = overlays;
             }
             ./hosts/profiles/gc.nix
-          ] ++ modules ++ [
+          ]
+          ++ modules
+          ++ [
             home-manager.nixosModules.home-manager
             nix-gc-env.nixosModules.default
           ];
@@ -128,8 +133,15 @@
       };
     in
     {
-      packages.x86_64-linux.hypr-spaces =
-        (pkgsFor systems.linux [ ]).callPackage ./pkgs/hypr-spaces { };
+      packages.x86_64-linux.hypr-spaces = (pkgsFor systems.linux [ ]).callPackage ./pkgs/hypr-spaces { };
+      packages.x86_64-linux.opencode = import ./home/apps/opencode/package.nix {
+        upstream = opencode.packages.x86_64-linux.opencode;
+        pkgs = pkgsFor systems.linux [ ];
+      };
+      packages.aarch64-darwin.opencode = import ./home/apps/opencode/package.nix {
+        upstream = opencode.packages.aarch64-darwin.opencode;
+        pkgs = pkgsFor systems.mac [ ];
+      };
 
       overlays = {
         amnezia-vpn = final: prev: {
