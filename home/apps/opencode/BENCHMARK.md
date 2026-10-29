@@ -11,6 +11,8 @@ Run from the repository root. None activates a Nix generation:
 ```fish
 node --test home/apps/opencode/tests/test_model_routing.mjs home/apps/opencode/tests/test_workspace_context.mjs home/apps/opencode/tests/test_git_offline.mjs home/apps/opencode/tests/test_voice_v2.mjs
 node --test home/apps/opencode/tests/test_permission_stats_v2.mjs home/apps/opencode/tests/test_model_calls.mjs
+node --test home/apps/opencode/tests/test_skill_stats.mjs
+python3 home/apps/opencode/tests/test_skill_stats.py
 node --test home/apps/opencode/tests/test_session_attention.mjs
 python3 home/apps/opencode/tests/test_task_report.py
 python3 home/apps/opencode/tests/test_silent_attention.py
@@ -86,6 +88,12 @@ Coverage:
   cached `remote show -n` remains allowed. Denied commands never execute, and
   the permitted cached command only examines a temporary local directory.
 - Native permission events persist the correlated Always decision with mode 0600.
+- Skill statistics use the native tool after hook and plugin KV storage. Unit
+  checks cover session/assistant boundaries, later steering exclusion, repeated
+  calls, concurrent duplicate callbacks/reload, unknown compacted queries,
+  fail-open storage/lookup and no tool output/error persistence. The read-only
+  report hides query text unless `--examples` is explicit. Runtime smoke exercises
+  real successful/missing skill calls and verifies query/model attribution in KV.
 - Read-only accounting against both synthetic schemas and a real V2 SQLite DB:
   exact mock token totals, compaction, descendants and merged V1/V2 recent sessions.
 - Team/personal/project config documents and native env interpolation for Mac.

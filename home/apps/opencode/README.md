@@ -149,7 +149,7 @@ Git-regression-rollback requires a user-authorized temporary commit rollback;
 ordinary investigation and permanent reverts are outside its scope. Already-loaded
 instructions are reused rather than loading the same skill on every follow-up.
 Built-in `opencode`/`report` are not overridden. These rules remain model guidance,
-not a deterministic classifier.
+not a deterministic classifier; use skill statistics to check false positives.
 
 Нативные `tool.use` policies запрещают сетевые Git-команды даже поверх Always.
 `plugins/git-offline.ts` через shell `create.before` задаёт `GIT_ALLOW_PROTOCOL=""`,
@@ -193,6 +193,40 @@ HTTP retries — отдельные строки; HTTP status означает �
 V2 сохраняет title usage в отдельных events, но этот отчёт их не суммирует.
 Это не invoice и не измеритель подписочной квоты.
 См. [BENCHMARK.md](BENCHMARK.md).
+
+### Вызовы скиллов
+
+`plugins/skill-stats.ts` — один native V2 `tool.execute.after` hook, без LLM, polling
+и изменения поведения скиллов. Каждый завершившийся вызов инструмента `skill`
+сохраняет ID скилла, статус (`completed`/`error`), время, agent/model, session,
+tool call/message IDs и **полный текст предшествующего запроса** с его ID.
+Запрос выбирается перед вызывающим assistant message в той же сессии; более
+поздние steering/queued prompts не подменяют его. Если граница/запрос отсутствуют
+в текущем контексте (например, после compaction), запрос остаётся неизвестным.
+
+Хранилище — штатный `ctx.storage` в локальной OpenCode DB, namespace
+`local.skill-stats`; отдельной БД/журнала нет. Ключ session + message + tool call делает
+повторную обработку идемпотентной; счётчики вычисляются по записям. Содержимое
+скилла, tool output и ошибки не копируются. Ошибка записи/lookup не ломает вызов,
+но учёт может быть неполным. История начинается после установки; явные `@skill`
+без вызова инструмента, прерванные до after hook вызовы и причина решения модели
+не покрываются. Записи не удаляются автоматически при удалении исходной сессии.
+
+Просмотр без изменения DB:
+
+```fish
+opencode-skill-stats
+opencode-skill-stats --skill discussion-map --examples 10
+opencode-skill-stats --json
+```
+
+По умолчанию выводятся только счётчики, число сессий и неизвестных запросов.
+**`--examples N` раскрывает приватные тексты запросов**, включая в JSON-выводе:
+не отправлять такой отчёт/DB в Git или публичные логи. Тексты хранятся локально
+с той же защитой, что и остальная OpenCode DB; дополнительного шифрования нет.
+Домашний HM подключает сборщик на laptop/desktop; самостоятельный Mac-порт
+не меняется. После HM switch V2 автоматически перечитывает plugins; при
+необходимости выполнить `/reload`, перезапускать service не требуется.
 
 ## Kitty clipboard MIME 5522
 

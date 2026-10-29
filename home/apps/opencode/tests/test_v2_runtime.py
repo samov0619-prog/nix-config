@@ -27,6 +27,7 @@ class MockResponses(BaseHTTPRequestHandler):
     fail_next = False
     fail_status = 400
     next_tool_command = None
+    next_tool_skill = None
 
     def log_message(self, *args):
         pass
@@ -52,11 +53,15 @@ class MockResponses(BaseHTTPRequestHandler):
         checkpoint = any(item.get("type") == "compaction_trigger" for item in body.get("input", []))
         if checkpoint:
             item = {"type": "compaction", "id": "cmp_mock", "encrypted_content": "fixture-checkpoint"}
-        tool_call = self.next_tool_command
+        tool_call = self.next_tool_command or self.next_tool_skill
         if tool_call:
+            skill_call = self.next_tool_skill
             type(self).next_tool_command = None
-            item = {"type": "function_call", "id": "fc_mock", "call_id": "call_mock", "name": "shell",
-                    "arguments": json.dumps({"command": tool_call, "timeout": 1000})}
+            type(self).next_tool_skill = None
+            # Deliberately reuse the provider call ID across assistant messages.
+            item = {"type": "function_call", "id": "fc_mock", "call_id": "call_mock",
+                    "name": "skill" if skill_call else "shell",
+                    "arguments": json.dumps({"id": skill_call} if skill_call else {"command": tool_call, "timeout": 1000})}
         response = {"id": "resp_mock", "object": "response", "created_at": int(time.time()),
                     "model": body["model"], "status": "completed", "output": [item],
                     "usage": {"input_tokens": 20, "output_tokens": 4, "total_tokens": 24,
@@ -128,7 +133,7 @@ def main(binary, catalog_only=False, mac=False, native=False):
         config.mkdir(parents=True)
         (config / "opencode.json").write_text(json.dumps(settings))
         for name, entry in [("git-offline", "git-offline.ts"), ("permission-stats", "permission-stats.ts"),
-                            ("model-calls", "model-calls.ts")]:
+                            ("model-calls", "model-calls.ts"), ("skill-stats", "skill-stats.ts")]:
             plugin = config / "plugins" / name
             generation = os.environ.get("OPENCODE_TEST_HM_GENERATION")
             if generation:
@@ -225,7 +230,7 @@ def main(binary, catalog_only=False, mac=False, native=False):
                     time.sleep(0.25)
                 assert {"build", "plan", "explore", "research", "review"} <= {a["id"] for a in agents["data"]}
                 local = [plugin for plugin in plugins["data"] if plugin["id"].startswith("local.")]
-                assert {p["id"] for p in local} == {"local.git-offline", "local.permission-stats", "local.model-calls"}, local
+                assert {p["id"] for p in local} == {"local.git-offline", "local.permission-stats", "local.model-calls", "local.skill-stats"}, local
                 assert all(p["state"]["status"] == "active" for p in local), local
                 print("PASS: configured agents and native local plugins active")
                 by_skill = {skill["id"]: skill for skill in skills["data"]}
@@ -396,6 +401,25 @@ def main(binary, catalog_only=False, mac=False, native=False):
                                and row["response"] == "always" for row in rows), rows
                     assert history.stat().st_mode & 0o777 == 0o600
                     print("PASS: native permission stream recorded correlated Always decision privately")
+                # Real native tool hooks and plugin KV storage; the mock emits a
+                # skill call, not a synthetic plugin event. No paid inference.
+                skill_session = api("session", {"title": "Skill stats fixture", "permissions": [
+                    {"action": "skill", "resource": "*", "effect": "allow"},
+                ]})["data"]["id"]
+                for skill_id in ["discussion-map", "missing-fixture-skill"]:
+                    MockResponses.next_tool_skill = skill_id
+                    prompt(skill_session, "gpt-6.1-sol", "high")
+                skill_report = json.loads(subprocess.check_output([
+                    sys.executable, str(SOURCE / "scripts/skill-stats.py"), "--json", "--examples", "10",
+                ], env=env))
+                observed = {row["skill"]: row for row in skill_report["skills"]}
+                assert observed["discussion-map"]["completed"] == 1, skill_report
+                assert observed["missing-fixture-skill"]["error"] == 1, skill_report
+                assert len(skill_report["examples"]) == 2, skill_report
+                assert all(row["lastQuery"] == "Reply briefly." and row["queryID"]
+                           and row["sessionID"] == skill_session for row in skill_report["examples"]), skill_report
+                assert all(row["model"]["id"] == "gpt-6.1-sol" for row in skill_report["examples"]), skill_report
+                print("PASS: actual skill success/error recorded once in native plugin storage with preceding query and model")
                 attempts = []
                 for path in (root / "state/opencode/model-calls").glob("*.jsonl"):
                     rows = [json.loads(line) for line in path.read_text().splitlines()]

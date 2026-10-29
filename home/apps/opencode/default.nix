@@ -70,6 +70,7 @@ in
     "opencode/plugins/git-offline-v2".source = serverPlugin "git-offline" ./plugins/git-offline.ts;
     "opencode/plugins/permission-stats-v2".source = serverPlugin "permission-stats" ./plugins/permission-stats.ts;
     "opencode/plugins/model-calls-v2".source = serverPlugin "model-calls" ./plugins/model-calls.ts;
+    "opencode/plugins/skill-stats-v2".source = serverPlugin "skill-stats" ./plugins/skill-stats.ts;
     "opencode/sounds/permission.wav".source = permissionSound;
     "opencode/sounds/completion.mp3".source = ./sounds/completion-sound.mp3;
     "opencode/sounds/error.mp3".source = ./sounds/error-sound.mp3;
@@ -86,6 +87,11 @@ in
       name = "opencode-task-report";
       runtimeInputs = [ pkgs.python3 ];
       text = ''exec python3 ${./scripts/task-report.py} "$@"'';
+    })
+    (pkgs.writeShellApplication {
+      name = "opencode-skill-stats";
+      runtimeInputs = [ pkgs.python3 ];
+      text = ''exec python3 ${./scripts/skill-stats.py} "$@"'';
     })
     (pkgs.writeShellApplication {
       name = "opencode-permission-stats";
