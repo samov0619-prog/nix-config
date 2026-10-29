@@ -1,9 +1,5 @@
 # Global Rules
 
-## Discussion
-
-- For multi-turn planning or discussion, load the `discussion-map` skill.
-
 ## Tools
 
 - ALWAYS use OpenCode's `grep` and `glob` tools for file searches; they are backed by `rg`.
@@ -36,8 +32,10 @@
   source synthesis to `research`, and independent correctness checks to `review`
   only when separate analysis is justified and delegation is permitted. Give the
   child a source scope, question and expected evidence; avoid duplicating its work.
-- Load skills only when their descriptions match the task. Keep skill permission
-  restrictions intact; a subagent is not a permission bypass.
+- Load a skill only when its advertised description matches the current task or
+  the user explicitly requests it. Reuse instructions already in the current
+  context unless the skill has changed; do not reload it for every follow-up.
+  Keep skill permission restrictions intact; a subagent is not a permission bypass.
 
 ## Git Workflow
 

@@ -137,6 +137,18 @@ def main(binary, catalog_only=False, mac=False, native=False):
             else:
                 plugin.mkdir(parents=True)
                 (plugin / "index.ts").write_text((SOURCE / "plugins" / entry).read_text())
+        for skill_id in ["discussion-map", "git-regression-rollback"]:
+            skill = config / "skills" / skill_id / "SKILL.md"
+            skill.parent.mkdir(parents=True)
+            if generation:
+                skill.symlink_to(Path(generation) / "home-files/.config/opencode/skills" / skill_id / "SKILL.md")
+            else:
+                skill.write_text((SOURCE / "skills" / skill_id / "SKILL.md").read_text())
+        rules = config / "AGENTS.md"
+        if generation:
+            rules.symlink_to(Path(generation) / "home-files/.config/opencode/AGENTS.md")
+        else:
+            rules.write_text((SOURCE / "config/AGENTS.md").read_text())
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             port = sock.getsockname()[1]
@@ -205,7 +217,8 @@ def main(binary, catalog_only=False, mac=False, native=False):
                 while True:
                     agents = api("agent")
                     plugins = api("plugin")
-                    if agents.get("data") and plugins.get("data"):
+                    skills = api("skill")
+                    if agents.get("data") and plugins.get("data") and {"discussion-map", "git-regression-rollback"} <= {s["id"] for s in skills.get("data", [])}:
                         break
                     if time.monotonic() > deadline:
                         raise AssertionError({"agents": agents, "plugins": plugins})
@@ -215,6 +228,15 @@ def main(binary, catalog_only=False, mac=False, native=False):
                 assert {p["id"] for p in local} == {"local.git-offline", "local.permission-stats", "local.model-calls"}, local
                 assert all(p["state"]["status"] == "active" for p in local), local
                 print("PASS: configured agents and native local plugins active")
+                by_skill = {skill["id"]: skill for skill in skills["data"]}
+                assert {"opencode", "report"} <= by_skill.keys()
+                for skill_id in ["discussion-map", "git-regression-rollback"]:
+                    expected = next(line.removeprefix("description: ") for line in
+                                    (SOURCE / "skills" / skill_id / "SKILL.md").read_text().splitlines()
+                                    if line.startswith("description: "))
+                    assert by_skill[skill_id]["description"] == expected, by_skill[skill_id]
+                assert "For multi-turn planning or discussion" not in rules.read_text()
+                print("PASS: native skill discovery advertises scoped descriptions; no blanket discussion-map rule")
                 if catalog_only:
                     catalog = api("model")
                     free = [model for model in catalog["data"] if model["id"] == "big-pickle"]

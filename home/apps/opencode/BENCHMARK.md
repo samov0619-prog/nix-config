@@ -43,6 +43,11 @@ Big Pickle inference. No paid API calls are needed.
 
 Coverage:
 - Native schema, configured agents, server plugin discovery and activation.
+- Native skill discovery parses both managed SKILL.md definitions and advertises
+  their exact scoped descriptions alongside built-in opencode/report. The blanket
+  discussion-map loading rule is absent. The HM-generation variant reads the
+  actual deployed skill/rules symlinks. This validates installation and metadata,
+  not the model's future choice to invoke a skill.
 - Actual provider requests: Build High, title Luna Low, free main/child/auxiliary
   generation/compaction, live-root paid change for an already-created Explore
   child (Luna Max), Plan XHigh, compaction and summary High after Plan XHigh.

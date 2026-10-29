@@ -141,6 +141,16 @@ research/review/explore — read-only, без дальнейшего делег�
 Explore также не вызывает skills. Подключены штатные discussion-map и
 git-regression-rollback; RLM/governor не устанавливаются.
 
+Skill selection follows native V2 discovery: the advertised `description` owns
+the trigger; `config/AGENTS.md` does not force discussion-map for general planning.
+Discussion-map requires established independent threads needing coordination or
+an explicit map request, not a single task, routine status check or topic change.
+Git-regression-rollback requires a user-authorized temporary commit rollback;
+ordinary investigation and permanent reverts are outside its scope. Already-loaded
+instructions are reused rather than loading the same skill on every follow-up.
+Built-in `opencode`/`report` are not overridden. These rules remain model guidance,
+not a deterministic classifier.
+
 Нативные `tool.use` policies запрещают сетевые Git-команды даже поверх Always.
 `plugins/git-offline.ts` через shell `create.before` задаёт `GIT_ALLOW_PROTOCOL=""`,
 `GIT_NO_LAZY_FETCH=1`, `GIT_TERMINAL_PROMPT=0`, в том числе для составных команд
