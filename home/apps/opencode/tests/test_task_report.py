@@ -6,7 +6,7 @@ import sqlite3
 import tempfile
 import unittest
 
-spec = importlib.util.spec_from_file_location("report", Path(__file__).parents[1] / "task-report.py")
+spec = importlib.util.spec_from_file_location("report", Path(__file__).parents[1] / "scripts/task-report.py")
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 

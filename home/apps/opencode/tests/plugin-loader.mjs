@@ -7,7 +7,7 @@ registerHooks({ resolve(specifier, context, next) {
     return { shortCircuit: true, url: "data:text/javascript,export const Plugin = {define: value => value};" };
   }
   if (specifier === "@sessionAttention@" || specifier === "../../session-attention") {
-    return { shortCircuit: true, url: new URL("../session-attention.ts", import.meta.url).href };
+    return { shortCircuit: true, url: new URL("../patches/session-attention.ts", import.meta.url).href };
   }
   return next(specifier, context);
 } });

@@ -97,7 +97,7 @@ class MockResponses(BaseHTTPRequestHandler):
 
 def main(binary, catalog_only=False, mac=False, native=False):
     settings = json.loads(subprocess.check_output([
-        "nix", "eval", "--json", "--file", str(SOURCE / "v2-settings.nix"),
+        "nix", "eval", "--json", "--file", str(SOURCE / "config/v2-settings.nix"),
         "--apply", "f: f { lib = {}; }",
     ]))
     mock = ThreadingHTTPServer(("127.0.0.1", 0), MockResponses)
@@ -136,7 +136,7 @@ def main(binary, catalog_only=False, mac=False, native=False):
                 plugin.symlink_to(Path(generation) / "home-files/.config/opencode/plugins" / f"{name}-v2", target_is_directory=True)
             else:
                 plugin.mkdir(parents=True)
-                (plugin / "index.ts").write_text((SOURCE / entry).read_text())
+                (plugin / "index.ts").write_text((SOURCE / "plugins" / entry).read_text())
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             port = sock.getsockname()[1]
@@ -279,7 +279,7 @@ def main(binary, catalog_only=False, mac=False, native=False):
                     assert error.code == 503, error
                 assert len(MockResponses.requests[start:]) == 1 and MockResponses.requests[-1]["model"] == "big-pickle"
                 print("PASS: provider error does not fall back to a paid provider")
-                paid = json.loads((SOURCE / "routing-models.json").read_text())
+                paid = json.loads((SOURCE / "plugins/model-routing/routing-models.json").read_text())
                 api(f"session/{session_id}", {"metadata": {"foreign": 1, key: {
                     "version": 1, "mode": "paid", "models": paid,
                 }}}, "PATCH")
@@ -304,7 +304,7 @@ def main(binary, catalog_only=False, mac=False, native=False):
                     print("PASS: native streamed checkpoint compaction routing")
                 assert api(f"session/{session_id}")["data"]["metadata"]["foreign"] == 1
                 report = json.loads(subprocess.check_output([
-                    sys.executable, str(SOURCE / "task-report.py"), "--session", session_id, "--json",
+                    sys.executable, str(SOURCE / "scripts/task-report.py"), "--session", session_id, "--json",
                 ], env=env))
                 assert report["storage"] == "v2", report
                 assert report["totals"]["input"] == 140 and report["totals"]["output"] == 28, report["totals"]
@@ -316,7 +316,7 @@ def main(binary, catalog_only=False, mac=False, native=False):
                 assert all(row.get("http_status") in (200, 400) for row in calls), calls
                 assert any(row["kind"] == "primary" and row.get("variant") == "xhigh" and row.get("effort") == "xhigh" for row in calls), calls
                 recent = json.loads(subprocess.check_output([
-                    sys.executable, str(SOURCE / "task-report.py"), "--recent", "10", "--json",
+                    sys.executable, str(SOURCE / "scripts/task-report.py"), "--recent", "10", "--json",
                 ], env=env))
                 assert {session_id, child} <= {row["id"] for row in recent}, recent
                 print("PASS: real V2 SQLite read-only accounting, exact tokens, children and recent sessions")
@@ -327,7 +327,7 @@ def main(binary, catalog_only=False, mac=False, native=False):
                 prompt(free, "big-pickle", title="big-pickle")
                 print("PASS: new free session title also uses Big Pickle")
                 free_report = json.loads(subprocess.check_output([
-                    sys.executable, str(SOURCE / "task-report.py"), "--session", free, "--json",
+                    sys.executable, str(SOURCE / "scripts/task-report.py"), "--session", free, "--json",
                 ], env=env))
                 assert any(row["kind"] == "title" and row["wireModel"] == "big-pickle"
                            for row in free_report["model_calls"]), free_report["model_calls"]
@@ -338,7 +338,7 @@ def main(binary, catalog_only=False, mac=False, native=False):
                 MockResponses.fail_status = 400
                 assert len(MockResponses.requests[start:]) >= 2, "retry was not exercised"
                 retry_report = json.loads(subprocess.check_output([
-                    sys.executable, str(SOURCE / "task-report.py"), "--session", retry_session, "--json",
+                    sys.executable, str(SOURCE / "scripts/task-report.py"), "--session", retry_session, "--json",
                 ], env=env))
                 assert [r.get("http_status") for r in retry_report["model_calls"]] == [429, 200], retry_report["model_calls"]
                 if not native:

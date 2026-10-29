@@ -9,7 +9,7 @@ test("per-attempt model journal: title/children/retries, HTTP headers, WS frames
   const previous = process.env.XDG_STATE_HOME;
   process.env.XDG_STATE_HOME = directory;
   try {
-    const { default: plugin } = await import("../model-calls.ts");
+    const { default: plugin } = await import("../plugins/model-calls.ts");
     const hooks = new Map();
     let disposed = 0;
     const cleanup = await plugin.setup({ session: { async hook(name, fn) {
@@ -73,7 +73,7 @@ test("unknown/oversized bodies and unavailable storage never change/block the re
   const previous = process.env.XDG_STATE_HOME;
   process.env.XDG_STATE_HOME = directory;
   try {
-    const { default: plugin } = await import("../model-calls.ts");
+    const { default: plugin } = await import("../plugins/model-calls.ts");
     const hooks = new Map();
     const cleanup = await plugin.setup({ session: { async hook(name, fn) {
       hooks.set(name, fn); return { dispose: async () => {} };

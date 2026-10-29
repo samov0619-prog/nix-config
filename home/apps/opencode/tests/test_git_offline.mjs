@@ -2,7 +2,7 @@ import "./plugin-loader.mjs";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { execFileSync } from "node:child_process";
-const { default: plugin, offlineEnvironment } = await import("../git-offline.ts");
+const { default: plugin, offlineEnvironment } = await import("../plugins/git-offline.ts");
 
 test("Git environment blocks transports and lazy fetch while preserving other settings", async () => {
   const env = { PATH: "/test", GIT_ALLOW_PROTOCOL: "https", GIT_NO_LAZY_FETCH: "0" };
@@ -20,7 +20,7 @@ test("Git environment blocks transports and lazy fetch while preserving other se
 
 test("native policies distinguish cached remote inspection from network commands", () => {
   const settings = JSON.parse(execFileSync("nix", ["eval", "--json", "--file",
-    new URL("../v2-settings.nix", import.meta.url).pathname, "--apply", "f: f { lib = {}; }"]));
+    new URL("../config/v2-settings.nix", import.meta.url).pathname, "--apply", "f: f { lib = {}; }"]));
   const effect = command => settings.policies.filter(p => p.action === "tool.use" &&
     new RegExp("^" + p.resource.split("*").map(s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*") + "$").test("shell:" + command)).at(-1)?.effect;
   for (const command of ["git fetch", "git -C /repo push origin main", "git -c color.ui=always pull", "git remote update", "git remote show origin", "git -C /repo remote show origin", "git remote set-head origin --auto", "git remote add -f upstream https://example.invalid/repo"])

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import "./plugin-loader.mjs";
-import { paidModels, routingKey, routedModel, routingState } from "../model-routing.ts";
-const { setup } = await import("../model-routing-tui.ts");
+import { paidModels, routingKey, routedModel, routingState } from "../plugins/model-routing/model-routing.ts";
+const { setup } = await import("../plugins/model-routing/tui.ts");
 
 function fixture() {
   const sessions = new Map([

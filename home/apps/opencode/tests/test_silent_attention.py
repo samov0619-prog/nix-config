@@ -13,7 +13,7 @@ class SilentAttentionTest(unittest.TestCase):
         kitty = ModuleType("kitty.fast_data_types")
         kitty.request_attention = self.request_attention
         with patch.dict("sys.modules", {"kittens.tui.handler": handler, "kitty.fast_data_types": kitty}):
-            self.handle = runpy.run_path(str(Path(__file__).parents[1] / "silent-attention.py"))["handle_result"]
+            self.handle = runpy.run_path(str(Path(__file__).parents[1] / "scripts/silent-attention.py"))["handle_result"]
 
     def test_inactive_window_marks_tab_without_invoking_bell_hooks(self):
         tab = SimpleNamespace(relayout_borders=Mock(), mark_tab_bar_dirty=Mock())

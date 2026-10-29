@@ -36,7 +36,7 @@ def main(binary):
         mock = ThreadingHTTPServer(("127.0.0.1", 0), MockResponses)
         threading.Thread(target=mock.serve_forever, daemon=True).start()
         settings = json.loads(subprocess.check_output([
-            "nix", "eval", "--offline", "--json", "--file", str(SOURCE / "v2-settings.nix"), "--apply", "f: f { lib = {}; }",
+            "nix", "eval", "--offline", "--json", "--file", str(SOURCE / "config/v2-settings.nix"), "--apply", "f: f { lib = {}; }",
         ]))
         settings["providers"]["openai"].update(package="@opencode/ai/providers/openai/responses", settings={
             "apiKey": "mock", "baseURL": f"http://127.0.0.1:{mock.server_port}/v1"})
@@ -49,9 +49,9 @@ def main(binary):
             if name == "quiet-urgency" and generation:
                 (directory / "tui.ts").symlink_to(Path(generation) / "home-files/.config/opencode/plugins/quiet-urgency/tui.ts")
             else:
-                source = SOURCE / ("tests/attention-probe.ts" if name == "attention-probe" else "quiet-urgency.ts")
+                source = SOURCE / ("tests/attention-probe.ts" if name == "attention-probe" else "plugins/quiet-urgency.ts")
                 (directory / "tui.ts").write_text(source.read_text().replace(
-                    "@sessionAttention@", str(SOURCE / "session-attention.ts")).replace("@silentAttention@", str(SOURCE / "silent-attention.py")))
+                    "@sessionAttention@", str(SOURCE / "patches/session-attention.ts")).replace("@silentAttention@", str(SOURCE / "scripts/silent-attention.py")))
         env = {key: value for key, value in os.environ.items()
                if not key.startswith(("OPENCODE_", "OPENAI_", "ANTHROPIC_", "XDG_", "KITTY_"))}
         env.update(HOME=temporary, XDG_CONFIG_HOME=str(root / "config"), XDG_STATE_HOME=str(root / "state"),

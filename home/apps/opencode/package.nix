@@ -1,10 +1,10 @@
 { upstream, pkgs }:
 upstream.overrideAttrs (old: {
-  patches = (old.patches or [ ]) ++ [ ./session-routing.patch ./session-attention.patch ];
+  patches = (old.patches or [ ]) ++ [ ./patches/session-routing.patch ./patches/session-attention.patch ];
   postPatch = (old.postPatch or "") + ''
-    cp ${./model-routing.ts} packages/schema/src/local-model-routing.ts
-    cp ${./routing-models.json} packages/schema/src/routing-models.json
-    cp ${./session-attention.ts} packages/tui/src/session-attention.ts
+    cp ${./plugins/model-routing/model-routing.ts} packages/schema/src/local-model-routing.ts
+    cp ${./plugins/model-routing/routing-models.json} packages/schema/src/routing-models.json
+    cp ${./patches/session-attention.ts} packages/tui/src/session-attention.ts
   '';
   postInstall = (old.postInstall or "") + pkgs.lib.optionalString pkgs.stdenv.isLinux ''
     wrapProgram $out/bin/opencode \

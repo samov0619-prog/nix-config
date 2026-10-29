@@ -2,14 +2,14 @@
 { pkgs, lib, config, opencodePackage, ... }:
 let
   json = pkgs.formats.json { };
-  settings = import ./v2-settings.nix { inherit lib; };
+  settings = import ./config/v2-settings.nix { inherit lib; };
   # Bun resolves imports relative to the real store path of tui.ts. Keep the
   # module and its dependencies together, not as separate HM file symlinks.
   modelRoutingPlugin = pkgs.runCommand "opencode-model-routing-plugin" { } ''
     mkdir -p "$out"
-    cp ${./model-routing-tui.ts} "$out/tui.ts"
-    cp ${./model-routing.ts} "$out/model-routing.ts"
-    cp ${./routing-models.json} "$out/routing-models.json"
+    cp ${./plugins/model-routing/tui.ts} "$out/tui.ts"
+    cp ${./plugins/model-routing/model-routing.ts} "$out/model-routing.ts"
+    cp ${./plugins/model-routing/routing-models.json} "$out/routing-models.json"
   '';
   # V2 checks realpath(server entrypoint) is inside realpath(plugin root).
   # A directory symlink to ordinary store files passes; an index.ts symlink
@@ -43,8 +43,8 @@ in
     package = opencodePackage;
     inherit settings;
     extraPackages = with pkgs; [ python3 ripgrep fd ];
-    skills.discussion-map = ./discussion-map-skill.md;
-    skills.git-regression-rollback = ./git-regression-rollback-skill.md;
+    skills.discussion-map = ./skills/discussion-map/SKILL.md;
+    skills.git-regression-rollback = ./skills/git-regression-rollback/SKILL.md;
     # V2 uses a mutable cli.json; the old tui.json/plugin option stays empty.
   };
 
@@ -58,7 +58,7 @@ in
   '';
 
   xdg.configFile = {
-    "opencode/AGENTS.md".source = ./AGENTS.md;
+    "opencode/AGENTS.md".source = ./config/AGENTS.md;
     "opencode/plugins/model-routing" = {
       source = modelRoutingPlugin;
       # Preserve the existing managed leaf paths during upgrades. Each link
@@ -67,17 +67,17 @@ in
     };
     # New directory paths allow HM to clean the old managed leaf links without
     # colliding with their existing parent directories during upgrade.
-    "opencode/plugins/git-offline-v2".source = serverPlugin "git-offline" ./git-offline.ts;
-    "opencode/plugins/permission-stats-v2".source = serverPlugin "permission-stats" ./permission-stats.ts;
-    "opencode/plugins/model-calls-v2".source = serverPlugin "model-calls" ./model-calls.ts;
+    "opencode/plugins/git-offline-v2".source = serverPlugin "git-offline" ./plugins/git-offline.ts;
+    "opencode/plugins/permission-stats-v2".source = serverPlugin "permission-stats" ./plugins/permission-stats.ts;
+    "opencode/plugins/model-calls-v2".source = serverPlugin "model-calls" ./plugins/model-calls.ts;
     "opencode/sounds/permission.wav".source = permissionSound;
-    "opencode/sounds/completion.mp3".source = ./completion-sound.mp3;
-    "opencode/sounds/error.mp3".source = ./error-sound.mp3;
+    "opencode/sounds/completion.mp3".source = ./sounds/completion-sound.mp3;
+    "opencode/sounds/error.mp3".source = ./sounds/error-sound.mp3;
   } // lib.optionalAttrs pkgs.stdenv.isLinux {
-    "opencode/plugins/workspace-context/tui.ts".source = ./workspace-context.ts;
-    "opencode/plugins/quiet-urgency/tui.ts".source = pkgs.replaceVars ./quiet-urgency.ts {
-      silentAttention = ./silent-attention.py;
-      sessionAttention = ./session-attention.ts;
+    "opencode/plugins/workspace-context/tui.ts".source = ./plugins/workspace-context.ts;
+    "opencode/plugins/quiet-urgency/tui.ts".source = pkgs.replaceVars ./plugins/quiet-urgency.ts {
+      silentAttention = ./scripts/silent-attention.py;
+      sessionAttention = ./patches/session-attention.ts;
     };
   };
 
@@ -85,7 +85,7 @@ in
     (pkgs.writeShellApplication {
       name = "opencode-task-report";
       runtimeInputs = [ pkgs.python3 ];
-      text = ''exec python3 ${./task-report.py} "$@"'';
+      text = ''exec python3 ${./scripts/task-report.py} "$@"'';
     })
     (pkgs.writeShellApplication {
       name = "opencode-permission-stats";

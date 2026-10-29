@@ -118,19 +118,19 @@ class ContextTui(unittest.TestCase):
         (config / "cli.json").write_text(json.dumps({"attention": {"sound": False}}))
         source = ROOT / "home/apps/opencode"
         settings = json.loads(subprocess.check_output([
-            "nix", "eval", "--json", "--file", str(source / "v2-settings.nix"), "--apply", "f: f { lib = {}; }",
+            "nix", "eval", "--json", "--file", str(source / "config/v2-settings.nix"), "--apply", "f: f { lib = {}; }",
         ]))
         settings["providers"]["openai"]["settings"] = {"apiKey": "isolated-no-inference"}
         (config / "opencode.json").write_text(json.dumps(settings))
-        for name, filename in [("workspace-context", "workspace-context.ts"), ("model-routing", "model-routing-tui.ts"),
+        for name, filename in [("workspace-context", "workspace-context.ts"), ("model-routing", "model-routing/tui.ts"),
                                ("quiet-urgency", "quiet-urgency.ts")]:
             plugin = config / "plugins" / name
             plugin.mkdir(parents=True)
-            (plugin / "tui.ts").write_text((source / filename).read_text().replace(
-                "@silentAttention@", str(source / "silent-attention.py")).replace(
-                "@sessionAttention@", str(source / "session-attention.ts")))
+            (plugin / "tui.ts").write_text((source / "plugins" / filename).read_text().replace(
+                "@silentAttention@", str(source / "scripts/silent-attention.py")).replace(
+                "@sessionAttention@", str(source / "patches/session-attention.ts")))
         for filename in ["model-routing.ts", "routing-models.json"]:
-            (config / "plugins/model-routing" / filename).write_text((source / filename).read_text())
+            (config / "plugins/model-routing" / filename).write_text((source / "plugins/model-routing" / filename).read_text())
         generation = os.environ.get("OPENCODE_TEST_HM_GENERATION")
         if generation:
             # Exercise Home Manager's actual symlink/store layout, not copies

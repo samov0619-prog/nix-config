@@ -7,7 +7,7 @@ import fs from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { mock, test } from "node:test";
-import { sessionAttention } from "../session-attention.ts";
+import { sessionAttention } from "../patches/session-attention.ts";
 
 const source = fileURLToPath(new URL("..", import.meta.url));
 const sessions = {
@@ -56,7 +56,7 @@ test("the actual patched native notification plugin isolates two clients, lifecy
     const relative = "packages/tui/src/feature-plugins/system/notifications.ts";
     mkdirSync(join(directory, "packages/tui/src/feature-plugins/system"), { recursive: true });
     copyFileSync(join(upstream, relative), join(directory, relative));
-    execFileSync("patch", ["--batch", "-s", "-p1", "-i", join(source, "session-attention.patch")], { cwd: directory });
+    execFileSync("patch", ["--batch", "-s", "-p1", "-i", join(source, "patches/session-attention.patch")], { cwd: directory });
     const { default: native } = await import(pathToFileURL(join(directory, relative)));
     const a = harness("a"), b = harness("b"), home = harness();
     const clients = [a, b, home];
@@ -110,7 +110,7 @@ test("silent Kitty urgency follows the same ownership policy, never calls an aud
   });
   syncBuiltinESMExports();
   try {
-    const { default: urgency } = await import("../quiet-urgency.ts");
+    const { default: urgency } = await import("../plugins/quiet-urgency.ts");
     const { context, emit, handlers } = harness("a");
     const dispose = urgency.setup(context);
     emit("session.execution.succeeded", "b");

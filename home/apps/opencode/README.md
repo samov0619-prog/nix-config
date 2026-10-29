@@ -4,8 +4,32 @@
 flake input `github:anomalyco/opencode/v2.1.4` (rev `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`),
 без обновления всего nixpkgs-unstable. Официальный LTS-канал не обнаружен.
 `package.nix` сохраняет upstream build и добавляет небольшой
-`session-routing.patch` и `session-attention.patch`; Linux wrapper сохраняет runtime libraries для watcher
+`patches/session-routing.patch` и `patches/session-attention.patch`; Linux wrapper сохраняет runtime libraries для watcher
 и native audio. V1-модуль и прежние исследования — в [archive/v1](archive/v1/README.md).
+
+## Структура
+
+```text
+opencode/
+├── default.nix              # Home Manager: подключение и установка файлов
+├── package.nix              # pinned binary, patches и Linux runtime libraries
+├── config/                  # native V2 settings и устанавливаемые глобальные AGENTS.md
+├── plugins/                 # server plugins и TUI plugins
+│   └── model-routing/       # tui.ts, общая policy и единая таблица моделей
+├── patches/                 # binary patches и общий session-attention.ts
+├── scripts/                 # read-only отчёты и тихая Kitty urgency
+├── skills/                  # <skill>/SKILL.md
+├── sounds/                  # домашние аудиофайлы (wow — запасной вариант, не установлен)
+├── tests/                   # unit, isolated runtime и PTY checks
+├── macos/                   # независимый корпоративный source overlay
+└── archive/                 # неиспользуемые V1 и RLM reference
+```
+
+`config/v2-settings.nix` читает таблицу из `plugins/model-routing/routing-models.json`.
+`patches/session-attention.ts` используется и binary patch, и `plugins/quiet-urgency.ts`.
+Это структура **исходников**: пути в `~/.config/opencode`, имена команд,
+plugin IDs и storage не меняются. Пустой прежний `lib/` удалён; архив не устанавливается.
+Проверки и ограничения покрытия — в [BENCHMARK.md](BENCHMARK.md).
 
 ## Модели и сессионные команды
 
@@ -32,7 +56,7 @@ Free направляет все эти роли на `opencode/big-pickle`. П�
 Pickle с public key и нулевой каталожной стоимостью; это не гарантия будущих
 условий сервиса или успешности удалённого запроса.
 
-Единый paid role table — `routing-models.json`. Его используют Nix, TUI-команды
+Единый paid role table — `plugins/model-routing/routing-models.json`. Его используют Nix, TUI-команды
 и core patch. Patch перечитывает live root перед каждым model resolve, включая
 title/compaction/auxiliary generation, и согласует TUI selection с запросом.
 Если ancestor ещё не загружен в TUI cache, он синхронизируется до выбора модели.
@@ -43,8 +67,8 @@ Symlinks в разные изолированные store-файлы ломаю�
 
 ### Изоляция уведомлений между TUI
 
-`session-attention.patch` ограничивает native `opencode.notifications` текущей
-сессией TUI и её потомками; тот же `session-attention.ts` используется для тихой
+`patches/session-attention.patch` ограничивает native `opencode.notifications` текущей
+сессией TUI и её потомками; тот же `patches/session-attention.ts` используется для тихой
 Kitty urgency. Общий event stream, одинаковая директория и global tabs не дают
 чужой сессии права включать звук/подсветку/ошибку-toast в этом окне. На home и
 plugin routes session-уведомления молчат. Неизвестная ancestry и global forms
@@ -99,13 +123,13 @@ V1 sound state machine, её фильтрация дочерних/остано�
 к звукам задаются штатным `attention.sounds`. Самостоятельный Mac-порт не
 обновляется домашним Home Manager и не должен наследовать эти настройки.
 
-`quiet-urgency.ts` дополняет native notifications **только** тихой Kitty
-workspace/tab urgency через `silent-attention.py`; не отправляет BEL и не
+`plugins/quiet-urgency.ts` дополняет native notifications **только** тихой Kitty
+workspace/tab urgency через `scripts/silent-attention.py`; не отправляет BEL и не
 проигрывает аудио. Его подписки не зависят от `attention.sound`, поэтому mute
 не должен отключать подсветку. OSC99 desktop notification сам по себе не
 доказывает Waybar urgency. Live-проверка mute/unmute и PipeWire всё ещё нужна.
 
-`workspace-context.ts` публикует полное Unicode-название **просматриваемой**
+`plugins/workspace-context.ts` публикует полное Unicode-название **просматриваемой**
 сессии и её directory в `$XDG_RUNTIME_DIR/hypr-spaces/apps/`, включая rename и
 route changes без prompt. PID/starttime/Kitty pane и cleanup сохранены.
 Модельных запросов и чтения message history нет.
@@ -118,7 +142,7 @@ Explore также не вызывает skills. Подключены штатн
 git-regression-rollback; RLM/governor не устанавливаются.
 
 Нативные `tool.use` policies запрещают сетевые Git-команды даже поверх Always.
-`git-offline.ts` через shell `create.before` задаёт `GIT_ALLOW_PROTOCOL=""`,
+`plugins/git-offline.ts` через shell `create.before` задаёт `GIT_ALLOW_PROTOCOL=""`,
 `GIT_NO_LAZY_FETCH=1`, `GIT_TERMINAL_PROMPT=0`, в том числе для составных команд
 и `git -C`. Это дополнительная transport-защита, **не sandbox** для произвольного
 shell/env override. Сеть Git выполняет пользователь.
@@ -126,7 +150,7 @@ shell/env override. Сеть Git выполняет пользователь.
 без `-n`, `remote update`, `set-head --auto`, `add -f` способны ходить в сеть.
 `remote add/rename/remove/set-url` изменяют local config: это не read-only операции.
 
-`permission-stats.ts` читает native V2 permission events, дописывает прежний
+`plugins/permission-stats.ts` читает native V2 permission events, дописывает прежний
 XDG state `opencode/permission-history.jsonl`, теперь с session/request IDs.
 Это учёт **запрошенных решений**, не всех auto-allowed вызовов. Старый history
 и usage ledgers сохраняются. `opencode-permission-stats` агрегирует журнал.
@@ -142,7 +166,7 @@ real plugin root. Отдельный symlink `index.ts` за пределы root
 обе версии без дубликатов. Проверен на настоящей изолированной V2 DB, включая
 точные token totals и compaction.
 
-`model-calls.ts` дописывает приватный XDG state `opencode/model-calls/<session>.jsonl`.
+`plugins/model-calls.ts` дописывает приватный XDG state `opencode/model-calls/<session>.jsonl`.
 В том же отчёте теперь есть **каждая наблюдаемая transport attempt**: время,
 сессия/ребёнок, `primary`/`title`/`generate`/`compaction`, agent, resolved
 provider/model/variant, API `model` и reasoning effort (если удалось извлечь).

@@ -1,6 +1,6 @@
 { lib }:
 let
-  routes = builtins.fromJSON (builtins.readFile ./routing-models.json);
+  routes = builtins.fromJSON (builtins.readFile ../plugins/model-routing/routing-models.json);
   model = role:
     let ref = routes.${role} or routes."*";
     in "${ref.providerID}/${ref.id}#${ref.variant}";

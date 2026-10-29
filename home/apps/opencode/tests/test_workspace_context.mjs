@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mock, test } from "node:test";
 import "./plugin-loader.mjs";
-const { default: plugin } = await import("../workspace-context.ts");
+const { default: plugin } = await import("../plugins/workspace-context.ts");
 
 test("publishes viewed session, full Unicode title, route changes and cleanup", async () => {
   const runtime = mkdtempSync(join(tmpdir(), "workspace-context-"));

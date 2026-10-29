@@ -10,7 +10,7 @@ test("V2 permission stream correlates requests, preserves legacy fields, ignores
   const previous = process.env.XDG_STATE_HOME;
   process.env.XDG_STATE_HOME = directory;
   try {
-    const { default: plugin } = await import("../permission-stats.ts");
+    const { default: plugin } = await import("../plugins/permission-stats.ts");
     let aborted = false;
     const cleanup = plugin.setup({ event: { async *subscribe({ signal }) {
       yield { type: "permission.asked", data: { id: "request", sessionID: "session", action: "shell", resources: ["date"] } };

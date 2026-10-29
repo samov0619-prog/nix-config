@@ -108,7 +108,7 @@ not import Disko.
 
 ### Home OpenCode
 
-- Shared exploration policy lives in `home/apps/opencode/AGENTS.md`. Use native
+- Shared exploration policy lives in `home/apps/opencode/config/AGENTS.md`. Use native
   glob/grep/read and tool-output artifacts; mechanical extraction needs no extra
   model. RLM is archived under `archive/rlm-disabled`, excluded from installation
   and normal tests. Home changes do not update the corporate Mac profile.
@@ -124,9 +124,12 @@ not import Disko.
 
 - `home/apps/opencode/default.nix` — HM laptop/desktop на pinned OpenCode 2.1.4
   (отдельный flake input, не nixpkgs-unstable). `package.nix` добавляет
-  `session-routing.patch`, `session-attention.patch` и Linux runtime libraries. V1-модуль/исследования —
+  `patches/session-routing.patch`, `patches/session-attention.patch` и Linux runtime libraries. V1-модуль/исследования —
   `archive/v1`, не импортируются. README/BENCHMARK описывают текущий V2.
-- Native V2 config — `v2-settings.nix`; plugins — directories с `index.ts`/`tui.ts`
+- Исходники сгруппированы: `config/` (V2 settings и global rules), `plugins/`,
+  `patches/` (включая общий session-attention helper), `scripts/`, `skills/`,
+  `sounds/`; структура установки в `~/.config/opencode` не меняется.
+- Native V2 config — `config/v2-settings.nix`; установленные plugins — directories с `index.ts`/`tui.ts`
   и API `@opencode/plugin`, не V1 `@opencode-ai/plugin`.
   Model-routing собирается одним store-каталогом, HM `recursive = true` сохраняет
   managed leaf paths. Отдельные store-файлы ломают относительные импорты Bun;
@@ -137,7 +140,7 @@ not import Disko.
   server runtime также с `OPENCODE_TEST_HM_GENERATION`, не только копиями.
 - `/switch-free`/`/switch-paid` — локальные TUI-команды, без LLM. Режим живёт
   в metadata корневой сессии и влияет на последующие запросы существующих детей.
-  Paid role table — единый `routing-models.json`: Sol High work, Sol XHigh plan,
+  Paid role table — единый `plugins/model-routing/routing-models.json`: Sol High work, Sol XHigh plan,
   Luna Max explore, Sol High compaction/summary, Luna Low title. Free — Big Pickle
   для всех ролей, без автоматического paid fallback. Обычная compaction до
   явного переключения сохраняет наследование session model.
