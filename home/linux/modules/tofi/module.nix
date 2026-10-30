@@ -65,6 +65,7 @@ in
           HYPRLAND CONTROLS
 
           F1                  this help
+          F3                  agent todo in Neovim
           Super+M             fullscreen
           Super+F             focus floating window
           Super+Shift+F       focus tiled window

@@ -1,5 +1,11 @@
 # OpenCode V2: pinned upstream package, native config/audio and small local plugins.
-{ pkgs, lib, config, opencodePackage, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  opencodePackage,
+  ...
+}:
 let
   json = pkgs.formats.json { };
   settings = import ./config/v2-settings.nix { inherit lib; };
@@ -14,16 +20,21 @@ let
   # V2 checks realpath(server entrypoint) is inside realpath(plugin root).
   # A directory symlink to ordinary store files passes; an index.ts symlink
   # escaping a real HM directory is silently filtered by native discovery.
-  serverPlugin = name: source: pkgs.runCommand "opencode-${name}-plugin" { } ''
-    mkdir -p "$out"
-    cp ${source} "$out/index.ts"
-  '';
-  permissionSound = pkgs.runCommand "opencode-permission.wav" {
-    nativeBuildInputs = [ pkgs.ffmpeg-headless ];
-  } ''
-    ffmpeg -v error -i ${pkgs.sound-theme-freedesktop}/share/sounds/freedesktop/stereo/bell.oga \
-      -c:a pcm_s16le -f wav "$out"
-  '';
+  serverPlugin =
+    name: source:
+    pkgs.runCommand "opencode-${name}-plugin" { } ''
+      mkdir -p "$out"
+      cp ${source} "$out/index.ts"
+    '';
+  permissionSound =
+    pkgs.runCommand "opencode-permission.wav"
+      {
+        nativeBuildInputs = [ pkgs.ffmpeg-headless ];
+      }
+      ''
+        ffmpeg -v error -i ${pkgs.sound-theme-freedesktop}/share/sounds/freedesktop/stereo/bell.oga \
+          -c:a pcm_s16le -f wav "$out"
+      '';
   cliDefaults = json.generate "opencode-cli-defaults.json" {
     "$schema" = "https://opencode.ai/v2/cli.json";
     attention = {
@@ -38,11 +49,18 @@ let
   };
 in
 {
+  imports = [ ./decision-support.nix ];
+  # Explicit home-only opt-in; set false to disable guidance and todo tools.
+  programs.opencode.decisionSupport.enable = lib.mkDefault true;
   programs.opencode = {
     enable = true;
     package = opencodePackage;
     inherit settings;
-    extraPackages = with pkgs; [ python3 ripgrep fd ];
+    extraPackages = with pkgs; [
+      python3
+      ripgrep
+      fd
+    ];
     skills.discussion-map = ./skills/discussion-map/SKILL.md;
     skills.git-regression-rollback = ./skills/git-regression-rollback/SKILL.md;
     # V2 uses a mutable cli.json; the old tui.json/plugin option stays empty.
@@ -68,13 +86,15 @@ in
     # New directory paths allow HM to clean the old managed leaf links without
     # colliding with their existing parent directories during upgrade.
     "opencode/plugins/git-offline-v2".source = serverPlugin "git-offline" ./plugins/git-offline.ts;
-    "opencode/plugins/permission-stats-v2".source = serverPlugin "permission-stats" ./plugins/permission-stats.ts;
+    "opencode/plugins/permission-stats-v2".source =
+      serverPlugin "permission-stats" ./plugins/permission-stats.ts;
     "opencode/plugins/model-calls-v2".source = serverPlugin "model-calls" ./plugins/model-calls.ts;
     "opencode/plugins/skill-stats-v2".source = serverPlugin "skill-stats" ./plugins/skill-stats.ts;
     "opencode/sounds/permission.wav".source = permissionSound;
     "opencode/sounds/completion.mp3".source = ./sounds/completion-sound.mp3;
     "opencode/sounds/error.mp3".source = ./sounds/error-sound.mp3;
-  } // lib.optionalAttrs pkgs.stdenv.isLinux {
+  }
+  // lib.optionalAttrs pkgs.stdenv.isLinux {
     "opencode/plugins/workspace-context/tui.ts".source = ./plugins/workspace-context.ts;
     "opencode/plugins/quiet-urgency/tui.ts".source = pkgs.replaceVars ./plugins/quiet-urgency.ts {
       silentAttention = ./scripts/silent-attention.py;
@@ -95,7 +115,11 @@ in
     })
     (pkgs.writeShellApplication {
       name = "opencode-permission-stats";
-      runtimeInputs = with pkgs; [ coreutils gawk jq ];
+      runtimeInputs = with pkgs; [
+        coreutils
+        gawk
+        jq
+      ];
       text = ''
         history="${config.xdg.stateHome}/opencode/permission-history.jsonl"
         if test ! -s "$history"; then

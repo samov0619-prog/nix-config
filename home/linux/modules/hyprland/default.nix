@@ -18,22 +18,41 @@ let
       config.wayland.windowManager.hyprland.package;
   # Upstream #15502 adds libcanberra for native bell playback. Inspect package
   # dependencies instead of guessing the first release version; catches backports.
-  hyprlandHasNativeBell = lib.any (
-    dependency: lib.getName dependency == "libcanberra"
-  ) (hyprlandPackage.buildInputs or [ ]);
+  hyprlandHasNativeBell = lib.any (dependency: lib.getName dependency == "libcanberra") (
+    hyprlandPackage.buildInputs or [ ]
+  );
   semanticSwitcher = pkgs.writeShellApplication {
     name = "hypr-semantic-switcher";
-    runtimeInputs = [ pkgs.hyprland pkgs.python3 ];
+    runtimeInputs = [
+      pkgs.hyprland
+      pkgs.python3
+    ];
     text = ''
       exec python3 ${./semantic-switcher.py} "$@"
     '';
   };
   semanticSwitcherTofi = pkgs.writeShellApplication {
     name = "hypr-semantic-switcher-tofi";
-    runtimeInputs = [ pkgs.tofi semanticSwitcher ];
+    runtimeInputs = [
+      pkgs.tofi
+      semanticSwitcher
+    ];
     text = ''
       selection=$(hypr-semantic-switcher menu | tofi --prompt-text="Switch: ") || exit 0
       exec hypr-semantic-switcher activate "$selection"
+    '';
+  };
+  agentTodoOpen = pkgs.writeShellApplication {
+    name = "agent-todo-open";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.kitty
+      pkgs.neovim-unwrapped
+    ];
+    text = ''
+      umask 077
+      mkdir -p "$HOME/agent-todo"
+      exec kitty --directory "$HOME/agent-todo" -- nvim "$HOME/agent-todo/todo.md"
     '';
   };
 in
@@ -51,6 +70,7 @@ in
   home.packages = [
     semanticSwitcher
     semanticSwitcherTofi
+    agentTodoOpen
     onionbell
   ];
 

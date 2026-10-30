@@ -138,6 +138,17 @@ not import Disko.
   V2 discovery молча исключает entrypoint, чей realpath вне real plugin root.
   Старые leaf paths убираются HM cleanup; IDs/history сохраняются. Проверять
   server runtime также с `OPENCODE_TEST_HM_GENERATION`, не только копиями.
+- `decision-support.nix` — явный домашний opt-in через
+  `programs.opencode.decisionSupport.enable`: короткие configured instructions,
+  on-demand `decision-check` и `agent-todo-v2`. Todo — ручной Markdown/Git в
+  `~/agent-todo/todo.md`, не HM-managed content. Native question показывает diff
+  и ручные правки; запись/локальный коммит только после согласия, Plan guard
+  независим от session grants. Stable IDs и hash user-message в Markdown
+  дедуплицируют подтверждённые обращения; числовой приоритет равен счётчику,
+  это интерес, не срочность. Нет фонового семантического детектора/LLM или polling.
+  F3/`agent-todo-open` открывает файл в Kitty/Neovim на laptop/desktop, F1 содержит
+  этот bind. Live UI/compositor проверяются на целевой машине; runtime smoke
+  проверяет native forms API/Git в изолированном HOME.
 - `/switch-free`/`/switch-paid` — локальные TUI-команды, без LLM. Режим живёт
   в metadata корневой сессии и влияет на последующие запросы существующих детей.
   Paid role table — единый `plugins/model-routing/routing-models.json`: Sol High work, Sol XHigh plan,

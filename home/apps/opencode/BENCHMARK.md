@@ -12,6 +12,7 @@ Run from the repository root. None activates a Nix generation:
 node --test home/apps/opencode/tests/test_model_routing.mjs home/apps/opencode/tests/test_workspace_context.mjs home/apps/opencode/tests/test_git_offline.mjs home/apps/opencode/tests/test_voice_v2.mjs
 node --test home/apps/opencode/tests/test_permission_stats_v2.mjs home/apps/opencode/tests/test_model_calls.mjs
 node --test home/apps/opencode/tests/test_skill_stats.mjs
+node --test home/apps/opencode/tests/test_agent_todo.mjs
 python3 home/apps/opencode/tests/test_skill_stats.py
 node --test home/apps/opencode/tests/test_session_attention.mjs
 python3 home/apps/opencode/tests/test_task_report.py
@@ -45,7 +46,7 @@ Big Pickle inference. No paid API calls are needed.
 
 Coverage:
 - Native schema, configured agents, server plugin discovery and activation.
-- Native skill discovery parses both managed SKILL.md definitions and advertises
+- Native skill discovery parses all managed SKILL.md definitions and advertises
   their exact scoped descriptions alongside built-in opencode/report. The blanket
   discussion-map loading rule is absent. The HM-generation variant reads the
   actual deployed skill/rules symlinks. This validates installation and metadata,
@@ -107,6 +108,29 @@ audio and compositor urgency require testing on the corresponding machine.
 Legacy notification/mute sources and tests live under `archive/v1`, including
 their V1 permission collector; they are not part of the current test glob.
 Run them separately with `node --test home/apps/opencode/archive/v1/tests/test_*.mjs`.
+
+## Decision support / todo verification
+
+`test_agent_todo.mjs` executes the real Markdown/Git implementation in disposable
+`/tmp/opencode` repositories, with a fake native question executor. It covers:
+lazy read/no initialization, approval/exact diff, decline/free-form revision,
+stale content before/during confirmation, preserving staged/unstaged manual edits,
+Plan denial, cancellation, native index locks, unrelated files, symlinks/size limits,
+reload without implicit approval, deterministic priority/counters, same-user-turn
+deduplication, duplicate IDs, and missing context attribution.
+
+The isolated `test_v2_runtime.py` also installs the actual plugin/decision-check
+skill and uses the **real V2 Promise adapter and native question executor**. A
+localhost mock provider calls todo tools; the test answers real forms through the
+API, checks no/revise/yes behavior, commits in isolated HOME, and verifies the Plan
+guard even with session-level edit allow. `OPENCODE_TEST_HM_GENERATION` checks the
+real store-directory plugin installation too. No paid semantic inference is used.
+
+`decision-check-scenarios.md` supplies behavioral fixtures for manual/model
+evaluation, including negative cases. They are not an automated semantic classifier
+test, and passing implementation tests does not establish model precision or helpfulness.
+Live Russian menu rendering and F3/Neovim require target-host verification. Native
+free-form input remains labelled in English; no TUI/binary localization patch is added.
 
 ## Accounting limits
 
