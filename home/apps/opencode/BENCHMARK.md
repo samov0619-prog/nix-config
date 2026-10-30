@@ -45,6 +45,7 @@ synthetic Mac test. `--catalog` reads the bundled/native catalog, without callin
 Big Pickle inference. No paid API calls are needed.
 
 Coverage:
+
 - Native schema, configured agents, server plugin discovery and activation.
 - Native skill discovery parses all managed SKILL.md definitions and advertises
   their exact scoped descriptions alongside built-in opencode/report. The blanket
@@ -108,6 +109,24 @@ audio and compositor urgency require testing on the corresponding machine.
 Legacy notification/mute sources and tests live under `archive/v1`, including
 their V1 permission collector; they are not part of the current test glob.
 Run them separately with `node --test home/apps/opencode/archive/v1/tests/test_*.mjs`.
+
+## No global formatter
+
+The Home Manager generation must not enable a global native formatter. The runtime
+smoke verifies this configuration and checks that native write/edit/patch preserve
+unformatted text without project formatting rules. Formatting CLI dependencies,
+dispatcher scripts and the six-language autoformat smoke have been removed.
+Repository-owned formatting rules are documented in the root `AGENTS.md`; they
+do not enable native OpenCode formatting or reformat files during activation.
+
+The 2026-10 project-config comparison used temporary inputs, without rewriting
+repository files: Ruff 0.17.2 matched its isolated defaults on all 13 Python files;
+Prettier 3.9.5 matched its defaults on 64 supported, non-ignored files; actual
+LuaLS formatting with two-space LSP options matched the EditorConfig on 5 Lua files.
+Beautysh 6.4.3 matched Neovim's `paronly` invocation on 6 shell files and a function
+fixture. Both old and configured Beautysh fail on `hosts/server/preflight.sh` with
+`indent/outdent mismatch`; no unrelated parser/style fix was attempted. The flake
+formatter resolves to the exact installed nixfmt 1.3.1 binary used by nixd on PATH.
 
 ## Decision support / todo verification
 

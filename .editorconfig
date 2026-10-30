@@ -1,0 +1,28 @@
+root = true
+
+[*.{nix,ts,mjs,js,json,jsonc,css,md,toml}]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+insert_final_newline = true
+
+[*.py]
+indent_style = space
+indent_size = 4
+
+[*.{sh,bash,zsh}]
+indent_style = space
+indent_size = 4
+
+# LuaLS uses EmmyLuaCodeStyle, not StyLua. Match Neovim's two-space LSP options.
+[*.lua]
+indent_style = space
+indent_size = 2
+tab_width = 2
+continuation_indent = 4
+max_line_length = 120
+quote_style = none
+call_arg_parentheses = keep
+trailing_table_separator = keep
+end_of_line = lf
+insert_final_newline = true

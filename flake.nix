@@ -133,6 +133,9 @@
       };
     in
     {
+      # Same nixfmt and default flags as Neovim's nixd -> nixfmt command.
+      formatter = lib.genAttrs (builtins.attrValues systems) (system: (pkgsFor system [ ]).nixfmt);
+
       packages.x86_64-linux.hypr-spaces = (pkgsFor systems.linux [ ]).callPackage ./pkgs/hypr-spaces { };
       packages.x86_64-linux.opencode = import ./home/apps/opencode/package.nix {
         upstream = opencode.packages.x86_64-linux.opencode;

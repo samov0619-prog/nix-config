@@ -39,13 +39,13 @@ plugin IDs и storage не меняются. Пустой прежний `lib/` 
 picker не включает free mode. Сессионная политика после явной команды имеет
 приоритет над отдельным ручным model selection до следующего переключения.
 
-| Роль | Paid |
-|---|---|
-| Build/general/research/review | GPT-6.1 Sol High |
-| Plan | GPT-6.1 Sol XHigh, alias `gpt-6.1-sol-plan` |
-| Explore | GPT-6 Luna Max, alias `gpt-6-luna-max` |
-| Compaction/служебная generation | Sol High, alias `gpt-6.1-sol-high` |
-| Title | Luna Low |
+| Роль                            | Paid                                        |
+| ------------------------------- | ------------------------------------------- |
+| Build/general/research/review   | GPT-6.1 Sol High                            |
+| Plan                            | GPT-6.1 Sol XHigh, alias `gpt-6.1-sol-plan` |
+| Explore                         | GPT-6 Luna Max, alias `gpt-6-luna-max`      |
+| Compaction/служебная generation | Sol High, alias `gpt-6.1-sol-high`          |
+| Title                           | Luna Low                                    |
 
 Free направляет все эти роли на `opencode/big-pickle`. Политика действует на
 **последующие** запросы существующих детей и сохраняется в DB при reopen.
@@ -110,11 +110,11 @@ V1 sound state machine, её фильтрация дочерних/остано�
 
 ### Дом и корпоративный Mac — разные настройки
 
-| | Домашний laptop/desktop | Корпоративный Mac |
-|---|---|---|
-| Звуки | Личные anime done/error, freedesktop permission | Только стандартные встроенные OpenCode |
-| Обработчик | Native plugin с `session-attention.patch` | Штатный `opencode.notifications`, без нашего `session-notifications` |
-| Kitty urgency | Домашний `quiet-urgency.ts` | Домашний plugin не переносится |
+|               | Домашний laptop/desktop                         | Корпоративный Mac                                                    |
+| ------------- | ----------------------------------------------- | -------------------------------------------------------------------- |
+| Звуки         | Личные anime done/error, freedesktop permission | Только стандартные встроенные OpenCode                               |
+| Обработчик    | Native plugin с `session-attention.patch`       | Штатный `opencode.notifications`, без нашего `session-notifications` |
+| Kitty urgency | Домашний `quiet-urgency.ts`                     | Домашний plugin не переносится                                       |
 
 **Личные звуки — только для дома.** При ручном Mac-порте не копировать домашний
 `cli.json`, `attention.sounds`, аудиофайлы и `quiet-urgency`. Mac сохраняет свои
@@ -227,6 +227,28 @@ opencode-skill-stats --json
 Домашний HM подключает сборщик на laptop/desktop; самостоятельный Mac-порт
 не меняется. После HM switch V2 автоматически перечитывает plugins; при
 необходимости выполнить `/reload`, перезапускать service не требуется.
+
+## Форматирование: правила проекта
+
+Глобальное автоформатирование и зависимости форматтеров не устанавливаются.
+Короткое правило в `config/AGENTS.md`: применять объявленный проектом formatter
+через CLI только к изменённым файлам; без него сохранять существующее оформление,
+не выбирать глобальный fallback и не заменять инструмент переформатированием моделью.
+Lint fixes — отдельная операция. Проектные настройки V2 могут явно включить native
+formatter; домашний модуль его не включает. Правила самого `nix-config` — в корневом
+`AGENTS.md`, `.prettierrc.json`, `pyproject.toml`, `.editorconfig` и flake formatter.
+
+## LSP
+
+LSP в pinned V2 отсутствует, не просто выключен. Возвращение в новой архитектуре
+отслеживается в [upstream #38528](https://github.com/anomalyco/opencode/issues/38528),
+что [подтвердил maintainer](https://github.com/anomalyco/opencode/issues/50916#issuecomment-6287891675).
+Это незавершённый port; отдельного публичного обоснования окончательного отказа нет.
+Специализированного native LSP API в этой версии нет; расширять можно общим plugin
+API/MCP. Есть [сторонний V2 plugin](https://github.com/christensenjairus/opencode-v2-lsp-support)
+с lazy stdio servers и diagnostics через tool hooks, но он здесь не устанавливается
+и совместимость с pinned 2.1.4 не проверена. Неиспользуемые language-server packages
+в closure не добавлены. CLI lint/typecheck не заменяет navigation/rename/hover LSP.
 
 ## Decision support и локальные todo
 

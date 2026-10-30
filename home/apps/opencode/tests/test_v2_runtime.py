@@ -243,6 +243,9 @@ def main(binary, catalog_only=False, mac=False, native=False):
                 True  # Never connect to corporate services in this test.
             )
     generation = os.environ.get("OPENCODE_TEST_HM_GENERATION")
+    if generation and not mac:
+        installed = Path(generation) / "home-files/.config/opencode/opencode.json"
+        assert json.loads(installed.read_text()).get("formatter", False) is False
     with tempfile.TemporaryDirectory(prefix="opencode-v2-", dir="/tmp/opencode") as tmp:
         root = Path(tmp)
         config = root / "config" / "opencode"
@@ -1017,6 +1020,74 @@ def main(binary, catalog_only=False, mac=False, native=False):
                 print(
                     "PASS: native todo read, exact diff form, no/revise/yes, real local commit, revisit attribution/priority and Plan edit denial"
                 )
+                if generation and not mac:
+                    fmt_session = api(
+                        "session",
+                        {
+                            "title": "No global formatting fixture",
+                            "permissions": [
+                                {"action": "edit", "resource": "*", "effect": "allow"},
+                            ],
+                        },
+                    )["data"]["id"]
+                    # GPT models expose patch only; Big Pickle exposes write/edit.
+                    api(
+                        f"session/{fmt_session}",
+                        {
+                            "metadata": {
+                                key: {
+                                    "version": 1,
+                                    "mode": "free",
+                                    "models": {
+                                        "*": {
+                                            "providerID": "opencode",
+                                            "id": "big-pickle",
+                                        }
+                                    },
+                                }
+                            }
+                        },
+                        "PATCH",
+                    )
+                    MockResponses.next_tool = (
+                        "write",
+                        {"path": "fixture.ts", "content": "const x={a:1}\n"},
+                    )
+                    prompt(fmt_session, "big-pickle")
+                    assert last_tool(fmt_session)["status"] == "completed", last_tool(
+                        fmt_session
+                    )
+                    assert (work / "fixture.ts").read_text() == "const x={a:1}\n"
+                    MockResponses.next_tool = (
+                        "edit",
+                        {
+                            "path": "fixture.ts",
+                            "oldString": "{a:1}",
+                            "newString": "{a:2}",
+                        },
+                    )
+                    prompt(fmt_session, "big-pickle")
+                    assert (work / "fixture.ts").read_text() == "const x={a:2}\n"
+                    fmt_session = api(
+                        "session",
+                        {
+                            "title": "Native patch preserves layout",
+                            "permissions": [
+                                {"action": "edit", "resource": "*", "effect": "allow"},
+                            ],
+                        },
+                    )["data"]["id"]
+                    MockResponses.next_tool = (
+                        "patch",
+                        {
+                            "patchText": "*** Begin Patch\n*** Update File: fixture.ts\n@@\n-const x={a:2}\n+const x={a:3}\n*** End Patch"
+                        },
+                    )
+                    prompt(fmt_session, "gpt-6.1-sol", "high")
+                    assert (work / "fixture.ts").read_text() == "const x={a:3}\n"
+                    print(
+                        "PASS: no global formatter; native write/edit/patch preserve existing layout"
+                    )
                 attempts = []
                 for path in (root / "state/opencode/model-calls").glob("*.jsonl"):
                     rows = [json.loads(line) for line in path.read_text().splitlines()]

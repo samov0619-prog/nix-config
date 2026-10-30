@@ -17,27 +17,27 @@ NixOS и HM управляются раздельно: NixOS через `nixosCo
 
 ### NixOS-хосты
 
-| | laptop | desktop | server |
-|---|---|---|---|
-| CPU | Intel | AMD | VPS |
-| GPU | Intel iGPU + NVIDIA PRIME | NVIDIA only | — |
-| Ввод | xremap + uinput | нет | — |
-| Сеть | NetworkManager, v2raya, Amnezia | NetworkManager, v2raya, Amnezia | SSH, AWG3.1, AdGuard, NaiveProxy, SFTP |
-| Boot | GRUB EFI removable | GRUB nodev | GRUB on `settings.nix.diskDevice` |
-| Доп. | Hibernate/zram, Bluetooth, brightnessctl, thermald | нет | NAT, ACME, profile download |
-| stateVersion | 25.11 | 25.11 | 26.05 |
+|              | laptop                                             | desktop                         | server                                 |
+| ------------ | -------------------------------------------------- | ------------------------------- | -------------------------------------- |
+| CPU          | Intel                                              | AMD                             | VPS                                    |
+| GPU          | Intel iGPU + NVIDIA PRIME                          | NVIDIA only                     | —                                      |
+| Ввод         | xremap + uinput                                    | нет                             | —                                      |
+| Сеть         | NetworkManager, v2raya, Amnezia                    | NetworkManager, v2raya, Amnezia | SSH, AWG3.1, AdGuard, NaiveProxy, SFTP |
+| Boot         | GRUB EFI removable                                 | GRUB nodev                      | GRUB on `settings.nix.diskDevice`      |
+| Доп.         | Hibernate/zram, Bluetooth, brightnessctl, thermald | нет                             | NAT, ACME, profile download            |
+| stateVersion | 25.11                                              | 25.11                           | 26.05                                  |
 
 ### Home Manager-конфигурации
 
-| | samov-laptop | samov-desktop | samov-server | samov-mac |
-|---|---|---|---|---|
-| База | users + core-set | users + core-set | users + core-set | users + core-set |
-| GUI | gui-set | gui-set | — | — |
-| Apps | minecraft + creative | minecraft + creative | — | — |
-| Minecraft module | server + instance | server + instance | server only | — |
-| Leaf | linux/laptop | linux/desktop | linux/server | — |
-| Overlays | filemanager1-common, freesm | filemanager1-common, freesm | нет | нет |
-| Архитектура | x86_64-linux | x86_64-linux | x86_64-linux | aarch64-darwin |
+|                  | samov-laptop                | samov-desktop               | samov-server     | samov-mac        |
+| ---------------- | --------------------------- | --------------------------- | ---------------- | ---------------- |
+| База             | users + core-set            | users + core-set            | users + core-set | users + core-set |
+| GUI              | gui-set                     | gui-set                     | —                | —                |
+| Apps             | minecraft + creative        | minecraft + creative        | —                | —                |
+| Minecraft module | server + instance           | server + instance           | server only      | —                |
+| Leaf             | linux/laptop                | linux/desktop               | linux/server     | —                |
+| Overlays         | filemanager1-common, freesm | filemanager1-common, freesm | нет              | нет              |
+| Архитектура      | x86_64-linux                | x86_64-linux                | x86_64-linux     | aarch64-darwin   |
 
 ### Модульная структура HM
 
@@ -138,6 +138,10 @@ not import Disko.
   V2 discovery молча исключает entrypoint, чей realpath вне real plugin root.
   Старые leaf paths убираются HM cleanup; IDs/history сохраняются. Проверять
   server runtime также с `OPENCODE_TEST_HM_GENERATION`, не только копиями.
+- Глобального formatter и его CLI-зависимостей в OpenCode нет. Короткое правило в
+  `config/AGENTS.md` требует использовать объявленный проектом CLI только для
+  изменённых файлов; без правил сохранять оформление, без global fallback или
+  форматирования моделью. Runtime smoke проверяет отсутствие автоформатирования.
 - `decision-support.nix` — явный домашний opt-in через
   `programs.opencode.decisionSupport.enable`: короткие configured instructions,
   on-demand `decision-check` и `agent-todo-v2`. Todo — ручной Markdown/Git в
@@ -262,7 +266,7 @@ not import Disko.
   system profile, Home Manager profile и modern `nix profile` независимы, но
   могут удерживать одни и те же store paths.
 - На NixOS единственный полный cleanup запускается `sudo systemctl start
-  nix-gc.service`; штатный `nix-gc.timer` вызывает этот же service. Не запускать
+nix-gc.service`; штатный `nix-gc.timer` вызывает этот же service. Не запускать
   отдельный user timer или `nix-collect-garbage` как регулярную альтернативу.
 - `nix-gc-run` запускает этот же service и выводит очистку профилей и store в
   реальном времени. `systemctl start` намеренно не передаёт stdout service в
@@ -274,7 +278,7 @@ not import Disko.
   laptop `+3` weekly, desktop `+5` weekly. Это обеспечивает rollback именно
   конфигурации Home Manager.
 - Modern `nix profile` сохраняет только current generation через `nix profile
-  wipe-history`: Nix не предоставляет API "keep N", а его history откатывает
+wipe-history`: Nix не предоставляет API "keep N", а его history откатывает
   bootstrap CLI, не Home Manager configuration. Не применять `nix-env` к modern
   `nix profile`: эти форматы несовместимы.
 - Текущий `~/.nix-profile` на laptop содержит рабочий `home-manager`; не удалять
@@ -327,6 +331,37 @@ not import Disko.
 - Before any destructive install, replace every `REPLACE_ME` after checking `lsblk`; future desktop must also confirm BIOS vs EFI with `efibootmgr -v`.
 - Current laptop retains `/swapfile` plus `resume_offset`; `laptop-next` uses a swap partition with `resumeDevice = true`, so the two schemes never coexist on one host.
 
+## Форматирование этого репозитория
+
+Форматировать только изменённые файлы через CLI, не весь репозиторий и не моделью.
+Эти правила принадлежат проекту; глобальной настройки formatter в OpenCode нет.
+Neovim-конфигурация не меняется. Новые конфиги не означают массовый style rewrite.
+
+| Файлы                                | Инструмент и источник правил                                                                                                                         | Команда из корня репозитория                                                         |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Nix                                  | nixfmt 1.3.1, defaults (100 columns, 2 spaces), как nixd → `nixfmt`; flake pin                                                                       | `nix fmt -- file.nix`                                                                |
+| TS/JS/MJS, JSON/JSONC, CSS, Markdown | Prettier, `.prettierrc.json` + `.prettierignore`; defaults текущего Neovim Prettier 3.9.5                                                            | `prettier --write path/to/file`                                                      |
+| Python                               | Ruff, `[tool.ruff]` / `[tool.ruff.format]` в `pyproject.toml`; defaults текущего Neovim Ruff 0.17.2 (88 columns, 4 spaces, Python 3.11, без preview) | `ruff format path/to/file.py`                                                        |
+| Shell                                | Beautysh 6.4.3, `[tool.beautysh]` в `pyproject.toml`: 4 spaces, `paronly`, как в Conform                                                             | `beautysh path/to/file.sh`                                                           |
+| Lua                                  | LuaLS / EmmyLuaCodeStyle, `.editorconfig`, 2 spaces как LSP options Neovim; не StyLua                                                                | Форматировать через LuaLS в редакторе; без соответствующего CLI сохранять оформление |
+
+Использовать доступный CLI той же версии, что в редакторе; если его нет, сообщить,
+не подменять другим formatter и не устанавливать без запроса. Версии Prettier/Ruff/
+Beautysh здесь описывают проверенный снимок, не отдельную систему установки/pinning.
+Одинаковый конфиг сам по себе не гарантирует byte-identical output разных версий.
+`nix fmt` использует nixfmt из flake.lock; nixd уже вызывает установленный `nixfmt`
+из того же nixpkgs через `home/core-set/nix-authoring.nix` (после применения профиля).
+У nixfmt нет нативного файла конфигурации стиля; выдуманный `.nixfmt`/nixd config
+не добавлять. Beautysh читает `pyproject.toml` только из cwd: запускать из корня.
+На `hosts/server/preflight.sh` Beautysh 6.4.3 даёт существующую ошибку
+`indent/outdent mismatch`; не менять скрипт ради форматтера и не скрывать ошибку.
+Python lint fixes (`ruff check --fix`) не являются форматированием.
+
+Для C/C++, Rust, raw `.conf`, patches, ключей и прочих типов без объявленного
+formatter сохранять существующее оформление. Generated locks не форматировать.
+Neovim раньше не выбирал Prettier без config/dependency; `.prettierrc.json` теперь
+явно включает его для поддерживаемых типов в этом проекте, включая CSS/Markdown.
+
 ## Полезные команды
 
 ## Обновление flake и конфигураций
@@ -349,7 +384,7 @@ nix-flake-update-verify --hosts laptop --input nixpkgs
   `disko`, `freesm`, `nix-gc-env`, `xremap-flake`; `all` доступен только
   явно через `--input all`.
 - Hosts: `laptop`, `desktop`, `server`, `server-installer`, `mac`; `--hosts
-  all` проверяет все hosts, поддерживаемые текущей платформой: Linux hosts на
+all` проверяет все hosts, поддерживаемые текущей платформой: Linux hosts на
   Linux и `mac` на macOS.
 - Linux hosts `laptop`, `desktop` и `server` строят свои NixOS и Home Manager
   outputs; `server-installer` строит только NixOS ISO output; `mac` строит

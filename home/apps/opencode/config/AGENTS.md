@@ -37,6 +37,13 @@
   context unless the skill has changed; do not reload it for every follow-up.
   Keep skill permission restrictions intact; a subagent is not a permission bypass.
 
+## Formatting
+
+- Use the project's declared formatter, configuration and version through its CLI,
+  only on changed files. Do not replace tooling with model-generated reformatting.
+- If no formatter is declared for that file type, preserve the existing layout;
+  do not choose a global fallback. Keep lint fixes separate from formatting.
+
 ## Git Workflow
 
 - Before creating a branch or commit, ALWAYS inspect the user's style with `git log --author="$(git config user.name)" --oneline --branches --remotes -n 15` and follow it.

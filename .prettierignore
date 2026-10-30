@@ -1,0 +1,5 @@
+# Generated lock files and Nix build outputs are not hand-formatted.
+flake.lock
+**/package-lock.json
+/result
+/result-*

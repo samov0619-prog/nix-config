@@ -1,0 +1,20 @@
+# Formatting defaults of the current Neovim CLI tools, not a Python package.
+[tool.ruff]
+line-length = 88
+indent-width = 4
+target-version = "py311"
+preview = false
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = false
+docstring-code-line-length = "dynamic"
+
+# Beautysh reads this section from cwd: run its CLI from the repository root.
+[tool.beautysh]
+indent_size = 4
+tab = false
+force_function_style = "paronly"
