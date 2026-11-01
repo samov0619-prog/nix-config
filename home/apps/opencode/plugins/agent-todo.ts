@@ -14,13 +14,247 @@ import {
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
+import {
+  reviewQuestions,
+  reviewAnswer,
+  type ReviewNote,
+} from "./agent-todo-review.ts";
 
 const exec = promisify(execFile);
 const LIMIT = 32768;
-const YES = "Да, сохранить";
-const NO = "Нет, не сохранять";
 const digest = (text: string) =>
   createHash("sha256").update(text).digest("hex");
+
+type NoteDraft = {
+  id: string;
+  title: string;
+  summary: string;
+  goal: string;
+  returnWhen: string;
+  notes?: string;
+};
+type NoteChanges = {
+  add?: NoteDraft[];
+  replace?: { id: string; before: string; after: string }[];
+};
+
+// Models supply useful wording, not a regenerated copy of unrelated notes.
+// This pure merge preserves manual text/layout and never performs any I/O.
+export function applyNoteChanges(before: string, changes: NoteChanges) {
+  const validID = (id: string) => /^[a-z0-9][a-z0-9-]{0,63}$/.test(id);
+  const marker =
+    /^<!-- todo:([a-z0-9][a-z0-9-]{0,63})(?:;last:[a-f0-9]{64})? -->$/m;
+  const blocks = before.split(/(?=^## )/m);
+  for (const edit of changes.replace ?? []) {
+    if (/[\x00-\x08\x0b-\x1f\x7f]|\uFFFD/.test(edit.after))
+      throw Error(
+        "Replacement must be plain UTF-8 text without control bytes.",
+      );
+    if (
+      !validID(edit.id) ||
+      !edit.before ||
+      [edit.before, edit.after].some((text) =>
+        /<!-- todo:|^Обращений:/m.test(text),
+      )
+    )
+      throw Error("Use an exact text replacement inside a note, not metadata.");
+    const matches = blocks.flatMap((block, index) =>
+      block.match(marker)?.[1] === edit.id ? [index] : [],
+    );
+    if (matches.length !== 1)
+      throw Error(`Unknown or duplicate todo ID: ${edit.id}`);
+    const index = matches[0],
+      block = blocks[index];
+    const offset = block.indexOf(edit.before);
+    if (offset < 0 || block.indexOf(edit.before, offset + 1) >= 0)
+      throw Error(`Replacement must match exactly once in ${edit.id}.`);
+    blocks[index] =
+      block.slice(0, offset) +
+      edit.after +
+      block.slice(offset + edit.before.length);
+    if (
+      blocks[index].match(marker)?.[1] !== edit.id ||
+      blocks[index].split(/(?=^## )/m).length !== 1
+    )
+      throw Error("Replacement must stay within its existing note block.");
+  }
+  let content = blocks.join("");
+  const ids = new Set(
+    blocks.map((block) => block.match(marker)?.[1]).filter(Boolean),
+  );
+  const html = (text: string) =>
+    text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const indent = (text: string) =>
+    text
+      .split("\n")
+      .map((line) => `  ${line}`)
+      .join("\n");
+  for (const note of changes.add ?? []) {
+    if (!validID(note.id) || ids.has(note.id))
+      throw Error(`Todo ID already exists or is invalid: ${note.id}`);
+    if (
+      [note.title, note.summary, note.goal, note.returnWhen].some(
+        (text) => typeof text !== "string" || !text.trim(),
+      ) ||
+      /[\r\n]/.test(note.title + note.summary) ||
+      [
+        note.title,
+        note.summary,
+        note.goal,
+        note.returnWhen,
+        note.notes ?? "",
+      ].some((text) =>
+        /[\x00-\x08\x0b-\x1f\x7f]|\uFFFD|<\/?(?:details|summary)\b|<!-- todo:/i.test(
+          text,
+        ),
+      )
+    )
+      throw Error(
+        "New notes need plain text fields without embedded todo metadata or spoiler tags.",
+      );
+    ids.add(note.id);
+    if (!content) content = "# Todo\n";
+    content +=
+      (content.endsWith("\n\n") ? "" : content.endsWith("\n") ? "\n" : "\n\n") +
+      `## [ ] ${html(note.title)}\n\n<details>\n<summary>${html(note.summary)}</summary>\n\n<!-- todo:${note.id} -->\n\n` +
+      `- Цель:\n${indent(note.goal)}\n- Условие возврата:\n${indent(note.returnWhen)}\n` +
+      (note.notes ? `- Заметки:\n${indent(note.notes)}\n` : "") +
+      "\n</details>\n";
+  }
+  return content;
+}
+
+// Render changes, not a second copy of the file or Git's patch envelope.
+// Never truncate consent text: every affected line remains available for review.
+function displayText(text: string) {
+  return text
+    .replace(
+      /^<!-- todo:[a-z0-9][a-z0-9-]{0,63}(?:;last:[a-f0-9]{64})? -->\n?/gm,
+      "",
+    )
+    .replace(
+      /^Обращений: ([1-9][0-9]*) · Приоритет: ([1-9][0-9]*)$/gm,
+      "Visits: $1 · Priority: $2",
+    )
+    .trim();
+}
+
+// Remove only our presentation wrappers, not code samples or arbitrary HTML.
+export function cleanNote(text: string) {
+  let fence = "";
+  return text
+    .split("\n")
+    .flatMap((line) => {
+      const marker = line.match(/^\s*(`{3,}|~{3,})/);
+      if (marker) {
+        if (!fence) fence = marker[1];
+        else if (marker[1][0] === fence[0] && marker[1].length >= fence.length)
+          fence = "";
+        return [line];
+      }
+      if (fence) return [line];
+      if (
+        /^<!-- todo:[a-z0-9][a-z0-9-]{0,63}(?:;last:[a-f0-9]{64})? -->$/.test(
+          line,
+        )
+      )
+        return [];
+      if (/^\s*<\/?details>\s*$/.test(line)) return [];
+      return [
+        line
+          .replace(/^\s*<summary>(.*)<\/summary>\s*$/, "$1")
+          .replace(/^## /, "")
+          .replace(
+            /^Обращений: ([1-9][0-9]*) · Приоритет: ([1-9][0-9]*)$/,
+            "Visits: $1 · Priority: $2",
+          ),
+      ];
+    })
+    .join("\n")
+    .trim();
+}
+
+export async function noteReview(
+  before: string,
+  after: string,
+  preview: (a: string, b: string) => Promise<string>,
+) {
+  const split = (text: string) =>
+    new Map(
+      text
+        .split(/(?=^## )/m)
+        .map((block, i) => [
+          block.match(
+            /^<!-- todo:([a-z0-9-]+)(?:;last:[a-f0-9]{64})? -->$/m,
+          )?.[1] ?? `document:${i}`,
+          block,
+        ]),
+    );
+  const old = split(before),
+    next = split(after);
+  const notes: ReviewNote[] = [];
+  // Proposed order first. Removed notes follow; each stable ID occurs once.
+  for (const id of new Set([...next.keys(), ...old.keys()])) {
+    const previous = displayText(old.get(id) ?? ""),
+      proposed = displayText(next.get(id) ?? "");
+    if (previous === proposed || (!previous && proposed === "# Todo")) continue;
+    const title =
+      (next.get(id) ?? old.get(id))?.match(/^## (.+)$/m)?.[1] ??
+      "Document notes";
+    const text = !previous
+      ? `Add\n${cleanNote(next.get(id) ?? "")}`
+      : !proposed
+        ? `Remove\n${cleanNote(old.get(id) ?? "")}`
+        : `Update\n${cleanNote(next.get(id) ?? "")}\n\nChanges:\n${cleanNote(describeChanges(await preview(previous, proposed)))}`;
+    notes.push({ id, title, text });
+  }
+  const order = (blocks: Map<string, string>, other: Map<string, string>) =>
+    [...blocks.keys()].filter((key) => other.has(key));
+  const previousOrder = order(old, next),
+    nextOrder = order(next, old);
+  const title = (id: string) =>
+    (next.get(id) ?? old.get(id))?.match(/^## (.+)$/m)?.[1] ?? "Document notes";
+  return {
+    notes,
+    order:
+      previousOrder.join() === nextOrder.join()
+        ? ""
+        : `Reorder:\nBefore: ${previousOrder.map(title).join(" → ")}\nAfter: ${nextOrder.map(title).join(" → ")}`,
+  };
+}
+
+export function describeChanges(diff: string) {
+  const changes: string[] = [];
+  let removed: string[] = [],
+    added: string[] = [];
+  let inHunk = false;
+  const flush = () => {
+    if (removed.length)
+      changes.push(
+        `Before:\n${displayText(removed.join("\n")) || "(blank lines)"}`,
+      );
+    if (added.length)
+      changes.push(
+        `After:\n${displayText(added.join("\n")) || "(blank lines)"}`,
+      );
+    removed = [];
+    added = [];
+  };
+  for (const line of diff.split("\n")) {
+    if (line.startsWith("diff --git ")) {
+      flush();
+      inHunk = false;
+    } else if (line.startsWith("@@")) {
+      flush();
+      inHunk = true;
+    } else if (!inHunk) continue;
+    else if (line.startsWith("-")) removed.push(line.slice(1));
+    else if (line.startsWith("+")) added.push(line.slice(1));
+    else if (!line.startsWith("\\")) flush();
+  }
+  flush();
+  return changes.join("\n\n");
+}
 
 // Metadata stays in the one Markdown file: no project registry or second database.
 export function countRevisits(
@@ -30,7 +264,10 @@ export function countRevisits(
   eventKey: string,
 ) {
   function blocks(text: string) {
-    const found = new Map<string, { count: number; last: string }>();
+    const found = new Map<
+      string,
+      { count: number; last: string; block: string }
+    >();
     for (const block of text.split(/(?=^## )/m)) {
       const marker = block.match(
         /^<!-- todo:([a-z0-9][a-z0-9-]{0,63})(?:;last:([a-f0-9]{64}))? -->$/m,
@@ -44,7 +281,7 @@ export function countRevisits(
       const number = count ? Number(count[1]) : 1;
       if (!Number.isSafeInteger(number) || number > 1000000)
         throw Error("Invalid todo counter.");
-      found.set(marker[1], { count: number, last: marker[2] ?? "" });
+      found.set(marker[1], { count: number, last: marker[2] ?? "", block });
     }
     return found;
   }
@@ -68,6 +305,9 @@ export function countRevisits(
         previous = old.get(id);
       const bump =
         previous && revisited.includes(id) && previous.last !== eventKey;
+      // Do not normalize unrelated legacy metadata while adding another note.
+      if (previous && !bump && block.trimEnd() === previous.block.trimEnd())
+        return block;
       const count = previous ? previous.count + (bump ? 1 : 0) : 1;
       const last = !previous || bump ? eventKey : previous.last;
       const metadata = `<!-- todo:${id}${last ? `;last:${last}` : ""} -->\nОбращений: ${count} · Приоритет: ${count}`;
@@ -213,6 +453,7 @@ export function todoStore(directory: string) {
           "diff",
           "--no-ext-diff",
           "--no-textconv",
+          "--unified=0",
           "--cached",
           "--",
           "todo.md",
@@ -221,6 +462,7 @@ export function todoStore(directory: string) {
           "diff",
           "--no-ext-diff",
           "--no-textconv",
+          "--unified=0",
           "--",
           "todo.md",
         ]));
@@ -260,6 +502,7 @@ export function todoStore(directory: string) {
         "--no-index",
         "--no-ext-diff",
         "--no-textconv",
+        "--unified=0",
         "--",
         join(temporary, "before"),
         join(temporary, "after"),
@@ -429,7 +672,7 @@ export async function setupTodo(
       name: "agent_todo_propose",
       options: { codemode: false },
       description:
-        "Propose the full revised todo.md after agent_todo_read. Use heading blocks: ## Russian title, then <!-- todo:stable-kebab-id -->, then an optional counter line and indented goal/return-condition/notes. Counters and priority are computed by the tool: new items start at 1; list existing IDs in revisited only when the user deliberately returns to their topic, not on reads, retries or wording changes. Shows exact diff and manual changes in native confirmation; only yes writes and locally commits. Preserve manual edits; never bypass through shell/edit. Stale proposals need rereading and renewed consent.",
+        "Propose todo changes after agent_todo_read. Prefer changes.add with Russian title, meaningful one-sentence summary, goal, returnWhen and optional notes; code generates checkbox headings, closed spoilers, IDs/counters and merges without copying unrelated notes. Use changes.replace for exact unique text replacements within an existing stable ID; preserve manual marks and legacy layout. Omit changes for a revisit-only proposal; list revisited IDs only for deliberate returns, not reads/retries/import duplicates. Content is a compatibility escape hatch only for explicitly requested whole-file restructuring. Code merges, compares, reviews and writes without model calls during navigation. The TUI shows one scrollable note per tab; left/right and Tab cycle. One final Submit saves the entire batch in one local commit only without feedback. Any own answer blocks writing: feedback carries note IDs/titles, batchFeedback is global, and draft preserves the proposal. Revise only referenced notes, preserve other drafts and request fresh approval for changed wording. Reject/Escape declines everything; do not reopen unless asked or bypass through shell/edit/fabricated form answers. Stale proposals need rereading and renewed consent.",
       input: {
         type: "object",
         properties: {
@@ -440,11 +683,74 @@ export async function setupTodo(
           content: {
             type: "string",
             description:
-              "Complete proposed UTF-8 Markdown, preserving unrelated notes",
+              "Compatibility only: complete Markdown for explicitly requested whole-file restructuring. Prefer changes; never copy unrelated notes for routine edits.",
+          },
+          changes: {
+            type: "object",
+            description:
+              "Only new note wording and targeted edits; code preserves and merges the existing file.",
+            properties: {
+              add: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: {
+                      type: "string",
+                      pattern: "^[a-z0-9][a-z0-9-]{0,63}$",
+                    },
+                    title: {
+                      type: "string",
+                      description:
+                        "Short descriptive Russian title, without heading/checkbox markup",
+                    },
+                    summary: {
+                      type: "string",
+                      description:
+                        "One concise meaningful Russian sentence, not a repetition of the title",
+                    },
+                    goal: { type: "string" },
+                    returnWhen: { type: "string" },
+                    notes: {
+                      type: "string",
+                      description:
+                        "Optional context; multiline Markdown/code is allowed",
+                    },
+                  },
+                  required: ["id", "title", "summary", "goal", "returnWhen"],
+                  additionalProperties: false,
+                },
+              },
+              replace: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: {
+                      type: "string",
+                      description: "Existing stable todo ID",
+                    },
+                    before: {
+                      type: "string",
+                      description:
+                        "Exact nonempty fragment occurring once inside this note",
+                    },
+                    after: {
+                      type: "string",
+                      description:
+                        "Replacement wording; do not edit ID/counter metadata",
+                    },
+                  },
+                  required: ["id", "before", "after"],
+                  additionalProperties: false,
+                },
+              },
+            },
+            additionalProperties: false,
           },
           reason: {
             type: "string",
-            description: "Brief Russian explanation of the proposed change",
+            description: "Brief explanation in the conversation's language",
           },
           message: {
             type: "string",
@@ -458,7 +764,7 @@ export async function setupTodo(
               "Existing stable todo IDs deliberately revisited by the user in this turn; otherwise omit. One increment per item per user message, only after consent.",
           },
         },
-        required: ["base", "content", "reason", "message"],
+        required: ["base", "reason", "message"],
         additionalProperties: false,
       },
       execute: async (input, context) => {
@@ -469,19 +775,24 @@ export async function setupTodo(
           base,
           reason,
           message,
+          changes: requestedChanges,
           revisited = [],
         } = input as {
           base: string;
-          content: string;
+          content?: string;
+          changes?: NoteChanges;
           reason: string;
           message: string;
           revisited?: string[];
         };
-        let { content } = input as { content: string };
+        let { content } = input as { content?: string };
+        const originalContent = content;
         if (
-          Buffer.byteLength(content) > LIMIT ||
-          content.includes("\0") ||
-          content.includes("\uFFFD") ||
+          (content !== undefined &&
+            (requestedChanges !== undefined ||
+              Buffer.byteLength(content) > LIMIT ||
+              content.includes("\0") ||
+              content.includes("\uFFFD"))) ||
           !message.trim() ||
           message.length > 120 ||
           /[\r\n\0]/.test(message) ||
@@ -531,7 +842,12 @@ export async function setupTodo(
           /* Missing/compacted ancestry is not evidence of another visit. */
         }
         try {
-          content = countRevisits(before.content, content, revisited, eventKey);
+          content = countRevisits(
+            before.content,
+            content ?? applyNoteChanges(before.content, requestedChanges ?? {}),
+            revisited,
+            eventKey,
+          );
         } catch (error) {
           return {
             content: JSON.stringify({
@@ -549,46 +865,92 @@ export async function setupTodo(
           };
         if (content === before.content && before.head && !before.status)
           return { content: JSON.stringify({ status: "unchanged" }) };
-        const diff = await store.preview(before.content, content);
-        const result = await question.execute(
-          {
-            questions: [
-              {
-                header: "Сохранить todo?",
-                question: `${reason}\n\nФайл: ${store.path}\nКоммит: ${message}\n\nИзменение относительно файла сейчас:\n${diff || "Текст не меняется; сохранить текущие ручные правки в Git."}\n\nУже имеющиеся ручные/индексированные правки (тоже войдут в коммит):\n${before.changes || (before.head ? "Нет." : "Первый коммит: весь итоговый файл.")}\n\nНесохранённый буфер Neovim не виден. Свободным ответом можно уточнить формулировку.`,
-                options: [
-                  {
-                    label: YES,
-                    description:
-                      "Применить показанный вариант и сделать локальный коммит.",
-                  },
-                  {
-                    label: NO,
-                    description: "Ничего не менять и продолжить работу.",
-                  },
-                ],
-                multiple: false,
-              },
-            ],
-          },
-          context,
-        );
-        const answer = (result.output as { answers?: string[][] } | undefined)
-          ?.answers?.[0];
-        if (answer?.length !== 1 || answer[0] !== YES)
+        const review = await noteReview(before.content, content, store.preview);
+        const manual = before.changes
+          ? `Manual changes included in this commit (staged and working tree):\n${describeChanges(before.changes)}`
+          : before.present && !before.head
+            ? `Existing uncommitted notes included in the first commit:\n${displayText(before.content)}`
+            : "";
+        const summary = [
+          reason,
+          review.order,
+          manual && cleanNote(manual),
+          `File: ${store.path}\nCommit: ${message}\nSubmit saves the entire file in one local commit.\nUnsaved editor buffers are not visible.`,
+        ]
+          .filter(Boolean)
+          .join("\n\n");
+        const token = digest(JSON.stringify([base, content, message, summary]));
+        try {
+          if (context.signal.aborted)
+            return { content: JSON.stringify({ status: "cancelled" }) };
+          if ((await store.snapshot()).fingerprint !== base)
+            return {
+              content: JSON.stringify({
+                status: "stale",
+                message:
+                  "Todo changed before review; reread and request fresh approval.",
+              }),
+            };
+          // Native forms remain the consent/cancellation transport. The TUI part
+          // presents full scrollable notes and emits a proposal-bound Submit value.
+          const result = await question.execute(
+            {
+              questions: reviewQuestions(review.notes, summary, token),
+            },
+            context,
+          );
+          if (context.signal.aborted)
+            return { content: JSON.stringify({ status: "cancelled" }) };
+          const answers =
+            (result.output as { answers?: string[][] } | undefined)?.answers ??
+            [];
+          const decision = reviewAnswer(review.notes, token, answers);
+          if (decision.status === "approved")
+            return {
+              content: JSON.stringify(
+                await store.save(base, content, message, context.signal),
+              ),
+            };
           return {
             content: JSON.stringify({
-              status: answer?.[0] === NO ? "declined" : "revise",
-              answer: answer ?? [],
+              ...decision,
+              ...(decision.status === "revise"
+                ? {
+                    draft: {
+                      base,
+                      ...(requestedChanges
+                        ? { changes: requestedChanges }
+                        : originalContent !== undefined
+                          ? { content: originalContent }
+                          : {}),
+                      revisited,
+                      reason,
+                      message,
+                    },
+                  }
+                : {}),
               message:
-                "Ничего не записано. Учтите ответ; повторяйте вопрос только если остаётся существенный выбор.",
+                decision.status === "declined"
+                  ? "Nothing saved. Do not reopen unless asked."
+                  : "Nothing saved. Feedback IDs scope each comment to that note only; batchFeedback is global. Preserve all other drafts. Revise the supplied draft and request fresh approval before any write; retries do not count as revisits.",
             }),
           };
-        return {
-          content: JSON.stringify(
-            await store.save(base, content, message, context.signal),
-          ),
-        };
+        } catch (error) {
+          // The real Promise adapter preserves this native dismissal tag.
+          // Do not turn permission denials, session aborts or other faults into consent/decline.
+          if (
+            (error as { _tag?: string })?._tag !== "QuestionTool.CancelledError"
+          )
+            throw error;
+          return {
+            content: JSON.stringify({
+              status: "declined",
+              dismissed: true,
+              message:
+                "Nothing saved. Do not reopen confirmation unless the user asks.",
+            }),
+          };
+        }
       },
     });
   });

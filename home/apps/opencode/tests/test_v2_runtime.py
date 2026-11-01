@@ -273,6 +273,14 @@ def main(binary, catalog_only=False, mac=False, native=False):
                 (plugin / "index.ts").write_text(
                     (SOURCE / "plugins" / entry).read_text()
                 )
+                if name == "agent-todo":
+                    for source, target in [
+                        ("agent-todo-review.ts", "agent-todo-review.ts"),
+                        ("agent-todo-tui.tsx", "tui.tsx"),
+                    ]:
+                        (plugin / target).write_text(
+                            (SOURCE / "plugins" / source).read_text()
+                        )
         for skill_id in ["discussion-map", "git-regression-rollback", "decision-check"]:
             skill = config / "skills" / skill_id / "SKILL.md"
             skill.parent.mkdir(parents=True)
@@ -920,46 +928,80 @@ def main(binary, catalog_only=False, mac=False, native=False):
                         )
                     )
 
+                def review_todo(answer, cancel=False):
+                    deadline = time.monotonic() + 60
+                    while True:
+                        forms = api(f"session/{todo_session}/form")["data"]
+                        if forms:
+                            break
+                        assert time.monotonic() < deadline, last_tool(todo_session)
+                        time.sleep(0.05)
+                    form = forms[0]
+                    request_count = len(MockResponses.requests)
+                    assert len(form["fields"]) >= 2, form
+                    descriptions = []
+                    values = {}
+                    for field in form["fields"]:
+                        assert field["custom"] is True, form
+                        descriptions.append(field["description"])
+                        assert (
+                            "@@" not in field["description"]
+                            and "last:" not in field["description"]
+                        ), form
+                    descriptor = json.loads(
+                        form["fields"][-1]["description"].split("\n", 1)[1]
+                    )
+                    assert len(descriptor["notes"]) == len(form["fields"]) - 1
+                    values[form["fields"][-1]["key"]] = (
+                        "agent-todo-submit/v1:" + descriptor["token"]
+                        if answer == "Save all"
+                        else "Reject"
+                        if answer == "Don't save"
+                        else answer
+                    )
+                    assert (
+                        api(f"session/{todo_session}/form")["data"][0]["id"]
+                        == form["id"]
+                    )
+                    assert len(MockResponses.requests) == request_count, (
+                        "Review must not call any model"
+                    )
+                    if cancel:
+                        api(
+                            f"session/{todo_session}/form/{form['id']}", method="DELETE"
+                        )
+                    else:
+                        api(
+                            f"session/{todo_session}/form/{form['id']}/reply",
+                            {"answer": values},
+                        )
+                    api(f"experimental/session/{todo_session}/wait", {}, "POST")
+                    return "\n".join(descriptions)
+
                 MockResponses.next_tool = ("agent_todo_read", {})
                 prompt(todo_session, "gpt-6.1-sol", "high")
                 todo = tool_result(todo_session)
                 assert not (root / "agent-todo").exists(), todo
                 proposal = {
                     "base": todo["fingerprint"],
-                    "content": "# Todo\n\n## Проверка устройства\n<!-- todo:device -->\n\n- Цель:\n  Проверить сон.\n",
+                    "content": "# Todo\n\n## [ ] Проверка устройства\n\n<details>\n<summary>Проверить сон и пробуждение устройства.</summary>\n\n<!-- todo:device -->\n\n- Цель:\n  Проверить сон.\n\n</details>\n",
                     "reason": "Сохранить проверку.",
                     "message": "add device test note",
                 }
                 for answer, expected in [
-                    ("Нет, не сохранять", "declined"),
+                    ("Don't save", "declined"),
                     ("Уточни формулировку", "revise"),
-                    ("Да, сохранить", "saved"),
+                    ("Save all", "saved"),
                 ]:
                     MockResponses.next_tool = ("agent_todo_propose", proposal)
                     api(f"session/{todo_session}/prompt", {"text": "Предложи заметку."})
-                    deadline = time.monotonic() + 20
-                    while True:
-                        forms = api(f"session/{todo_session}/form")["data"]
-                        if forms:
-                            form = forms[0]
-                            break
-                        assert time.monotonic() < deadline, last_tool(todo_session)
-                        time.sleep(0.1)
-                    assert form["fields"][0]["custom"] is True, form
-                    assert (
-                        "Обращений: 1 · Приоритет: 1"
-                        in form["fields"][0]["description"]
-                    ), form
                     assert not (root / "agent-todo/todo.md").exists()
                     # Isolated identity only; never write the real user's Git config.
                     (root / ".gitconfig").write_text(
                         "[user]\n name = Todo Fixture\n email = todo@example.invalid\n"
                     )
-                    api(
-                        f"session/{todo_session}/form/{form['id']}/reply",
-                        {"answer": {"q0": answer}},
-                    )
-                    api(f"experimental/session/{todo_session}/wait", {}, "POST")
+                    reviewed = review_todo(answer)
+                    assert "Visits: 1 · Priority: 1" in reviewed, reviewed
                     result = tool_result(todo_session)
                     assert result["status"] == expected, result
                 assert (
@@ -969,6 +1011,17 @@ def main(binary, catalog_only=False, mac=False, native=False):
                 assert ";last:" in (root / "agent-todo/todo.md").read_text(), (
                     "native in-flight user attribution missing"
                 )
+                saved_todo = (root / "agent-todo/todo.md").read_text()
+                assert "## [ ] Проверка устройства" in saved_todo
+                assert (
+                    "<summary>Проверить сон и пробуждение устройства.</summary>"
+                    in saved_todo
+                )
+                assert (
+                    saved_todo.index("<details>")
+                    < saved_todo.index("Обращений: 1 · Приоритет: 1")
+                    < saved_todo.index("</details>")
+                ), saved_todo
                 assert (
                     subprocess.check_output(
                         ["git", "status", "--porcelain"],
@@ -986,26 +1039,72 @@ def main(binary, catalog_only=False, mac=False, native=False):
                     f"session/{todo_session}/prompt",
                     {"text": "Вернёмся к проверке устройства."},
                 )
-                deadline = time.monotonic() + 20
-                while True:
-                    forms = api(f"session/{todo_session}/form")["data"]
-                    if forms:
-                        form = forms[0]
-                        break
-                    assert time.monotonic() < deadline, last_tool(todo_session)
-                    time.sleep(0.1)
-                assert (
-                    "Обращений: 2 · Приоритет: 2" in form["fields"][0]["description"]
-                ), form
-                api(
-                    f"session/{todo_session}/form/{form['id']}/reply",
-                    {"answer": {"q0": "Да, сохранить"}},
-                )
-                api(f"experimental/session/{todo_session}/wait", {}, "POST")
+                reviewed = review_todo("Save all")
+                assert "Visits: 2 · Priority: 2" in reviewed, reviewed
                 assert tool_result(todo_session)["status"] == "saved"
                 assert (
                     "Обращений: 2 · Приоритет: 2"
                     in (root / "agent-todo/todo.md").read_text()
+                )
+                original_todo = (root / "agent-todo/todo.md").read_text()
+                MockResponses.next_tool = ("agent_todo_read", {})
+                prompt(todo_session, "gpt-6.1-sol", "high")
+                batch = {
+                    "base": tool_result(todo_session)["fingerprint"],
+                    "changes": {
+                        "add": [
+                            {
+                                "id": "long-task",
+                                "title": "Long task",
+                                "summary": "Review all long lines.",
+                                "goal": "Check pages.",
+                                "returnWhen": "During import.",
+                                "notes": "Длинная строка 👩🏽‍💻 для проверки страниц.\n"
+                                * 30,
+                            },
+                            {
+                                "id": "last-task",
+                                "title": "Last task",
+                                "summary": "Review the final imported note.",
+                                "goal": "End of import.",
+                                "returnWhen": "During import.",
+                            },
+                        ]
+                    },
+                    "reason": "Проверить пакетный импорт.",
+                    "message": "import batch of todo notes",
+                }
+                MockResponses.next_tool = ("agent_todo_propose", batch)
+                api(
+                    f"session/{todo_session}/prompt",
+                    {"text": "Проверь импорт с отменой."},
+                )
+                review_todo("Save all", cancel=True)
+                assert tool_result(todo_session)["status"] == "declined"
+                assert (root / "agent-todo/todo.md").read_text() == original_todo
+                MockResponses.next_tool = ("agent_todo_propose", batch)
+                api(
+                    f"session/{todo_session}/prompt",
+                    {"text": "Теперь просмотри и сохрани весь импорт."},
+                )
+                reviewed = review_todo("Save all")
+                assert "Last task" in reviewed and "End of import." in reviewed, (
+                    reviewed
+                )
+                assert tool_result(todo_session)["status"] == "saved"
+                assert (
+                    (root / "agent-todo/todo.md").read_text().startswith(original_todo)
+                )
+                assert (
+                    subprocess.check_output(
+                        ["git", "rev-list", "--count", "HEAD"],
+                        cwd=root / "agent-todo",
+                        env=env,
+                    ).strip()
+                    == b"3"
+                )
+                print(
+                    "PASS: one native multi-question batch review, cancellation, no extra model calls and a single final atomic commit"
                 )
                 api(f"session/{todo_session}/agent", {"agent": "plan"})
                 MockResponses.next_tool = ("agent_todo_read", {})
@@ -1018,7 +1117,7 @@ def main(binary, catalog_only=False, mac=False, native=False):
                 )
                 assert not api(f"session/{todo_session}/form")["data"]
                 print(
-                    "PASS: native todo read, exact diff form, no/revise/yes, real local commit, revisit attribution/priority and Plan edit denial"
+                    "PASS: native todo read, one-note review transport, reject/revise/submit, real local commit, revisit attribution/priority and Plan edit denial"
                 )
                 if generation and not mac:
                     fmt_session = api(

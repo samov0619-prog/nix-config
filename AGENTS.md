@@ -124,7 +124,8 @@ not import Disko.
 
 - `home/apps/opencode/default.nix` — HM laptop/desktop на pinned OpenCode 2.1.4
   (отдельный flake input, не nixpkgs-unstable). `package.nix` добавляет
-  `patches/session-routing.patch`, `patches/session-attention.patch` и Linux runtime libraries. V1-модуль/исследования —
+  `patches/session-routing.patch`, `patches/session-attention.patch`,
+  `patches/question-location.patch` и Linux runtime libraries. V1-модуль/исследования —
   `archive/v1`, не импортируются. README/BENCHMARK описывают текущий V2.
 - Исходники сгруппированы: `config/` (V2 settings и global rules), `plugins/`,
   `patches/` (включая общий session-attention helper), `scripts/`, `skills/`,
@@ -138,6 +139,13 @@ not import Disko.
   V2 discovery молча исключает entrypoint, чей realpath вне real plugin root.
   Старые leaf paths убираются HM cleanup; IDs/history сохраняются. Проверять
   server runtime также с `OPENCODE_TEST_HM_GENERATION`, не только копиями.
+  Resolver остаётся штатным. После HM updates, меняющих store-каталоги плагинов,
+  завершить активные задачи, выполнить `opencode service restart`, затем
+  `opencode service status`: кеш Bun может оставить старый entrypoint и молча
+  исключить плагин даже после `/reload`. Проверку containment не отключать.
+  Закрывать все клиенты заранее не обязательно; restart прерывает серверные задачи.
+  После замены binary переоткрыть TUI. Обычные config edits не требуют restart.
+  Runtime smoke с HM generation проверяет загрузку ссылок в новом процессе.
 - Глобального formatter и его CLI-зависимостей в OpenCode нет. Короткое правило в
   `config/AGENTS.md` требует использовать объявленный проектом CLI только для
   изменённых файлов; без правил сохранять оформление, без global fallback или
@@ -145,7 +153,7 @@ not import Disko.
 - `decision-support.nix` — явный домашний opt-in через
   `programs.opencode.decisionSupport.enable`: короткие configured instructions,
   on-demand `decision-check` и `agent-todo-v2`. Todo — ручной Markdown/Git в
-  `~/agent-todo/todo.md`, не HM-managed content. Native question показывает diff
+  `~/agent-todo/todo.md`, не HM-managed content. Native question показывает изменения
   и ручные правки; запись/локальный коммит только после согласия, Plan guard
   независим от session grants. Stable IDs и hash user-message в Markdown
   дедуплицируют подтверждённые обращения; числовой приоритет равен счётчику,
@@ -153,6 +161,50 @@ not import Disko.
   F3/`agent-todo-open` открывает файл в Kitty/Neovim на laptop/desktop, F1 содержит
   этот bind. Live UI/compositor проверяются на целевой машине; runtime smoke
   проверяет native forms API/Git в изолированном HOME.
+  Новые заметки: `## [ ] Заголовок`, затем закрытый `<details>` с
+  `<summary>` — кратким резюме задачи в одном предложении, не общим «Подробности»
+  и не дублем короткого говорящего заголовка; ID, счётчик, цель/возврат/заметки внутри.
+  Ручные `[ ]`/`[x]` и старый формат сохранять; автоматической миграции нет.
+  HTML-спойлер не включает folds в обычном Neovim buffer.
+  Чтение `~/agent-todo/*` явно разрешено без prompt, запись остаётся за edit/Plan
+  guard и подтверждением изменений. Todo UI — английские controls, reason на языке
+  беседы, только затронутые заметки/строки вместо unified diff; ручные правки показаны
+  отдельно без обрезания. В 2.1.4 question description не прокручивается: todo-плагин
+  использует `agent-todo-tui.tsx`: public dialog/slot/keymap/form API, одна полная
+  заметка на вкладку с внутренней прокруткой, сразу первая задача. Без Proposal,
+  счётчиков Review/Change и HTML-обёрток; в Markdown spoilers сохраняются.
+  ←/→, Tab/Shift+Tab циклически листают, ↑/↓ прокручивают заметку, Home/End — начало/конец.
+  На финальной вкладке ↑/↓ выбирают Submit/Reject/own answer; Ctrl+↑/↓ прокручивают
+  пояснение, путь, commit и ручные правки. Подсказка в привычном native-стиле;
+  PgUp/PgDown не листают вкладки. Одна native form — только consent/cancel transport;
+  `agent-todo-review.ts` связывает поля с IDs и Submit с конкретным предложением.
+  Без TUI presenter stock form не даёт случайно сохранить обрезанный текст.
+  Непрозрачная подложка плагина скрывает underlying Questions до удаления формы
+  после ответа/отмены, без правки host tree/cache. PTY 140×40 и 160×48 проверяет
+  отсутствие второго видимого Questions/own-answer/hint, включая финальную вкладку.
+  Только финальный Submit без комментариев сохраняет весь файл одним коммитом;
+  Reject/Esc/закрытие/уход с сессии отменяют пакет. Reload не даёт автоматического согласия.
+  Fingerprint проверяется перед формой и записью; локальное листание не вызывает
+  сервер/модель. `a` открывает own answer текущей заметки, Enter сохраняет комментарий
+  в форме, Tab сохраняет и листает. Любой комментарий блокирует запись; инструмент
+  возвращает `feedback: [{id,title,feedback}]`, глобальный `batchFeedback` и исходный
+  `draft`. Модель меняет только затронутые формулировки, сохраняет остальные черновики
+  и снова запрашивает согласие. Реальный PTY 80×24 проверяет конец длинной заметки,
+  циклическую навигацию, изоляцию/восстановление комментариев и однократный commit.
+  `changes.add` принимает
+  формулировки, код собирает Markdown/spoilers и сохраняет остальные записи побайтно;
+  `changes.replace` делает точечные unique-match правки внутри stable ID, без metadata.
+  Для возврата достаточно `revisited`. Полный `content` — совместимый путь только
+  для явно запрошенной перестройки файла. Вложенный `changes` не попадает в огромную
+  строку native generic-tool summary; старые вызовы в истории не переписываются.
+  Merge/diff/counters/review/Git выполняются кодом, без модельных вызовов между
+  вкладками. Новый binary patch не нужен. Esc перехватывает только `QuestionTool.CancelledError` и
+  завершает tool обычным `declined`; остальные ошибки/abort не подавляются.
+  `question-location.patch` сохраняет Location
+  nested native question из Promise-плагина: без него форма есть в API, но не
+  видна TUI. PTY smoke проверяет реальные кнопки. Этот patch меняет server runtime:
+  после первого применения завершить задачи и выполнить `opencode service restart`,
+  проверить `opencode service status`, переоткрыть TUI; одного `/reload` недостаточно.
 - `/switch-free`/`/switch-paid` — локальные TUI-команды, без LLM. Режим живёт
   в metadata корневой сессии и влияет на последующие запросы существующих детей.
   Paid role table — единый `plugins/model-routing/routing-models.json`: Sol High work, Sol XHigh plan,

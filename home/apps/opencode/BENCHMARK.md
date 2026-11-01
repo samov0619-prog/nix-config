@@ -132,11 +132,28 @@ formatter resolves to the exact installed nixfmt 1.3.1 binary used by nixd on PA
 
 `test_agent_todo.mjs` executes the real Markdown/Git implementation in disposable
 `/tmp/opencode` repositories, with a fake native question executor. It covers:
-lazy read/no initialization, approval/exact diff, decline/free-form revision,
+lazy read/no initialization, approval/changed-note preview, English controls,
+native dismissal-tag handling without swallowing unrelated errors, no truncation,
+diff-looking note lines, decline/free-form revision,
 stale content before/during confirmation, preserving staged/unstaged manual edits,
 Plan denial, cancellation, native index locks, unrelated files, symlinks/size limits,
 reload without implicit approval, deterministic priority/counters, same-user-turn
-deduplication, duplicate IDs, and missing context attribution.
+deduplication, duplicate IDs, and missing context attribution. Checkbox headings
+and closed `<details>` blocks keep counters inside the spoiler, preserve manual
+completion marks across confirmed revisits, and coexist with unchanged legacy layouts.
+Review tests cover exactly one complete record per note, long lines/paths, Russian,
+wide glyphs/emoji and literal HTML in code, with presentation wrappers removed.
+One native form transports the entire batch and final decision. Proposal-bound consent,
+missing/malformed/old Submit, stale edits, scoped ID/title/feedback, global feedback,
+preserved drafts and renewed approval after wording changes are checked.
+Navigation never writes or initializes Git; only final Submit without feedback commits
+the batch once. Existing staged/unstaged changes stay intact.
+Structured-delta tests exercise code-generated Markdown/spoilers, exact text replacements
+scoped to stable IDs, byte-preserved unrelated/manual/legacy text, duplicate additions,
+ambiguous fragments and embedded metadata rejection, and revisit-only proposals without
+copying the file. `agent-todo-tui.tsx` uses public dialog/slot/keymap/form APIs;
+`agent-todo-review.ts` is the shared versioned transport, not a separate database.
+Left/right/Tab/Shift+Tab cycle, while text scrolls within each note tab.
 
 The isolated `test_v2_runtime.py` also installs the actual plugin/decision-check
 skill and uses the **real V2 Promise adapter and native question executor**. A
@@ -144,12 +161,60 @@ localhost mock provider calls todo tools; the test answers real forms through th
 API, checks no/revise/yes behavior, commits in isolated HOME, and verifies the Plan
 guard even with session-level edit allow. `OPENCODE_TEST_HM_GENERATION` checks the
 real store-directory plugin installation too. No paid semantic inference is used.
+The native adapter is also exercised across a multi-note batch, cancelling the
+form and submitting its proposal-bound final decision with exactly one commit.
+The batch supplies only new structured note wording; the saved file retains the original
+prefix exactly. HTTP request counts stay constant throughout review: no extra model calls
+for navigation, comparison, formatting or merging.
+
+The resolver remains upstream. A separate reproduction showed that atomically
+retargeting a plugin directory symlink in a running server can make todo disappear
+without a failed inventory item, even after `/reload`: Bun's cached logical alias
+resolves to the old entrypoint, which no longer passes containment. After HM updates
+that change plugin store directories, finish active tasks and use
+`opencode service restart`, then `opencode service status`; reopen TUI after binary
+changes. Ordinary config edits still reload normally. Runtime smoke with
+`OPENCODE_TEST_HM_GENERATION` verifies fresh-process loading of real store-directory
+links, not live symlink retargeting in the same process.
 
 `decision-check-scenarios.md` supplies behavioral fixtures for manual/model
 evaluation, including negative cases. They are not an automated semantic classifier
 test, and passing implementation tests does not establish model precision or helpfulness.
-Live Russian menu rendering and F3/Neovim require target-host verification. Native
-free-form input remains labelled in English; no TUI/binary localization patch is added.
+Live Kitty/F3/Neovim require target-host verification. Form controls are English,
+including native free-form input; note text and model reasoning retain their language.
+
+`test_attention_tui.py` additionally loads the actual todo plugin, reads a fresh
+note and asks for confirmation through a mock model with the normal Build
+permissions and only an explicit notes-read allow. It waits for the native form
+API **and** English review options in real PTY output, declines and verifies that
+neither the note nor Git is created. It then opens a second form and sends a real
+Escape byte through the PTY: the form disappears, tool state becomes `completed`
+with `declined` in both server history and TUI data cache, and the next prompt succeeds.
+Baseline testing with the Location-patched binary and old plugin did not reproduce a
+server hang: Escape produced a terminal `aborted` error and accepted another prompt.
+Calling that persistent spinner intentional upstream behavior was not justified.
+The todo-specific cancellation handler avoids that error/interrupt path; it needs no
+additional binary patch. The binary without the Location patch creates the form but
+does not display it: nested Promise-to-native question execution loses the
+ambient Location. `question-location.patch` supplies the question plugin's own
+Location for form/permission events. API-only reply tests cannot catch this bug.
+The same test resizes a real client to **80×24**, reviews several notes including
+a long Unicode/path-heavy note, and inspects actual rendered framebuffer cells on
+each tab: note title, own-answer control and the familiar tab/scroll/confirm/dismiss
+hint stay visible. End exposes the long note's unique final line; Home returns to
+its summary. It sends real left/right/Tab/Shift+Tab, including cycling from Submit
+to the first note; navigation keeps the same server form ID and request count.
+It types/restores comments on two notes, checks their IDs and the retained draft,
+and proves Submit with comments writes nothing. Escape, Reject and route changes
+also write nothing; final Submit without feedback makes one batch commit. This catches
+the oversized-description bug that API-only consent tests previously missed.
+The real framebuffer also checks that structured `changes` is not flattened into
+the generic tool summary behind the review; raw legacy-content history is unchanged.
+The same pending review is checked at **140×40** and **160×48**, including the final
+Submit tab: the native `Questions` composer must not show through and only one
+own-answer control/confirmation hint may be visible. The opaque plugin backdrop
+does not alter the host render tree or form cache. The previous presenter fails
+this wide-terminal regression, even though its 80×24 tests pass.
 
 ## Accounting limits
 

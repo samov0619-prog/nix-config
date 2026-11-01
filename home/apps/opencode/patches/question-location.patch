@@ -1,0 +1,20 @@
+diff --git a/packages/core/src/tool/plugin/question.ts b/packages/core/src/tool/plugin/question.ts
+--- a/packages/core/src/tool/plugin/question.ts
++++ b/packages/core/src/tool/plugin/question.ts
+@@ -4,5 +4,6 @@ import type { Context } from "@opencode/plugin/effect/plugin"
+ import { ToolFailure } from "@opencode/ai"
+ import { Effect, Schema } from "effect"
+ import { Form } from "../../form.js"
++import { Location } from "../../location.js"
+ import { Permission } from "../../permission.js"
+ import { Question } from "@opencode/schema/question"
+@@ -109,6 +110,9 @@ export const Plugin = {
+                     metadata: { answers: output.answers },
+                   })
+                 }),
++                // Promise plugins can call this executor without an ambient Location.
++                // Unlocated form events are invisible to TUI clients.
++                Effect.provideService(Location.Service, ctx.location),
+               ),
+         }),
+       )
