@@ -213,11 +213,19 @@ not import Disko.
   Luna Max explore, Sol High compaction/summary, Luna Low title. Free — Big Pickle
   для всех ролей, без автоматического paid fallback. Обычная compaction до
   явного переключения сохраняет наследование session model.
-  Ручной model/variant selection снимает policy с live root семьи и возвращает
-  обычные agent settings/наследование; выбор текущего агента не становится моделью
-  всех ролей. Повторная slash-команда снова включает policy. Автоматическая смена
-  агента её не снимает. `manual-model-routing.patch` ждёт durable clear до выбора
-  модели/variants. После смены binary переоткрыть TUI.
+  Manual model selection keeps one Free/Paid helper stack: configured Sol/Luna
+  select Paid, Big Pickle selects Free, and unknown identities prompt for the
+  helper stack. Do not infer a stack from provider names or catalog prices.
+  Model/effort overrides are scoped to session and agent in live-root metadata;
+  effort changes preserve helpers and never save a global model preference.
+  Old global variant preferences must not override configured agent defaults.
+  Explicit `/switch-free` or `/switch-paid` resets all overrides for the family;
+  automatic agent switching preserves them. Home selections carry their metadata
+  into native session creation. `manual-model-routing.patch` awaits durable policy
+  updates before applying selection; reopen TUI after replacing the binary.
+  `LocalProvider` wraps `DialogProvider`: NEVER call `useDialog()` from its init.
+  The nested `App` binds its dialog instance through `bindHelperDialog` with cleanup;
+  unknown-model selection cancels safely before binding or after disposal.
   После metadata mutation вызывать `data.session.invalidate(id)` перед `sync(id)`:
   sync кеширует hydration и иначе оставляет старый режим/модель в TUI. PTY проверяет
   public `ui.model.current()` после переключений и настоящего model picker, не одну DB.

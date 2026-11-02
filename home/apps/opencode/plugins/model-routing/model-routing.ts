@@ -6,6 +6,7 @@ export type Routing = {
   version: 1;
   mode: "free" | "paid";
   models: Record<string, ModelRef>;
+  overrides?: Record<string, Record<string, ModelRef>>;
 };
 
 // A single role table feeds the commands, core resolver and TUI. No provider fallback.
@@ -56,6 +57,37 @@ export function routingState(mode: Routing["mode"]): Routing {
   };
 }
 
+// Only explicitly configured model identities imply a helper stack. Unknown
+// models require a user choice; provider names and catalog prices are not policy.
+export function helperMode(model: ModelRef): Routing["mode"] | undefined {
+  const ref = canonicalModel(model);
+  if (ref.providerID === "opencode" && ref.id === "big-pickle") return "free";
+  if (
+    Object.values(paidModels).some(
+      (item) => item.providerID === ref.providerID && item.id === ref.id,
+    )
+  )
+    return "paid";
+}
+
+export function selectedRouting(
+  metadata: unknown,
+  mode: Routing["mode"],
+  scope: string,
+  role: string,
+  model: ModelRef,
+): Routing {
+  const previous = routing(metadata);
+  const overrides = previous?.overrides;
+  return {
+    ...routingState(mode),
+    overrides: {
+      ...overrides,
+      [scope]: { ...overrides?.[scope], [role]: canonicalModel(model) },
+    },
+  };
+}
+
 export function routing(metadata: unknown): Routing | undefined {
   if (!metadata || typeof metadata !== "object") return;
   const value = (metadata as Record<string, unknown>)[routingKey] as
@@ -74,9 +106,15 @@ export function routing(metadata: unknown): Routing | undefined {
 export function routedModel(
   metadata: unknown,
   role: string,
+  sessionID?: string,
+  rootID?: string,
 ): ModelRef | undefined {
   const state = routing(metadata);
-  const model = state?.models[role] ?? state?.models["*"];
+  const scope = sessionID && sessionID === rootID ? "$root" : sessionID;
+  const model =
+    (scope ? state?.overrides?.[scope]?.[role] : undefined) ??
+    state?.models[role] ??
+    state?.models["*"];
   if (
     !model ||
     typeof model.providerID !== "string" ||

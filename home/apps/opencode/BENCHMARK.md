@@ -6,6 +6,24 @@ Historical model-quality experiments and V1 behavior are retained in
 
 ## Latest review status (2026-11-02)
 
+The manual-selection helper-stack redesign below is a subsequent change. All
+73 Node unit tests passed, including production patch application, state/selection
+functions, and dialog ownership/lifecycle regression guards. The user built and
+applied Home Manager and reported that TUI startup works after the fix below.
+The installed binary's derivation inputs were compared byte-for-byte with the
+current manual-routing patch, model-variants patch, and routing helper; all match.
+No additional agent-run build was performed. Isolated runtime, actual dialog
+interaction, and PTY checks were not rerun for the redesign. The following bullets
+describe the earlier review of commit `5aec1de`, not verification of the redesign.
+
+The first user-run rollout of the redesign crashed at startup with
+`useDialog must be used within a DialogProvider`; the user rolled back.
+`LocalProvider` wraps `DialogProvider`, so it cannot acquire that hook during
+initialization. The fix removes the hook from Local and binds App's existing
+dialog instance with cleanup instead. Unit regression guards check the actual
+provider order, hook ownership, and chooser binding/disposal. The user's successful
+startup check does not replace full runtime/PTY verification.
+
 - All 59 Node unit tests passed, including production patch application and
   legacy-alias normalization with the `default` variant sentinel.
 - The real picker/Free→Paid/Build→Plan PTY check passed with the installed binary
@@ -91,11 +109,20 @@ Coverage:
   send a request. Provider error has no silent free→paid fallback.
 - Root-only metadata mutation, foreign-key preservation, serialization/reopen,
   unrelated sessions, missing models/variants, cycles; local commands make no LLM call.
-- Manual model selection exits the live root policy in both modes, preserving
-  unrelated and inherited child metadata. The actual patched selection functions
-  cover lookup/write failure, retry, cycles, overlapping actions and route changes;
-  automatic agent selection preserves routing. The picker awaits the selection
-  before inspecting variants. The baseline metadata-only free→paid test passed
+- Manual selection maps configured Sol/Luna to Paid helpers and Big Pickle to Free;
+  unknown identities require a Free/Paid choice, with cancellation leaving policy
+  and drafts unchanged. Production-patched functions cover the native chooser's
+  select/cancel callbacks, lookup/write failure, retry, cycles, overlapping actions,
+  route/agent changes, and missing helper models. Session/agent overrides survive
+  serialization without leaking into siblings or auxiliary roles. Effort changes
+  retain helpers and do not save global preferences; legacy global variants cannot
+  override configured agent defaults. Home policy is passed into native session
+  creation. Explicit mode commands reset all overrides; automatic agent switching
+  preserves them. The picker awaits selection before inspecting variants.
+  The Local/Dialog provider-order guard prevents acquiring a child provider hook
+  during Local initialization; chooser binding fails closed before setup and after
+  cleanup without letting stale cleanup detach a newer binding.
+  The baseline metadata-only free→paid test passed
   while the public TUI model stayed free: V2 sync is cached hydration, not refresh.
   Both metadata mutations now invalidate before sync. The PTY probe checks the
   actual public model after each mode switch and after real picker selection,

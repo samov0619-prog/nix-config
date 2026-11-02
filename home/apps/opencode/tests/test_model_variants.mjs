@@ -32,6 +32,8 @@ try {
   for (const relative of [
     "packages/tui/src/context/local.tsx",
     "packages/tui/src/component/dialog-model.tsx",
+    "packages/tui/src/component/prompt/index.tsx",
+    "packages/tui/src/app.tsx",
     "packages/core/src/session/runner/model.ts",
     "packages/core/src/session/context.ts",
     "packages/core/src/session/compaction.ts",
@@ -127,7 +129,12 @@ test("Build and Plan select independent effort on the same model without role al
         }),
       },
       () => undefined,
-      { variant: {} },
+      // A legacy global effort preference must not leak into another agent.
+      {
+        variant: {
+          "openai/gpt-6.1-sol": variant === "high" ? "xhigh" : "high",
+        },
+      },
       (model) => `${model.providerID}/${model.modelID}`,
       (value) => value,
       () => [

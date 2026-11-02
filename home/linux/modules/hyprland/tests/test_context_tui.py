@@ -360,8 +360,8 @@ class ContextTui(unittest.TestCase):
                         == "big-pickle"
                     )
                 )
-            # Real picker, not a model-probe command: selection must clear the
-            # root policy and the public TUI model must reflect the real model.
+            # Real picker, not a model-probe command: a known paid selection
+            # changes helper policy and persists only this session/agent's choice.
             os.write(self.master, b"/models")
             self.wait_record(
                 lambda _: any(
@@ -377,7 +377,7 @@ class ContextTui(unittest.TestCase):
             os.write(self.master, b"GPT-6 Luna")
             self.wait_record(lambda _: frame().count("GPT-6 Luna") >= 2)
             os.write(self.master, b"\r")
-            self.wait_record(lambda _: routing_ready(None))
+            self.wait_record(lambda _: routing_ready("paid"))
             self.wait_record(
                 lambda _: (
                     json.loads(selection_file.read_text())
@@ -408,6 +408,7 @@ class ContextTui(unittest.TestCase):
             self.assertEqual(
                 json.loads(rows[0][0])["local.model-routing"]["mode"], "paid"
             )
+            self.assertNotIn("overrides", json.loads(rows[0][0])["local.model-routing"])
             self.assertEqual(
                 db.execute("SELECT count(*) FROM session_message").fetchone()[0], 0
             )

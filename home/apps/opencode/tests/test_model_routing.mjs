@@ -4,6 +4,8 @@ import "./plugin-loader.mjs";
 import {
   paidModels,
   canonicalModel,
+  helperMode,
+  selectedRouting,
   routingKey,
   routedModel,
   routingState,
@@ -173,6 +175,84 @@ test("home command creates an empty routed session without a model request", asy
   await run("free");
   assert.deepEqual(context.route, { type: "session", sessionID: "new" });
   assert.equal(sessions.get("new").metadata[routingKey].mode, "free");
+});
+
+test("explicit Free/Paid resets all manual model and effort overrides across the family", async () => {
+  const { sessions, run } = fixture();
+  for (const mode of ["free", "paid"]) {
+    sessions.get("root").metadata[routingKey] = selectedRouting(
+      {
+        [routingKey]: selectedRouting(undefined, "paid", "$root", "build", {
+          ...paidModels["*"],
+          variant: "xhigh",
+        }),
+      },
+      "paid",
+      "child",
+      "plan",
+      { ...paidModels["*"], variant: "high" },
+    );
+    await run(mode);
+    const state = sessions.get("root").metadata[routingKey];
+    assert.equal(state.mode, mode);
+    assert.equal(state.overrides, undefined);
+    assert.deepEqual(
+      routedModel(sessions.get("root").metadata, "build", "root", "root"),
+      mode === "free"
+        ? { providerID: "opencode", id: "big-pickle" }
+        : paidModels["*"],
+    );
+    assert.deepEqual(
+      routedModel(sessions.get("root").metadata, "plan", "child", "root"),
+      mode === "free"
+        ? { providerID: "opencode", id: "big-pickle" }
+        : paidModels.plan,
+    );
+  }
+});
+
+test("helper classification is explicit and does not infer unknown models from their provider", () => {
+  assert.equal(
+    helperMode({ providerID: "opencode", id: "big-pickle" }),
+    "free",
+  );
+  for (const model of Object.values(paidModels))
+    assert.equal(helperMode(model), "paid");
+  for (const model of [
+    { providerID: "openai", id: "unknown" },
+    { providerID: "opencode", id: "unknown" },
+    { providerID: "custom", id: "gpt-6.1-sol" },
+  ])
+    assert.equal(helperMode(model), undefined);
+});
+
+test("manual overrides survive serialization and remain isolated by session and agent", () => {
+  const first = selectedRouting(undefined, "paid", "$root", "build", {
+    ...paidModels["*"],
+    variant: "xhigh",
+  });
+  const before = JSON.stringify(first);
+  const next = selectedRouting(
+    { [routingKey]: first },
+    "free",
+    "child",
+    "plan",
+    paidModels.plan,
+  );
+  assert.equal(JSON.stringify(first), before);
+  const metadata = JSON.parse(JSON.stringify({ [routingKey]: next }));
+  assert.equal(routedModel(metadata, "build", "root", "root").variant, "xhigh");
+  assert.equal(routedModel(metadata, "plan", "child", "root").variant, "xhigh");
+  assert.equal(
+    routedModel(metadata, "build", "child", "root").id,
+    "big-pickle",
+  );
+  assert.equal(
+    routedModel(metadata, "plan", "sibling", "root").id,
+    "big-pickle",
+  );
+  for (const role of ["title", "summary", "compaction", "explore"])
+    assert.equal(routedModel(metadata, role, "root", "root").id, "big-pickle");
 });
 
 test("free to paid fails closed for an unavailable paid variant and succeeds after catalog recovery", async () => {

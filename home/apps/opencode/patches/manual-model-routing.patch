@@ -1,15 +1,18 @@
 --- a/packages/tui/src/context/local.tsx
 +++ b/packages/tui/src/context/local.tsx
-@@ -26,6 +26,8 @@
+@@ -27,6 +27,11 @@
  import { usePermission } from "./permission"
  import { useLocation } from "./location"
  import { parse } from "../util/model"
 +import { useClient } from "./client"
-+import { routing, routingKey } from "@opencode/schema/local-model-routing"
++import { createComponent } from "solid-js"
++import type { DialogContext } from "../ui/dialog"
++import { DialogSelect } from "../ui/dialog-select"
++import { helperMode, routing, routingKey, selectedRouting, type Routing } from "@opencode/schema/local-model-routing"
  
  export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
    name: "Local",
-@@ -40,6 +42,7 @@
+@@ -41,6 +45,7 @@
      const event = useEvent()
      const permission = usePermission()
      const location = useLocation()
@@ -17,7 +20,7 @@
  
      const models = () => data.location.model.list(location.ref)
      const providers = () => data.location.provider.list(location.ref)
-@@ -111,7 +114,7 @@
+@@ -112,7 +118,7 @@
              if (route.data.type === "session") setAgentStore("draftBySession", route.data.sessionID, { agent: id })
              // Retain both selections while agent and model commits arrive separately.
              const selected = changed && route.data.type === "session" ? model.current() : undefined
@@ -26,34 +29,145 @@
            })
          },
          move(direction: 1 | -1) {
-@@ -305,17 +308,47 @@
+@@ -150,9 +156,11 @@
+       const [selectionState, setSelectionState] = createStore<{
+-        newSessionModelByLocationAgent: Record<string, ModelPreferenceModel | undefined>
++        newSessionModelByLocationAgent: Record<string, ModelSelection | undefined>
+         selectionBySessionAgent: Record<string, Record<string, ModelSelection | undefined> | undefined>
++        routingByLocation: Record<string, Routing | undefined>
+       }>({
+         newSessionModelByLocationAgent: {},
+         selectionBySessionAgent: {},
++        routingByLocation: {},
+       })
+ 
+       const repository = createModelPreferenceRepository(path.join(paths.state, "model.json"))
+@@ -221,6 +229,10 @@
+ 
+       const currentSelection = createMemo<ModelSelection | undefined>(() => {
+         if (route.data.type === "session") return sessionSelection(route.data.sessionID)
++        const routed = routedModel(routingMetadata(), agent.current()?.id ?? "build", "$root", "$root")
++        if (routed) return { providerID: routed.providerID, modelID: routed.id, variant: routed.variant }
++        const draft = selectionState.newSessionModelByLocationAgent[locationAgentKey(agent.current()?.id ?? "build")]
++        if (draft && isModelValid(draft)) return draft
+         const model = newSessionModel()
+         if (!model) return
+         return preferredSelection(model)
+@@ -240,10 +251,8 @@
+       function preferredSelection(model: ModelPreferenceModel): ModelSelection {
+         const configured = agent.current()?.model
+         const fallback = configuredModel()
+-        const preferred = preferences.variant[modelPreferenceKey(model)]
+         const variant = normalizeModelVariant(
+-          preferred ??
+-            (configured?.providerID === model.providerID && configured.id === model.modelID
++          (configured?.providerID === model.providerID && configured.id === model.modelID
+               ? configured.variant
+               : undefined) ??
+             (fallback?.providerID === model.providerID && fallback.modelID === model.modelID
+@@ -279,7 +289,7 @@
+           }
+           root = parent
+         }
+-        const routed = routedModel(root?.metadata, current.id)
++        const routed = routedModel(root?.metadata, current.id, sessionID, root?.id)
+         if (routed) return {
+           providerID: routed.providerID,
+           modelID: routed.id,
+@@ -323,22 +334,96 @@
          )
        }
  
 -      function selectModel(model: ModelPreferenceModel) {
+-        if (route.data.type === "session") {
+-          const sessionID = route.data.sessionID
+-          const current = sessionSelection(sessionID)
+-          setSessionDraft(
+-            sessionID,
+-            current?.providerID === model.providerID && current.modelID === model.modelID
+-              ? current
+-              : preferredSelection(model),
+-          )
++      function routingMetadata() {
++        const state = selectionState.routingByLocation[locationAgentKey("$routing")]
++        return state ? { [routingKey]: state } : undefined
++      }
++
++      let helperDialog: DialogContext | undefined
++      function bindHelperDialog(dialog: DialogContext) {
++        helperDialog = dialog
++        return () => {
++          if (helperDialog === dialog) helperDialog = undefined
++        }
++      }
++
++      function chooseHelperMode() {
++        const dialog = helperDialog
++        if (!dialog) return Promise.resolve(undefined)
++        return new Promise<Routing["mode"] | undefined>((resolve) => {
++          dialog.replace(() => createComponent(DialogSelect<Routing["mode"]>, {
++              title: "Choose helper models",
++              options: [
++                { title: "Free", value: "free", description: "Big Pickle for other agents, title and compaction" },
++                { title: "Paid", value: "paid", description: "Configured Sol/Luna helpers; may incur charges" },
++              ],
++              onSelect: (option) => { resolve(option.value); dialog.clear() },
++          }), () => resolve(undefined))
++        })
++      }
++
 +      let selecting = false
-+      async function manualSelection(sessionID: string, apply: () => void) {
++      async function manualSelection(selection: ModelSelection, changeModel: boolean) {
 +        if (selecting) return false
 +        selecting = true
 +        const agentID = agent.current()?.id
++        const sessionID = route.data.type === "session" ? route.data.sessionID : undefined
++        const locationKey = locationAgentKey("$routing")
++        const active = () => agent.current()?.id === agentID && locationAgentKey("$routing") === locationKey &&
++          (sessionID ? route.data.type === "session" && route.data.sessionID === sessionID : route.data.type === "home")
 +        try {
-+          let root = await client.api.session.get({ sessionID })
-+          const seen = new Set<string>([root.id])
-+          while (root.parentID) {
-+            if (seen.has(root.parentID)) throw new Error("Cyclic session parent chain")
-+            seen.add(root.parentID)
++          if (!agentID || !active()) return false
++          const ref = { providerID: selection.providerID, id: selection.modelID, variant: selection.variant }
++          const mode = changeModel ? helperMode(ref) ?? await chooseHelperMode() : undefined
++          if (!active() || (changeModel && !mode)) return false
++          let root = sessionID ? await client.api.session.get({ sessionID }) : undefined
++          const seen = new Set<string>()
++          while (root?.parentID) {
++            if (seen.has(root.id)) throw new Error("Cyclic session parent chain")
++            seen.add(root.id)
 +            root = await client.api.session.get({ sessionID: root.parentID })
 +          }
-+          if (routing(root.metadata)) {
-+            const metadata = { ...root.metadata }
-+            delete metadata[routingKey]
-+            await client.api.session.update({ sessionID: root.id, metadata })
-+            data.session.invalidate(root.id)
-+            await data.session.sync(root.id)
++          const metadata = root ? root.metadata : routingMetadata()
++          const state = routing(metadata)
++          // Changing effort must not switch the helper stack or other agents.
++          // Without a profile, keep native per-session selection behavior.
++          if (changeModel || state) {
++            const next = selectedRouting(metadata, mode ?? state?.mode ?? "paid",
++              root && root.id !== sessionID ? sessionID! : "$root", agentID, ref)
++            if (!changeModel && state) next.models = state.models
++            for (const required of [...Object.values(next.models), ref]) {
++              const info = models()?.find((item) => item.providerID === required.providerID && item.id === required.id)
++              if (!info || (required.variant && !info.variants.some((item) => item.id === required.variant)))
++                throw new Error(`Model unavailable: ${required.providerID}/${required.id}${required.variant ? `#${required.variant}` : ""}`)
++            }
++            if (!active()) return false
++            if (root) {
++              await client.api.session.update({ sessionID: root.id, metadata: { ...root.metadata, [routingKey]: next } })
++              data.session.invalidate(root.id)
++              await data.session.sync(root.id)
++            } else {
++              setSelectionState("routingByLocation", locationKey, next)
++            }
 +          }
-+          if (route.data.type !== "session" || route.data.sessionID !== sessionID || agent.current()?.id !== agentID) return false
-+          apply()
-+          return true
++          if (!active()) return false
++          if (sessionID) setSessionDraft(sessionID, selection)
++          else setSelectionState("newSessionModelByLocationAgent", locationAgentKey(agentID), selection)
+           return true
+-        }
+-        const current = agent.current()
+-        if (!current) return false
+-        setSelectionState("newSessionModelByLocationAgent", locationAgentKey(current.id), model)
+-        return true
 +        } catch (error) {
 +          toast.show({ title: "Model selection", message: String(error), variant: "error" })
 +          return false
@@ -61,23 +175,27 @@
 +      }
 +
 +      async function selectModel(model: ModelPreferenceModel, preserveRouting = false) {
-         if (route.data.type === "session") {
-           const sessionID = route.data.sessionID
-           const current = sessionSelection(sessionID)
--          setSessionDraft(
-+          const apply = () => setSessionDraft(
-             sessionID,
-             current?.providerID === model.providerID && current.modelID === model.modelID
-               ? current
-               : preferredSelection(model),
-           )
--          return true
-+          if (preserveRouting) { apply(); return true }
-+          return manualSelection(sessionID, apply)
-         }
-         const current = agent.current()
-         if (!current) return false
-@@ -424,7 +457,7 @@
++        const current = currentSelection()
++        const selection = current?.providerID === model.providerID && current.modelID === model.modelID
++          ? current : preferredSelection(model)
++        if (preserveRouting) {
++          if (route.data.type === "session") setSessionDraft(route.data.sessionID, selection)
++          return true
++        }
++        return manualSelection(selection, true)
+       }
+ 
+       function reconcileSessionSelection(sessionID: string) {
+@@ -371,6 +446,8 @@
+ 
+       return {
+         current: currentModel,
++        routingMetadata,
++        bindHelperDialog,
+         selection: currentSelection,
+         remember() {
+           const current = agent.current()
+@@ -442,7 +518,7 @@
            if (!val) return
            selectModel({ ...val })
          },
@@ -86,7 +204,7 @@
            const favorites = preferences.favorite.filter((item) => isModelValid(item))
            if (!favorites.length) {
              toast.show({
-@@ -448,19 +481,20 @@
+@@ -466,19 +542,20 @@
            }
            const next = favorites[index]
            if (!next) return
@@ -111,7 +229,7 @@
          },
          toggleFavorite(model: { providerID: string; modelID: string }) {
            batch(() => {
-@@ -485,11 +519,13 @@
+@@ -503,14 +580,10 @@
              const info = models()?.find((item) => item.providerID === m.providerID && item.id === m.modelID)
              return info?.variants?.map((variant) => variant.id) ?? []
            },
@@ -119,14 +237,15 @@
 +          async set(value: string | undefined) {
              const m = currentSelection()
              if (!m) return
-             if (route.data.type === "session") {
+-            if (route.data.type === "session") {
 -              setSessionDraft(route.data.sessionID, { ...m, variant: normalizeModelVariant(value) })
-+              const sessionID = route.data.sessionID
-+              const selection = { ...m, variant: normalizeModelVariant(value) }
-+              if (!await manualSelection(sessionID, () => setSessionDraft(sessionID, selection))) return
-             }
-             setPreferences("variant", modelPreferenceKey(m), value ?? "default")
-             void repository.saveVariant(m, value).catch(() => undefined)
+-            }
+-            setPreferences("variant", modelPreferenceKey(m), value ?? "default")
+-            void repository.saveVariant(m, value).catch(() => undefined)
++            return manualSelection({ ...m, variant: normalizeModelVariant(value) }, false)
+           },
+           cycle() {
+             const variants = this.list()
 --- a/packages/tui/src/component/dialog-model.tsx
 +++ b/packages/tui/src/component/dialog-model.tsx
 @@ -20,8 +20,8 @@
@@ -140,3 +259,34 @@
      const list = local.model.variant.list()
      const cur = local.model.variant.current()
      if (cur && list.includes(cur)) {
+--- a/packages/core/src/session/runner/model.ts
++++ b/packages/core/src/session/runner/model.ts
+@@ -88,7 +88,7 @@
+           root = parent
+         }
+         const role = session.agent ?? (yield* agents.select(undefined)).id
+-        const routed = routedModel(root.metadata, role)
++        const routed = routedModel(root.metadata, role, session.id, root.id)
+         if (routed) session = { ...session, model: Model.Ref.make(routed) }
+         // Location plugins populate and filter the catalog asynchronously during layer startup.
+         if (!session.model) {
+--- a/packages/tui/src/component/prompt/index.tsx
++++ b/packages/tui/src/component/prompt/index.tsx
+@@ -1236,6 +1236,7 @@
+       const newSessionID = args.takeNewSessionID()
+       const created = data.session.create({
+         id: newSessionID,
++        metadata: local.model.routingMetadata(),
+         location: directory ? { directory } : location,
+         agent: agent.id,
+         model: {
+--- a/packages/tui/src/app.tsx
++++ b/packages/tui/src/app.tsx
+@@ -496,6 +496,7 @@
+   const renderer = useRenderer()
+   const dialog = useDialog()
+   const local = useLocal()
++  onCleanup(local.model.bindHelperDialog(dialog))
+   const sessionTabs = useSessionTabs()
+   const panels = usePanel()
+   const keymap = Keymap.use()
