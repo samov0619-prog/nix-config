@@ -4,7 +4,7 @@
 flake input `github:anomalyco/opencode/v2.1.4` (rev `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`),
 без обновления всего nixpkgs-unstable. Официальный LTS-канал не обнаружен.
 `package.nix` сохраняет upstream build и добавляет
-`patches/session-routing.patch`, `patches/session-attention.patch`,
+`patches/session-routing.patch`, `patches/manual-model-routing.patch`, `patches/model-variants.patch`, `patches/session-attention.patch`,
 `patches/question-location.patch`; Linux wrapper сохраняет runtime libraries для watcher
 и native audio. V1-модуль и прежние исследования — в [archive/v1](archive/v1/README.md).
 
@@ -37,22 +37,41 @@ plugin IDs и storage не меняются. Пустой прежний `lib/` 
 `/switch-free` и `/switch-paid` — локальные TUI-команды, без LLM-запроса.
 Они записывают `local.model-routing` в metadata **корневой сессии**, сохраняя
 остальные keys. Новые обычные сессии используют paid defaults. Ручной model
-picker не включает free mode. Сессионная политика после явной команды имеет
-приоритет над отдельным ручным model selection до следующего переключения.
+picker не включает free mode. Ручной выбор модели или variant снимает free/paid
+с корня семьи и возвращает обычный model selection OpenCode: выбранную модель
+текущего агента, настройки остальных агентов и штатное наследование. Это не
+перевод всех агентов на выбранную модель. Повторная `/switch-free` или
+`/switch-paid` снова включает таблицу режима. Простая смена агента режим не снимает.
+Picker ждёт снятия политики до выбора модели/открытия списка variants; ошибки
+обновления показываются, а не маскируются фиктивным локальным выбором.
 
-| Роль                            | Paid                                        |
-| ------------------------------- | ------------------------------------------- |
-| Build/general/research/review   | GPT-6.1 Sol High                            |
-| Plan                            | GPT-6.1 Sol XHigh, alias `gpt-6.1-sol-plan` |
-| Explore                         | GPT-6 Luna Max, alias `gpt-6-luna-max`      |
-| Compaction/служебная generation | Sol High, alias `gpt-6.1-sol-high`          |
-| Title                           | Luna Low                                    |
+| Роль                            | Paid              |
+| ------------------------------- | ----------------- |
+| Build/general/research/review   | GPT-6.1 Sol High  |
+| Plan                            | GPT-6.1 Sol XHigh |
+| Explore                         | GPT-6 Luna Max    |
+| Compaction/служебная generation | Sol High          |
+| Title                           | Luna Low          |
+
+В каталоге нет отдельных `(plan)`, `(summary)` или `(explore)` моделей:
+роли выбирают настоящую модель и её variant. Sol предлагает High/XHigh,
+Luna — Low/Max; строка ввода показывает агент, модель и выбранный effort отдельно.
+`model-variants.patch` читает старые ссылки на aliases в сохранённых сессиях и
+metadata как настоящие модели с прежним effort, без переписывания DB/history.
+Старый session variant `default` тоже получает прежний effort alias: V2 подставляет
+этот sentinel даже при отсутствии variant в сохранённой записи. Явный non-default
+variant сохраняется.
+Старые записи Recent/Favorites больше не доступны как отдельные модели.
 
 Free направляет все эти роли на `opencode/big-pickle`. Политика действует на
 **последующие** запросы существующих детей и сохраняется в DB при reopen.
 Уже начатый запрос не отменяется. Другие корневые сессии не переключаются.
 Перед записью команда проверяет доступность всех моделей/variants; при ошибке
 режим не меняется, автоматического перехода с free на paid нет.
+После изменения metadata обязательно `session.invalidate(id)` перед `session.sync(id)`:
+в V2 sync — кешированная загрузка, а не принудительное обновление. Без invalidate
+сервер уже переходил в paid, но TUI продолжал показывать free; тот же кеш мешал
+применить ручной выбор после снятия политики. Проверка одной DB этого не замечает.
 Настоящий V2 каталог без пользовательских credentials содержит активный Big
 Pickle с public key и нулевой каталожной стоимостью; это не гарантия будущих
 условий сервиса или успешности удалённого запроса.
@@ -129,6 +148,14 @@ workspace/tab urgency через `scripts/silent-attention.py`; не отпра�
 проигрывает аудио. Его подписки не зависят от `attention.sound`, поэтому mute
 не должен отключать подсветку. OSC99 desktop notification сам по себе не
 доказывает Waybar urgency. Live-проверка mute/unmute и PipeWire всё ещё нужна.
+
+HM собирает `tui.ts`, `session-attention.ts` и `silent-attention.py` в один
+store-каталог. Импорты и путь Kitty kitten относительны к реальному entrypoint:
+они не ссылаются на временный flake source snapshot, который GC может удалить.
+Старый `replaceVars` оставлял такие абсолютные пути без зарегистрированных
+Nix references. Для todo эта причина не установлена: при диагностике плагин
+был загружен. Известный отдельный сбой кеша после смены store-ссылок описан ниже;
+сам по себе факт GC не доказывает, что он затронул todo.
 
 `plugins/workspace-context.ts` публикует полное Unicode-название **просматриваемой**
 сессии и её directory в `$XDG_RUNTIME_DIR/hypr-spaces/apps/`, включая rename и
@@ -363,7 +390,7 @@ restart прерывает серверную работу. После заме�
 ```markdown
 # Todo
 
-## [ ] Проверить пробуждение ноутбука
+## [ ] 1. Проверить пробуждение ноутбука
 
 <details>
 <summary>Проверить suspend/resume на текущей прошивке ноутбука.</summary>
@@ -381,6 +408,11 @@ restart прерывает серверную работу. После заме�
 
 </details>
 ```
+
+Новые `changes.add` получают следующий номер в заголовке (после максимального
+номера или количества существующих записей). Старые заголовки и ручные номера
+не переписываются автоматически; номер не заменяет stable ID и не связан с
+числом обращений/приоритетом. Перенумерация старых записей требует подтверждения.
 
 Снаружи остаётся только заголовок с `[ ]`; для выполненного пункта вручную заменить
 на `[x]`. Заголовок — короткое говорящее название, `<summary>` — краткое резюме сути

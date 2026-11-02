@@ -124,7 +124,7 @@ not import Disko.
 
 - `home/apps/opencode/default.nix` — HM laptop/desktop на pinned OpenCode 2.1.4
   (отдельный flake input, не nixpkgs-unstable). `package.nix` добавляет
-  `patches/session-routing.patch`, `patches/session-attention.patch`,
+  `patches/session-routing.patch`, `patches/manual-model-routing.patch`, `patches/model-variants.patch`, `patches/session-attention.patch`,
   `patches/question-location.patch` и Linux runtime libraries. V1-модуль/исследования —
   `archive/v1`, не импортируются. README/BENCHMARK описывают текущий V2.
 - Исходники сгруппированы: `config/` (V2 settings и global rules), `plugins/`,
@@ -161,10 +161,12 @@ not import Disko.
   F3/`agent-todo-open` открывает файл в Kitty/Neovim на laptop/desktop, F1 содержит
   этот bind. Live UI/compositor проверяются на целевой машине; runtime smoke
   проверяет native forms API/Git в изолированном HOME.
-  Новые заметки: `## [ ] Заголовок`, затем закрытый `<details>` с
+  Новые заметки: `## [ ] N. Заголовок`, затем закрытый `<details>` с
   `<summary>` — кратким резюме задачи в одном предложении, не общим «Подробности»
   и не дублем короткого говорящего заголовка; ID, счётчик, цель/возврат/заметки внутри.
-  Ручные `[ ]`/`[x]` и старый формат сохранять; автоматической миграции нет.
+  `changes.add` назначает следующий номер кодом; title передавать без номера.
+  Номер не является stable ID или приоритетом. Ручные `[ ]`/`[x]`, номера и старый
+  формат сохранять; автоматической перенумерации нет.
   HTML-спойлер не включает folds в обычном Neovim buffer.
   Чтение `~/agent-todo/*` явно разрешено без prompt, запись остаётся за edit/Plan
   guard и подтверждением изменений. Todo UI — английские controls, reason на языке
@@ -211,6 +213,20 @@ not import Disko.
   Luna Max explore, Sol High compaction/summary, Luna Low title. Free — Big Pickle
   для всех ролей, без автоматического paid fallback. Обычная compaction до
   явного переключения сохраняет наследование session model.
+  Ручной model/variant selection снимает policy с live root семьи и возвращает
+  обычные agent settings/наследование; выбор текущего агента не становится моделью
+  всех ролей. Повторная slash-команда снова включает policy. Автоматическая смена
+  агента её не снимает. `manual-model-routing.patch` ждёт durable clear до выбора
+  модели/variants. После смены binary переоткрыть TUI.
+  После metadata mutation вызывать `data.session.invalidate(id)` перед `sync(id)`:
+  sync кеширует hydration и иначе оставляет старый режим/модель в TUI. PTY проверяет
+  public `ui.model.current()` после переключений и настоящего model picker, не одну DB.
+  В каталоге только настоящие Sol/Luna с variants High/XHigh и Low/Max, без
+  role-specific aliases `(plan)`/`(summary)`/`(explore)`. `model-variants.patch`
+  нормализует старые session/model-routing ссылки при чтении, без правки DB/history.
+  Старый `variant = "default"` у alias означает его прежний effort, а не потерю
+  XHigh/High/Max; явный non-default variant сохраняется. Проверять старые сессии
+  через настоящий runtime, не только plain-object unit fixture.
 - Auto compaction: soft input 244000 − buffer 32000 = 212000; output 128000,
   keep.tokens 15000. V2 не имеет прежнего `prune=false`; между шагами возможен overshoot.
 - Audio — только native notifications/OpenTUI; mutable `cli.json` seeded once,
@@ -224,6 +240,11 @@ not import Disko.
   Это не single-owner election для одной сессии в нескольких TUI. После замены
   binary переоткрыть TUI (не только `/reload`); общий server менять не нужно.
   Самостоятельный Mac archive с официальным binary не содержит этот patch.
+  Quiet urgency устанавливается одним store-каталогом с TS helper и Python kitten;
+  imports/assets относительны к real entrypoint. Не подставлять пути flake source
+  через replaceVars: прежний output не имел Nix references, и GC удалял helper.
+  Для исторического отказа todo после GC эта причина не подтверждена; при проверке
+  он был загружен. Известный кеш при retarget plugin symlink — отдельный случай.
 - Звуковая граница: домашние anime done/error и freedesktop permission — только
   для личных laptop/desktop. Корпоративный Mac использует стандартные встроенные
   звуки и штатный `opencode.notifications`; удалённый `session-notifications`
@@ -245,8 +266,11 @@ not import Disko.
   Title usage есть в native V2 events, но не добавляется к message totals отчёта;
   это не invoice или измеритель подписочной квоты. WS response.create проверен
   unit-тестом, реальный HTTP — mock runtime с retries и обеими compaction.
-- Проверка после правок: build без activation, isolated V2 runtime/mock Responses,
-  native и summarizing compaction, title/summary/children, реальный TUI PTY.
+- Verification coverage after changes: build without activation, isolated V2
+  runtime/mock Responses, native and summarizing compaction, title/summary/children,
+  and real TUI PTY. This is a coverage checklist, not authorization to run it
+  automatically. Leave builds to the user unless explicitly requested; obtain
+  separate approval before resource-intensive runtime or PTY checks.
   `tests/test_v2_runtime.py <binary>`: обычный, `--native`, `--catalog`, `--mac`.
   Live Kitty/audio/Waybar и Mac AVFoundation проверяются на целевой машине.
 - Mac source overlay — `home/apps/opencode/macos/`; актуальная база — `Downloads/opc.zip`.
@@ -475,10 +499,16 @@ FAILED: phase=build; input=nixpkgs; host=laptop; output=home-manager; exit=1
 
 ## Применение конфигурации
 
-**Никогда не запускай `nixos-rebuild switch` или `home-manager switch`.**
-Пользователь применяет системную и Home Manager-конфигурацию самостоятельно
-после личной проверки. Для проверки агент может выполнять только evaluation
-или build без активации, например `nix eval` или `nix build`.
+- NEVER run `nixos-rebuild switch` or `home-manager switch`. The user applies
+  NixOS and Home Manager configurations after personal review.
+- Leave Nix closure verification builds to the user by default. This includes
+  `nix build`, `nix flake check`, rebuild/build commands, and scripts that invoke
+  builds, including `nix-flake-update-verify`. Run a specific build only when the
+  user explicitly requests it; general review or commit approval is not enough.
+- Lightweight evaluation without realizing derivations is allowed. Obtain
+  approval before expensive evaluation.
+- Provide the smallest verification command for the affected host/output.
+  Do not run the full verification matrix automatically.
 
 ### Область применения изменений
 

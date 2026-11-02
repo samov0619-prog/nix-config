@@ -89,6 +89,21 @@ export function applyNoteChanges(before: string, changes: NoteChanges) {
       .split("\n")
       .map((line) => `  ${line}`)
       .join("\n");
+  // New numbers are local reading aids, not stable IDs or visit priorities.
+  // Preserve existing headings (including legacy/un-numbered/manual entries).
+  const headings = [...content.matchAll(/^## (.+)$/gm)];
+  let number = Math.max(
+    0,
+    headings.length,
+    ...headings.map((heading) =>
+      Number(heading[1].match(/^(?:\[[ xX]\] )?([1-9][0-9]*)\. /)?.[1] ?? 0),
+    ),
+  );
+  if (
+    (changes.add?.length ?? 0) &&
+    !Number.isSafeInteger(number + changes.add!.length)
+  )
+    throw Error("Todo heading number exceeds the safe integer range.");
   for (const note of changes.add ?? []) {
     if (!validID(note.id) || ids.has(note.id))
       throw Error(`Todo ID already exists or is invalid: ${note.id}`);
@@ -116,7 +131,7 @@ export function applyNoteChanges(before: string, changes: NoteChanges) {
     if (!content) content = "# Todo\n";
     content +=
       (content.endsWith("\n\n") ? "" : content.endsWith("\n") ? "\n" : "\n\n") +
-      `## [ ] ${html(note.title)}\n\n<details>\n<summary>${html(note.summary)}</summary>\n\n<!-- todo:${note.id} -->\n\n` +
+      `## [ ] ${++number}. ${html(note.title)}\n\n<details>\n<summary>${html(note.summary)}</summary>\n\n<!-- todo:${note.id} -->\n\n` +
       `- Цель:\n${indent(note.goal)}\n- Условие возврата:\n${indent(note.returnWhen)}\n` +
       (note.notes ? `- Заметки:\n${indent(note.notes)}\n` : "") +
       "\n</details>\n";
@@ -702,7 +717,7 @@ export async function setupTodo(
                     title: {
                       type: "string",
                       description:
-                        "Short descriptive Russian title, without heading/checkbox markup",
+                        "Short descriptive Russian title, without numbering or heading/checkbox markup; code assigns the next note number",
                     },
                     summary: {
                       type: "string",

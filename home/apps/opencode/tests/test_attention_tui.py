@@ -93,7 +93,10 @@ def main(binary):
         for name in ["quiet-urgency", "attention-probe"]:
             directory = config / "plugins" / name
             directory.mkdir(parents=True)
-            if name == "quiet-urgency" and generation:
+            urgency_package = os.environ.get("OPENCODE_TEST_QUIET_URGENCY_PLUGIN")
+            if name == "quiet-urgency" and urgency_package:
+                (directory / "tui.ts").symlink_to(Path(urgency_package) / "tui.ts")
+            elif name == "quiet-urgency" and generation:
                 (directory / "tui.ts").symlink_to(
                     Path(generation)
                     / "home-files/.config/opencode/plugins/quiet-urgency/tui.ts"
@@ -104,16 +107,13 @@ def main(binary):
                     if name == "attention-probe"
                     else "plugins/quiet-urgency.ts"
                 )
-                (directory / "tui.ts").write_text(
-                    source.read_text()
-                    .replace(
-                        "@sessionAttention@",
-                        str(SOURCE / "patches/session-attention.ts"),
-                    )
-                    .replace(
-                        "@silentAttention@", str(SOURCE / "scripts/silent-attention.py")
-                    )
-                )
+                (directory / "tui.ts").write_text(source.read_text())
+                if name == "quiet-urgency":
+                    for target, relative in [
+                        ("session-attention.ts", "patches/session-attention.ts"),
+                        ("silent-attention.py", "scripts/silent-attention.py"),
+                    ]:
+                        (directory / target).write_text((SOURCE / relative).read_text())
         env = {
             key: value
             for key, value in os.environ.items()
@@ -564,7 +564,7 @@ def main(binary):
                         visible = (
                             ["Reject", "Type your own answer"]
                             if final
-                            else [f"[ ] Task {index}", "this note only"]
+                            else [f"[ ] {index + 1}. Task {index}", "this note only"]
                         )
                         visible += [
                             "tab",
@@ -725,7 +725,7 @@ def main(binary):
                             assert result["feedback"] == [
                                 {
                                     "id": f"batch-{i}",
-                                    "title": f"[ ] Task {i}",
+                                    "title": f"[ ] {i + 1}. Task {i}",
                                     "feedback": f"Comment for task {i}",
                                 }
                                 for i in [0, 1]
@@ -733,7 +733,9 @@ def main(binary):
                             assert result["draft"]["changes"] == batch["changes"]
                     else:
                         saved = (root / "agent-todo/todo.md").read_text()
-                        assert all(f"## [ ] Task {i}" in saved for i in range(3))
+                        assert all(
+                            f"## [ ] {i + 1}. Task {i}" in saved for i in range(3)
+                        )
                         assert (
                             subprocess.check_output(
                                 ["git", "rev-list", "--count", "HEAD"],
@@ -826,7 +828,7 @@ def main(binary):
                 api(f"session/{a}/prompt", {"text": "Проверь отмену при reload."})
                 wait(
                     lambda: (
-                        "[ ] Reload task" in frame() and "this note only" in frame()
+                        "[ ] 4. Reload task" in frame() and "this note only" in frame()
                     ),
                     "Reload review did not open",
                 )
@@ -848,7 +850,7 @@ def main(binary):
                 )
                 wait(
                     lambda: (
-                        "[ ] Reload task" in frame() and "this note only" in frame()
+                        "[ ] 4. Reload task" in frame() and "this note only" in frame()
                     ),
                     "Pending review did not recover after disconnect",
                 )

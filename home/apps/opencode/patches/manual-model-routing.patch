@@ -1,0 +1,142 @@
+--- a/packages/tui/src/context/local.tsx
++++ b/packages/tui/src/context/local.tsx
+@@ -26,6 +26,8 @@
+ import { usePermission } from "./permission"
+ import { useLocation } from "./location"
+ import { parse } from "../util/model"
++import { useClient } from "./client"
++import { routing, routingKey } from "@opencode/schema/local-model-routing"
+ 
+ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
+   name: "Local",
+@@ -40,6 +42,7 @@
+     const event = useEvent()
+     const permission = usePermission()
+     const location = useLocation()
++    const client = useClient()
+ 
+     const models = () => data.location.model.list(location.ref)
+     const providers = () => data.location.provider.list(location.ref)
+@@ -111,7 +114,7 @@
+             if (route.data.type === "session") setAgentStore("draftBySession", route.data.sessionID, { agent: id })
+             // Retain both selections while agent and model commits arrive separately.
+             const selected = changed && route.data.type === "session" ? model.current() : undefined
+-            if (selected) model.set(selected)
++            if (selected) model.set(selected, { preserveRouting: true })
+           })
+         },
+         move(direction: 1 | -1) {
+@@ -305,17 +308,47 @@
+         )
+       }
+ 
+-      function selectModel(model: ModelPreferenceModel) {
++      let selecting = false
++      async function manualSelection(sessionID: string, apply: () => void) {
++        if (selecting) return false
++        selecting = true
++        const agentID = agent.current()?.id
++        try {
++          let root = await client.api.session.get({ sessionID })
++          const seen = new Set<string>([root.id])
++          while (root.parentID) {
++            if (seen.has(root.parentID)) throw new Error("Cyclic session parent chain")
++            seen.add(root.parentID)
++            root = await client.api.session.get({ sessionID: root.parentID })
++          }
++          if (routing(root.metadata)) {
++            const metadata = { ...root.metadata }
++            delete metadata[routingKey]
++            await client.api.session.update({ sessionID: root.id, metadata })
++            data.session.invalidate(root.id)
++            await data.session.sync(root.id)
++          }
++          if (route.data.type !== "session" || route.data.sessionID !== sessionID || agent.current()?.id !== agentID) return false
++          apply()
++          return true
++        } catch (error) {
++          toast.show({ title: "Model selection", message: String(error), variant: "error" })
++          return false
++        } finally { selecting = false }
++      }
++
++      async function selectModel(model: ModelPreferenceModel, preserveRouting = false) {
+         if (route.data.type === "session") {
+           const sessionID = route.data.sessionID
+           const current = sessionSelection(sessionID)
+-          setSessionDraft(
++          const apply = () => setSessionDraft(
+             sessionID,
+             current?.providerID === model.providerID && current.modelID === model.modelID
+               ? current
+               : preferredSelection(model),
+           )
+-          return true
++          if (preserveRouting) { apply(); return true }
++          return manualSelection(sessionID, apply)
+         }
+         const current = agent.current()
+         if (!current) return false
+@@ -424,7 +457,7 @@
+           if (!val) return
+           selectModel({ ...val })
+         },
+-        cycleFavorite(direction: 1 | -1) {
++        async cycleFavorite(direction: 1 | -1) {
+           const favorites = preferences.favorite.filter((item) => isModelValid(item))
+           if (!favorites.length) {
+             toast.show({
+@@ -448,19 +481,20 @@
+           }
+           const next = favorites[index]
+           if (!next) return
+-          if (!selectModel({ ...next })) return
++          if (!await selectModel({ ...next })) return
+           setPreferences("recent", recentModels(next, preferences.recent))
+           void repository.addRecent(next).catch(() => undefined)
+         },
+-        set(model: { providerID: string; modelID: string }, options?: { recent?: boolean }) {
++        async set(model: { providerID: string; modelID: string }, options?: { recent?: boolean; preserveRouting?: boolean }) {
++          if (!isModelValid(model)) return false
++          if (!await selectModel(model, options?.preserveRouting)) return false
+           batch(() => {
+-            if (!isModelValid(model)) return
+-            if (!selectModel(model)) return
+             if (options?.recent) {
+               setPreferences("recent", recentModels(model, preferences.recent))
+               void repository.addRecent(model).catch(() => undefined)
+             }
+           })
++          return true
+         },
+         toggleFavorite(model: { providerID: string; modelID: string }) {
+           batch(() => {
+@@ -485,11 +519,13 @@
+             const info = models()?.find((item) => item.providerID === m.providerID && item.id === m.modelID)
+             return info?.variants?.map((variant) => variant.id) ?? []
+           },
+-          set(value: string | undefined) {
++          async set(value: string | undefined) {
+             const m = currentSelection()
+             if (!m) return
+             if (route.data.type === "session") {
+-              setSessionDraft(route.data.sessionID, { ...m, variant: normalizeModelVariant(value) })
++              const sessionID = route.data.sessionID
++              const selection = { ...m, variant: normalizeModelVariant(value) }
++              if (!await manualSelection(sessionID, () => setSessionDraft(sessionID, selection))) return
+             }
+             setPreferences("variant", modelPreferenceKey(m), value ?? "default")
+             void repository.saveVariant(m, value).catch(() => undefined)
+--- a/packages/tui/src/component/dialog-model.tsx
++++ b/packages/tui/src/component/dialog-model.tsx
+@@ -20,8 +20,8 @@
+   const newDesigns = useNewDesigns()
+   const connected = useConnected()
+ 
+-  function select(providerID: string, modelID: string) {
+-    local.model.set({ providerID, modelID }, { recent: true })
++  async function select(providerID: string, modelID: string) {
++    if (!await local.model.set({ providerID, modelID }, { recent: true })) return
+     const list = local.model.variant.list()
+     const cur = local.model.variant.current()
+     if (cur && list.includes(cur)) {

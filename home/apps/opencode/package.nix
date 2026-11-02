@@ -2,6 +2,8 @@
 upstream.overrideAttrs (old: {
   patches = (old.patches or [ ]) ++ [
     ./patches/session-routing.patch
+    ./patches/manual-model-routing.patch
+    ./patches/model-variants.patch
     ./patches/session-attention.patch
     ./patches/question-location.patch
   ];

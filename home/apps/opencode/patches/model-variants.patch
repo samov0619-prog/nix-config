@@ -1,0 +1,43 @@
+diff --git a/packages/core/src/session/runner/model.ts b/packages/core/src/session/runner/model.ts
+--- a/packages/core/src/session/runner/model.ts
++++ b/packages/core/src/session/runner/model.ts
+@@ -9,7 +9,7 @@
+ import { ModelResolver } from "../../model-resolver.js"
+ import { SessionSchema } from "../schema.js"
+ import { SessionStore } from "../store.js"
+-import { routedModel } from "@opencode/schema/local-model-routing"
++import { canonicalModel, routedModel } from "@opencode/schema/local-model-routing"
+ 
+ export class ModelNotSelectedError extends Schema.TaggedError<ModelNotSelectedError>()(
+   "SessionRunnerModel.ModelNotSelectedError",
+@@ -78,6 +78,7 @@
+     const store = yield* SessionStore.Service
+     return Service.of({
+       resolve: Effect.fn("SessionRunnerModel.resolve")(function* (session, available) {
++        if (session.model) session = { ...session, model: Model.Ref.make(canonicalModel(session.model)) }
+         // Read the live root policy, not the metadata snapshot inherited by children.
+         let root = (yield* store.get(session.id)) ?? session
+         const seen = new Set<string>([root.id])
+diff --git a/packages/tui/src/context/local.tsx b/packages/tui/src/context/local.tsx
+--- a/packages/tui/src/context/local.tsx
++++ b/packages/tui/src/context/local.tsx
+@@ -1,4 +1,4 @@
+-import { routedModel } from "@opencode/schema/local-model-routing"
++import { canonicalModel, routedModel } from "@opencode/schema/local-model-routing"
+ import { createStore } from "solid-js/store"
+ import { dedupeWith } from "effect/Array"
+ import { createSimpleContext } from "./helper"
+@@ -258,10 +258,11 @@
+       function durableSelection(sessionID: string): ModelSelection | undefined {
+         const model = data.session.get(sessionID)?.model
+         if (!model) return
++        const ref = canonicalModel(model)
+         return {
+-          providerID: model.providerID,
+-          modelID: model.id,
+-          variant: normalizeModelVariant(model.variant),
++          providerID: ref.providerID,
++          modelID: ref.id,
++          variant: normalizeModelVariant(ref.variant),
+         }
+       }

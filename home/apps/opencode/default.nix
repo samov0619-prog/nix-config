@@ -17,6 +17,14 @@ let
     cp ${./plugins/model-routing/model-routing.ts} "$out/model-routing.ts"
     cp ${./plugins/model-routing/routing-models.json} "$out/routing-models.json"
   '';
+  # Keep runtime imports/assets in the plugin closure, not in the flake's
+  # temporary source snapshot (replaceVars does not retain those references).
+  quietUrgencyPlugin = pkgs.runCommand "opencode-quiet-urgency-plugin" { } ''
+    mkdir -p "$out"
+    cp ${./plugins/quiet-urgency.ts} "$out/tui.ts"
+    cp ${./patches/session-attention.ts} "$out/session-attention.ts"
+    cp ${./scripts/silent-attention.py} "$out/silent-attention.py"
+  '';
   # V2 checks realpath(server entrypoint) is inside realpath(plugin root).
   # A directory symlink to ordinary store files passes; an index.ts symlink
   # escaping a real HM directory is silently filtered by native discovery.
@@ -96,9 +104,9 @@ in
   }
   // lib.optionalAttrs pkgs.stdenv.isLinux {
     "opencode/plugins/workspace-context/tui.ts".source = ./plugins/workspace-context.ts;
-    "opencode/plugins/quiet-urgency/tui.ts".source = pkgs.replaceVars ./plugins/quiet-urgency.ts {
-      silentAttention = ./scripts/silent-attention.py;
-      sessionAttention = ./patches/session-attention.ts;
+    "opencode/plugins/quiet-urgency" = {
+      source = quietUrgencyPlugin;
+      recursive = true;
     };
   };
 

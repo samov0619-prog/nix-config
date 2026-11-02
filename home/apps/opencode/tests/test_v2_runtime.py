@@ -458,6 +458,24 @@ def main(binary, catalog_only=False, mac=False, native=False):
                 }, local
                 assert all(p["state"]["status"] == "active" for p in local), local
                 print("PASS: configured agents and native local plugins active")
+                catalog = api("model")["data"]
+                aliases = {"gpt-6.1-sol-plan", "gpt-6.1-sol-high", "gpt-6-luna-max"}
+                assert not any(
+                    m["providerID"] == "openai" and m["id"] in aliases for m in catalog
+                )
+                for model_id, variants in [
+                    ("gpt-6.1-sol", {"high", "xhigh"}),
+                    ("gpt-6-luna", {"low", "max"}),
+                ]:
+                    model = next(
+                        m
+                        for m in catalog
+                        if m["providerID"] == "openai" and m["id"] == model_id
+                    )
+                    assert variants <= {v["id"] for v in model["variants"]}, model
+                print(
+                    "PASS: real model catalog has role variants, no Plan/summary/explore aliases"
+                )
                 by_skill = {skill["id"]: skill for skill in skills["data"]}
                 assert {"opencode", "report"} <= by_skill.keys()
                 for skill_id in [
@@ -1095,6 +1113,9 @@ def main(binary, catalog_only=False, mac=False, native=False):
                 assert (
                     (root / "agent-todo/todo.md").read_text().startswith(original_todo)
                 )
+                numbered = (root / "agent-todo/todo.md").read_text()
+                assert "## [ ] 2. Long task" in numbered, numbered
+                assert "## [ ] 3. Last task" in numbered, numbered
                 assert (
                     subprocess.check_output(
                         ["git", "rev-list", "--count", "HEAD"],
@@ -1187,6 +1208,23 @@ def main(binary, catalog_only=False, mac=False, native=False):
                     print(
                         "PASS: no global formatter; native write/edit/patch preserve existing layout"
                     )
+                for alias, model_id, effort in [
+                    ("gpt-6.1-sol-plan", "gpt-6.1-sol", "xhigh"),
+                    ("gpt-6.1-sol-high", "gpt-6.1-sol", "high"),
+                    ("gpt-6-luna-max", "gpt-6-luna", "max"),
+                ]:
+                    legacy = api(
+                        "session",
+                        {
+                            "title": "Legacy model reference",
+                            "model": {"providerID": "openai", "id": alias},
+                        },
+                    )["data"]["id"]
+                    assert api(f"session/{legacy}")["data"]["model"]["id"] == alias
+                    prompt(legacy, model_id, effort)
+                print(
+                    "PASS: legacy session model references resolve without selectable aliases"
+                )
                 attempts = []
                 for path in (root / "state/opencode/model-calls").glob("*.jsonl"):
                     rows = [json.loads(line) for line in path.read_text().splitlines()]

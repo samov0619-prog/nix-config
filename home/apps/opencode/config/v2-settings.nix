@@ -1,16 +1,37 @@
 { lib }:
 let
   routes = builtins.fromJSON (builtins.readFile ../plugins/model-routing/routing-models.json);
-  model = role:
-    let ref = routes.${role} or routes."*";
-    in "${ref.providerID}/${ref.id}#${ref.variant}";
-  deny = action: { inherit action; resource = "*"; effect = "deny"; };
-  analysisPermissions = map deny [ "edit" "subagent" "todowrite" ];
-  limit = { context = 1050000; input = 244000; output = 128000; };
-  reasoning = effort: {
+  model =
+    role:
+    let
+      ref = routes.${role} or routes."*";
+    in
+    "${ref.providerID}/${ref.id}#${ref.variant}";
+  deny = action: {
+    inherit action;
+    resource = "*";
+    effect = "deny";
+  };
+  analysisPermissions = map deny [
+    "edit"
+    "subagent"
+    "todowrite"
+  ];
+  limit = {
+    context = 1050000;
+    input = 244000;
+    output = 128000;
+  };
+  reasoning = efforts: {
     inherit limit;
-    capabilities.reasoning = { supported = true; effort = [ effort ]; };
-    variants = [{ id = effort; body.reasoning.effort = effort; }];
+    capabilities.reasoning = {
+      supported = true;
+      effort = efforts;
+    };
+    variants = map (effort: {
+      id = effort;
+      body.reasoning.effort = effort;
+    }) efforts;
   };
 in
 {
@@ -19,41 +40,83 @@ in
   share = "disabled";
   model = model "*";
   policies = [
-    { action = "provider.use"; resource = "*"; effect = "deny"; }
-    { action = "provider.use"; resource = "openai"; effect = "allow"; }
-    { action = "provider.use"; resource = "opencode"; effect = "allow"; }
-  ] ++ map (resource: { action = "tool.use"; inherit resource; effect = "deny"; }) [
-    "shell:git push*" "shell:git pull*" "shell:git fetch*" "shell:git clone*"
-    "shell:git ls-remote*" "shell:git remote update*"
-    "shell:git * push*" "shell:git * pull*" "shell:git * fetch*"
-    "shell:git * clone*" "shell:git * ls-remote*" "shell:git * remote update*"
-    "shell:git remote show*" "shell:git remote set-head*--auto*"
-    "shell:git * remote show*" "shell:git * remote set-head*--auto*"
-    "shell:git remote add -f*" "shell:git remote add --fetch*"
-    "shell:git * remote add -f*" "shell:git * remote add --fetch*"
-  ] ++ map (resource: { action = "tool.use"; inherit resource; effect = "allow"; }) [
-    # `remote show -n` only reads the cached local configuration.
-    "shell:git remote show -n*" "shell:git remote show * -n*"
-    "shell:git * remote show -n*" "shell:git * remote show * -n*"
-  ];
+    {
+      action = "provider.use";
+      resource = "*";
+      effect = "deny";
+    }
+    {
+      action = "provider.use";
+      resource = "openai";
+      effect = "allow";
+    }
+    {
+      action = "provider.use";
+      resource = "opencode";
+      effect = "allow";
+    }
+  ]
+  ++
+    map
+      (resource: {
+        action = "tool.use";
+        inherit resource;
+        effect = "deny";
+      })
+      [
+        "shell:git push*"
+        "shell:git pull*"
+        "shell:git fetch*"
+        "shell:git clone*"
+        "shell:git ls-remote*"
+        "shell:git remote update*"
+        "shell:git * push*"
+        "shell:git * pull*"
+        "shell:git * fetch*"
+        "shell:git * clone*"
+        "shell:git * ls-remote*"
+        "shell:git * remote update*"
+        "shell:git remote show*"
+        "shell:git remote set-head*--auto*"
+        "shell:git * remote show*"
+        "shell:git * remote set-head*--auto*"
+        "shell:git remote add -f*"
+        "shell:git remote add --fetch*"
+        "shell:git * remote add -f*"
+        "shell:git * remote add --fetch*"
+      ]
+  ++
+    map
+      (resource: {
+        action = "tool.use";
+        inherit resource;
+        effect = "allow";
+      })
+      [
+        # `remote show -n` only reads the cached local configuration.
+        "shell:git remote show -n*"
+        "shell:git remote show * -n*"
+        "shell:git * remote show -n*"
+        "shell:git * remote show * -n*"
+      ];
   # Other tools retain the native V2 permission baseline. The shell hook also
   # disables Git transports and lazy fetch, independently of remembered Always.
   providers.openai.models = {
-    "gpt-6.1-sol" = reasoning "high";
-    "gpt-6.1-sol-plan" = reasoning "xhigh" // {
-      modelID = "gpt-6.1-sol"; name = "GPT-6.1 Sol (plan)";
-    };
-    "gpt-6.1-sol-high" = reasoning "high" // {
-      modelID = "gpt-6.1-sol"; name = "GPT-6.1 Sol High (summary)";
-    };
-    "gpt-6-luna" = reasoning "low";
-    "gpt-6-luna-max" = reasoning "max" // {
-      modelID = "gpt-6-luna"; name = "GPT-6 Luna Max (explore)";
-    };
+    "gpt-6.1-sol" = reasoning [
+      "high"
+      "xhigh"
+    ];
+    "gpt-6-luna" = reasoning [
+      "low"
+      "max"
+    ];
   };
   agents = {
     build.model = model "build";
-    plan = { model = model "plan"; permissions = [ (deny "edit") ]; };
+    plan = {
+      model = model "plan";
+      permissions = [ (deny "edit") ];
+    };
     general.model = model "general";
     research = {
       model = model "research";
@@ -97,5 +160,9 @@ in
     summary.model = model "summary";
     title.model = model "title";
   };
-  compaction = { auto = true; buffer = 32000; keep.tokens = 15000; };
+  compaction = {
+    auto = true;
+    buffer = 32000;
+    keep.tokens = 15000;
+  };
 }

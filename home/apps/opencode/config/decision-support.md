@@ -28,9 +28,11 @@
   drafts. Any feedback blocks the entire write; changed wording needs renewed approval.
   Wording revisions/retries are not revisits. Never work around a missing presenter
   or declined/stale form through shell/edit or fabricated form answers.
-- Format new items with `## [ ] Русский заголовок`, followed by a closed `<details>`
+- Format new items with `## [ ] N. Русский заголовок`, followed by a closed `<details>`
   block with `<summary>Краткое резюме задачи</summary>` and a blank line. Keep the
-  heading short and descriptive; the summary is one concise Russian sentence about
+  heading short and descriptive; `changes.add` generates N in code (omit it from title).
+  Numbers are reading aids, not stable IDs or visit priorities. Existing headings
+  are not automatically renumbered. The summary is one concise Russian sentence about
   the task, not a generic label or a repetition of the title. Put the stable todo ID
   comment, counter, indented goal, return condition and notes inside that block.
   Preserve existing `[ ]`/`[x]` marks, IDs and legacy layouts unless asked to change

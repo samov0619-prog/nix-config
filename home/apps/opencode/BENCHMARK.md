@@ -4,12 +4,33 @@ Pinned upstream: 2.1.4, `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`.
 Historical model-quality experiments and V1 behavior are retained in
 [archive/v1/BENCHMARK.md](archive/v1/BENCHMARK.md). They do not measure V2 quality.
 
+## Latest review status (2026-11-02)
+
+- All 59 Node unit tests passed, including production patch application and
+  legacy-alias normalization with the `default` variant sentinel.
+- The real picker/Free→Paid/Build→Plan PTY check passed with the installed binary
+  and Home Manager generation. That binary predates the final legacy-alias fix.
+- The attention PTY run passed window isolation, permissions, and todo review,
+  feedback, cancellation, and a single commit, then failed with
+  `Child completion attention not delivered`. Its cause remains unresolved;
+  later assertions in that run were not reached.
+- Runtime checks passed the catalog and main routing/todo paths before failing
+  legacy-alias effort verification. The resulting compatibility fix is covered
+  by unit tests, but its binary build was cancelled at the user's request.
+  Runtime verification of that fix and a fresh native-compaction run are pending.
+
+This is not a fully green verification matrix. Builds remain user-run by default;
+resource-intensive runtime and PTY checks require separate approval. The commands
+below document reproducibility, not authorization to execute them automatically.
+
 ## Reproducible checks
 
 Run from the repository root. None activates a Nix generation:
 
 ```fish
 node --test home/apps/opencode/tests/test_model_routing.mjs home/apps/opencode/tests/test_workspace_context.mjs home/apps/opencode/tests/test_git_offline.mjs home/apps/opencode/tests/test_voice_v2.mjs
+node --test home/apps/opencode/tests/test_manual_model_routing.mjs
+node --test home/apps/opencode/tests/test_model_variants.mjs
 node --test home/apps/opencode/tests/test_permission_stats_v2.mjs home/apps/opencode/tests/test_model_calls.mjs
 node --test home/apps/opencode/tests/test_skill_stats.mjs
 node --test home/apps/opencode/tests/test_agent_todo.mjs
@@ -36,6 +57,10 @@ set generation (nix build --offline --no-link --print-out-paths path:.#homeConfi
 env OPENCODE_TEST_BINARY=$binary OPENCODE_TEST_HM_GENERATION=$generation python3 home/linux/modules/hyprland/tests/test_context_tui.py ContextTui.test_opencode_real_tui_plugin
 env OPENCODE_TEST_HM_GENERATION=$generation python3 home/apps/opencode/tests/test_v2_runtime.py $binary
 env OPENCODE_TEST_HM_GENERATION=$generation python3 home/apps/opencode/tests/test_attention_tui.py $binary
+# Fast targeted check of the HM-built urgency package without building every home package:
+set urgency (nix build --no-link --print-out-paths --impure --expr '(builtins.getFlake ("path:" + builtins.toString ./.)).homeConfigurations.samov-laptop.config.xdg.configFile."opencode/plugins/quiet-urgency".source')
+env OPENCODE_TEST_QUIET_URGENCY_PLUGIN=$urgency node --test home/apps/opencode/tests/test_session_attention.mjs
+env OPENCODE_TEST_BINARY=$binary OPENCODE_TEST_QUIET_URGENCY_PLUGIN=$urgency python3 home/linux/modules/hyprland/tests/test_context_tui.py ContextTui.test_opencode_real_tui_plugin
 ```
 
 The opt-in runtime test uses disposable HOME/XDG/config/data/state, a private
@@ -55,17 +80,37 @@ Coverage:
 - Actual provider requests: Build High, title Luna Low, free main/child/auxiliary
   generation/compaction, live-root paid change for an already-created Explore
   child (Luna Max), Plan XHigh, compaction and summary High after Plan XHigh.
+- Role-specific model aliases are absent from the real catalog; Sol exposes
+  High/XHigh and Luna Low/Max on the real model IDs. The production patch stack
+  is applied in unit fixtures; old persisted aliases resolve without database
+  rewrites, including SessionInfo's `default` sentinel for a missing stored variant.
+  The PTY checks effort through real Build/Plan switching (native Shift+Tab), not names
+  such as `(plan)`; runtime mock requests check the actual wire effort.
 - Both summarizing compaction and native Responses streamed `compaction_trigger`
   checkpoints; both must finish with a stored `completed` compaction, not merely
   send a request. Provider error has no silent free→paid fallback.
 - Root-only metadata mutation, foreign-key preservation, serialization/reopen,
   unrelated sessions, missing models/variants, cycles; local commands make no LLM call.
+- Manual model selection exits the live root policy in both modes, preserving
+  unrelated and inherited child metadata. The actual patched selection functions
+  cover lookup/write failure, retry, cycles, overlapping actions and route changes;
+  automatic agent selection preserves routing. The picker awaits the selection
+  before inspecting variants. The baseline metadata-only free→paid test passed
+  while the public TUI model stayed free: V2 sync is cached hydration, not refresh.
+  Both metadata mutations now invalidate before sync. The PTY probe checks the
+  actual public model after each mode switch and after real picker selection,
+  in addition to durable metadata and zero inference messages.
 - Native TUI/SDK loading in a real PTY, `/switch-free` then `/switch-paid` with
   durable metadata and zero session messages, Unicode rename/workspace publication, Mac voice hotkey
   registration (platform guard on Linux); unit checks for voice cancellation,
   route changes, delayed transcription and no auto-submit.
 - Home Manager's built model-routing directory is loaded through its real store
   symlinks; separate file symlinks break Bun's relative TS/JSON imports.
+- Quiet urgency uses one self-contained store directory for its entrypoint, TS
+  helper and Python kitten; HM-generation PTY checks those real neighboring files.
+  The previous replaceVars output had no Nix references to its absolute source
+  paths; the reported helper path was absent after GC. Todo was loaded during
+  diagnosis, so this does not establish the same cause for its historical failure.
 - Model-call journal matched one-to-one to all mock HTTP requests, including
   paid/free title, child errors, generation, both compaction modes and a real
   429→200 retry. Wire model/effort matched mock bodies; headers were correlated
@@ -141,6 +186,8 @@ reload without implicit approval, deterministic priority/counters, same-user-tur
 deduplication, duplicate IDs, and missing context attribution. Checkbox headings
 and closed `<details>` blocks keep counters inside the spoiler, preserve manual
 completion marks across confirmed revisits, and coexist with unchanged legacy layouts.
+New structured notes receive sequential heading numbers, continuing after manual
+gaps without renumbering existing headings. Numbers are independent of visits/IDs.
 Review tests cover exactly one complete record per note, long lines/paths, Russian,
 wide glyphs/emoji and literal HTML in code, with presentation wrappers removed.
 One native form transports the entire batch and final decision. Proposal-bound consent,

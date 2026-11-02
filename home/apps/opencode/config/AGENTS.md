@@ -44,6 +44,21 @@
 - If no formatter is declared for that file type, preserve the existing layout;
   do not choose a global fallback. Keep lint fixes separate from formatting.
 
+## Verification and Resources
+
+- Leave pre-commit and pre-push verification builds to the user. Requests to
+  review, verify, or commit if everything looks good do not authorize builds.
+- Obtain explicit approval for the command and scope before running
+  resource-intensive checks. Announce the approved work before starting it;
+  never launch it silently in the background or in parallel.
+- Small local unit tests, lint, and static checks that do not build the project
+  may run without separate approval. Ask first when the resource cost is unknown.
+- Reuse verification already performed by the user. If later changes invalidate
+  its coverage, explain the gap and provide a manual verification command instead
+  of starting another build.
+- Clearly distinguish completed checks from checks not run. Never describe
+  unbuilt or untested changes as fully verified.
+
 ## Git Workflow
 
 - Before creating a branch or commit, ALWAYS inspect the user's style with `git log --author="$(git config user.name)" --oneline --branches --remotes -n 15` and follow it.

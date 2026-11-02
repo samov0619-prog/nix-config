@@ -66,6 +66,15 @@ export default Plugin.define({
       }),
     );
     let command = "";
+    let frame: string[] = [];
+    // Read only the buffer leased for post-processing, not a live native output
+    // buffer from a timer (which can throw OutputBusy during presentation).
+    const capture = (buffer: typeof context.renderer.currentRenderBuffer) => {
+      frame = buffer
+        .getSpanLines()
+        .map((line) => line.spans.map((span) => span.text).join(""));
+    };
+    context.renderer.addPostProcessFn(capture);
     const timer = setInterval(() => {
       try {
         const next = readFileSync(`${base}.route`, "utf8").trim();
@@ -107,15 +116,14 @@ export default Plugin.define({
           route,
           plugins: true,
           todo,
-          frame: context.renderer.currentRenderBuffer
-            .getSpanLines()
-            .map((line) => line.spans.map((span) => span.text).join("")),
+          frame,
         }),
       );
       renameSync(`${base}.state.tmp`, `${base}.state`);
     }, 50);
     return () => {
       clearInterval(timer);
+      context.renderer.removePostProcessFn(capture);
       context.attention.notify = original;
       dispose.forEach((cleanup) => cleanup());
     };

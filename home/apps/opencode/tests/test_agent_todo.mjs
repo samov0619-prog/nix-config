@@ -176,7 +176,7 @@ test("structured additions and exact replacements preserve unrelated/manual/lega
   assert.ok(added.startsWith(before));
   assert.match(
     added,
-    /## \[ \] Проверить Kitty\n\n<details>\n<summary>Проверить настройку A &lt; B &amp; C\.<\/summary>/,
+    /## \[ \] 3\. Проверить Kitty\n\n<details>\n<summary>Проверить настройку A &lt; B &amp; C\.<\/summary>/,
   );
   assert.match(
     added,
@@ -229,6 +229,37 @@ test("structured additions and exact replacements preserve unrelated/manual/lega
         replace: [{ id: "manual", before: "same", after: "new" }],
       }),
     /exactly once/,
+  );
+});
+
+test("new note numbers start at one, continue after manual gaps and preserve existing marks/layout", () => {
+  const draft = (id) => ({
+    id,
+    title: id,
+    summary: "Summary.",
+    goal: "Goal.",
+    returnWhen: "Later.",
+  });
+  const first = applyNoteChanges("", { add: [draft("one"), draft("two")] });
+  assert.deepEqual(
+    [...first.matchAll(/^## (.+)$/gm)].map((match) => match[1]),
+    ["[ ] 1. one", "[ ] 2. two"],
+  );
+  const manual =
+    "# Todo\n\n## [x] 9. Finished\n<!-- todo:old -->\nManual text.\n\n## Legacy\n";
+  const added = applyNoteChanges(manual, {
+    add: [draft("ten"), draft("eleven")],
+  });
+  assert.ok(added.startsWith(manual));
+  assert.match(added, /^## \[ \] 10\. ten$/m);
+  assert.match(added, /^## \[ \] 11\. eleven$/m);
+  assert.equal(applyNoteChanges(added, {}), added);
+  assert.throws(
+    () =>
+      applyNoteChanges("## [ ] 9007199254740991. Max\n", {
+        add: [draft("overflow")],
+      }),
+    /safe integer/,
   );
 });
 
@@ -518,7 +549,7 @@ test("scoped revisions preserve other drafts, need fresh approval, and never sav
   const result = await p.propose({ content: undefined, changes });
   assert.equal(result.status, "revise");
   assert.deepEqual(result.feedback, [
-    { id: "first", title: "[ ] first", feedback: "Shorten first only" },
+    { id: "first", title: "[ ] 1. first", feedback: "Shorten first only" },
   ]);
   assert.deepEqual(result.draft.changes, changes);
   await assert.rejects(access(f.file));
@@ -942,7 +973,7 @@ test("checkbox headings and closed spoilers preserve marks, counters and legacy 
     new URL("../config/decision-support.md", import.meta.url),
     "utf8",
   );
-  assert.match(rules, /## \[ \] Русский заголовок/);
+  assert.match(rules, /## \[ \] N\. Русский заголовок/);
   assert.match(rules, /<summary>Краткое резюме задачи<\/summary>/);
   assert.match(rules, /not a generic label or a repetition of the title/);
   assert.match(
