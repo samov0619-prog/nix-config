@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.samov.profileGc;
   homeDirectory = "/home/${cfg.user}";
@@ -6,7 +11,10 @@ let
   nixProfile = "${homeDirectory}/.local/state/nix/profiles/profile";
   nixGcRun = pkgs.writeShellApplication {
     name = "nix-gc-run";
-    runtimeInputs = with pkgs; [ coreutils systemd ];
+    runtimeInputs = with pkgs; [
+      coreutils
+      systemd
+    ];
     text = ''
       set -euo pipefail
 
@@ -64,6 +72,10 @@ in
           # nix profile has no "keep N" API. Its history only rolls back the
           # bootstrap CLI, while Home Manager rollbacks use the profile above.
           nix profile wipe-history --profile "${nixProfile}"
+        elif [ -e "${nixProfile}/manifest.nix" ]; then
+          # Standalone Home Manager can still use a legacy nix-env profile.
+          # Prune its history too, without removing the current environment.
+          nix-env --profile "${nixProfile}" --delete-generations old
         fi
       '';
     };
