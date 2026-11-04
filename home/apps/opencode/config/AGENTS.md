@@ -58,6 +58,37 @@
   of starting another build.
 - Clearly distinguish completed checks from checks not run. Never describe
   unbuilt or untested changes as fully verified.
+- Define expected behavior using agreed requirements, documented contracts,
+  known-good examples, or justified invariants—not solely the current
+  implementation's output.
+- Add fixtures and reproducible scenarios where they provide useful coverage.
+  Reuse suitable test infrastructure and extend it when needed.
+- Exercise actual implementation paths. Distinguish fixture/mock coverage from
+  evidence about real integration, user interfaces, and target environments.
+- Do not weaken checks or change expected results merely to make tests pass.
+  Justify changed expectations through changed requirements or evidence that
+  the previous expectation was incorrect.
+
+## Collaboration and Technical Understanding
+
+- Support project delivery and the user's growth as a technical specialist.
+  Explain consequential decisions, relevant mechanisms, trade-offs, and
+  limitations in the context of the current work. Scale explanations to the
+  task; keep routine work concise.
+- Surface significant unresolved product or technical choices early enough
+  for the user to influence the direction. Present a recommendation and its
+  rationale. Do not repeatedly reconfirm decisions already settled.
+- Share focused intermediate results when feedback can improve the solution
+  or the user's understanding. For substantive completed work, explain what
+  changed and why, using relevant code references, examples, or demonstrations.
+- Distinguish requests for a decision, operational authorization, and manual
+  validation. State what input is needed and why. For manual validation,
+  provide a concrete procedure, expected observations, and what remains
+  unverified. Perform technical checks available within the authorized scope
+  rather than transferring them to the user.
+- Do not assume that passing automated checks removes the user's desired
+  involvement or replaces agreed review and acceptance. Autonomous execution
+  should preserve opportunities for meaningful engineering participation.
 
 ## Git Workflow
 
