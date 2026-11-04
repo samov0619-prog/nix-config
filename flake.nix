@@ -221,7 +221,8 @@
             ./home/core-set/devtools/github.nix
             ./home/apps/aider
             ./home/apps/opencode
-            ./home/apps/hermes
+            # Hermes временно отключён.
+            # ./home/apps/hermes
             ./home/gui-set
             ./home/modules/minecraft/server
             ./home/apps/minecraft
@@ -251,7 +252,8 @@
             ./home/core-set/devtools/github.nix
             ./home/apps/aider
             ./home/apps/opencode
-            ./home/apps/hermes
+            # Hermes временно отключён.
+            # ./home/apps/hermes
             ./home/gui-set
             ./home/modules/minecraft/server
             ./home/apps/minecraft
