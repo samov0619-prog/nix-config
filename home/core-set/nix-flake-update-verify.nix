@@ -6,13 +6,14 @@ let
       coreutils
       git
       nix
+      python3
     ];
     text = ''
       set -euo pipefail
 
       usage() {
         cat <<'EOF'
-      Usage: nix-flake-update-verify --hosts HOST (--input INPUT | --no-update)
+      Usage: nix-flake-update-verify --hosts HOST (--input INPUT | --no-update) [--server-settings DIR]
 
       Hosts: laptop, desktop, server, server-installer, mac, all
       Inputs: nixpkgs, nixpkgs-unstable, home-manager, browser-previews,
@@ -21,19 +22,22 @@ let
       --hosts HOST   Verify one host, or every host supported by this platform.
       --input INPUT  Update one root input, or all inputs, before building.
       --no-update    Build against the existing flake.lock.
+      --server-settings DIR  External directory containing settings.nix (server/installer).
+                             Default: $XDG_CONFIG_HOME/nix-config/server, or ~/.config/nix-config/server.
       EOF
       }
 
       host=""
       input=""
       no_update=false
+      server_settings="''${SERVER_SETTINGS_DIR:-''${XDG_CONFIG_HOME:-$HOME/.config}/nix-config/server}"
       while [ "$#" -gt 0 ]; do
         case "$1" in
           --help | -h)
             usage
             exit 0
             ;;
-          --hosts | --input)
+          --hosts | --input | --server-settings)
             option="$1"
             shift
             if [ "$#" -eq 0 ]; then
@@ -43,6 +47,7 @@ let
             case "$option" in
               --hosts) host="$1" ;;
               --input) input="$1" ;;
+              --server-settings) server_settings="$1" ;;
             esac
             ;;
           --no-update) no_update=true ;;
@@ -82,6 +87,22 @@ let
         printf '%s\n' "This host must be verified on its supported platform." >&2
         exit 2
       fi
+
+      # Validate before updating the lock or starting any build, including --hosts all.
+      case " $hosts " in
+        *" server "* | *" server-installer "*)
+          if [ ! -f "$server_settings/settings.nix" ]; then
+            printf '%s\n' "FAILED: phase=settings; input=$input; host=$host; output=none; exit=2" >&2
+            printf 'Missing %s/settings.nix; run server-preflight or pass --server-settings DIR.\n' "$server_settings" >&2
+            exit 2
+          fi
+          server_settings="$(cd "$server_settings" && pwd -P)"
+          # Shell quoting is not URI escaping: encode spaces, %, #, ?, and Unicode.
+          server_settings_uri="$(python3 -c \
+            'import sys; from urllib.parse import quote; print("path:" + quote(sys.argv[1], safe="/"))' \
+            "$server_settings")"
+          ;;
+      esac
 
       if ! repo="$(git rev-parse --show-toplevel)"; then
         printf '%s\n' "FAILED: phase=repository; input=$input; host=$host; output=none; exit=1" >&2
@@ -123,7 +144,13 @@ let
         target_host="$1"
         output="$2"
         installable="$3"
-        if nix build --no-link "$installable"; then
+        settings_args=()
+        case "$target_host:$output" in
+          server:nixos | server-installer:nixos)
+            settings_args=(--override-input server-settings "$server_settings_uri" --no-write-lock-file)
+            ;;
+        esac
+        if nix build --no-link "''${settings_args[@]}" "$installable"; then
           :
         else
           status=$?
@@ -160,6 +187,7 @@ in
     complete -c nix-flake-update-verify -l hosts -r -a 'laptop desktop server server-installer mac all' -d 'Host to verify'
     complete -c nix-flake-update-verify -l input -r -a 'nixpkgs nixpkgs-unstable home-manager browser-previews disko freesm nix-gc-env xremap-flake all' -d 'Root input to update'
     complete -c nix-flake-update-verify -l no-update -d 'Build the existing lock file'
+    complete -c nix-flake-update-verify -l server-settings -r -a '(__fish_complete_directories)' -d 'External server settings directory'
     complete -c nix-flake-update-verify -s h -l help -d 'Show usage'
   '';
 }

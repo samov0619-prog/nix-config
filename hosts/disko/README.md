@@ -7,7 +7,7 @@ Disko is destructive only when its command is explicitly run. A normal
 
 Run the read-only preflight locally from the workstation checkout against the
 candidate Linux or rescue host. It needs only `ip` and `lsblk`; all parsing,
-interactive prompts, and the write to local `hosts/server/settings.nix` happen
+interactive prompts, and the write to external `~/.config/nix-config/server/settings.nix` happen
 on the workstation:
 
 ```bash
@@ -15,26 +15,34 @@ nix shell nixpkgs#jq nixpkgs#openssh --command \
   sh hosts/server/preflight.sh vps-bootstrap
 ```
 
+First build the server and Disko closures with the external input as described
+in `SERVER_AI_INSTRUCTIONS.md`, obtaining `$disko_script` and `$nixos_system`.
+Use the documented `--out-link` paths under `~/.local/state/nix-config/deploy/server/`
+so both results remain GC-rooted until installation succeeds; do not use
+`--no-link` for this pair. Remove the links only after successful final boot.
+Keep settings unchanged between verification and deployment. `hosts/server/settings.nix`
+is an example only; the default input refuses server/installer evaluation.
+
 Try the NixOS installer bootstrap first. This phase does not partition or
 format the target disk:
 
 ```bash
 nix run github:nix-community/nixos-anywhere -- \
-  --flake .#server --phases kexec root@<vps-ip>
+  --store-paths "$disko_script" "$nixos_system" --phases kexec root@<vps-ip>
 ```
 
 If kexec fails, build the settings-based provider ISO, upload local `result` in
 the provider panel, and boot the VPS from it:
 
 ```bash
-nix build .#nixosConfigurations.server-installer.config.system.build.isoImage
+nix build --override-input server-settings "path:$HOME/.config/nix-config/server" .#nixosConfigurations.server-installer.config.system.build.isoImage
 ```
 
 Once the target is running a NixOS installer, use the destructive phases:
 
 ```bash
 nix run github:nix-community/nixos-anywhere -- \
-  --flake .#server --phases disko,install,reboot root@<vps-ip>
+  --store-paths "$disko_script" "$nixos_system" --phases disko,install,reboot root@<vps-ip>
 ```
 
 `root@<vps-ip>` is SSH syntax for the temporary Linux or NixOS installer host.

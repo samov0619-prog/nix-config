@@ -1,10 +1,10 @@
 {
   lib,
   pkgs,
+  serverSettings,
   ...
 }:
 let
-  serverSettings = import ./settings.nix;
   awg31KernelPackages = pkgs.linuxPackages.extend (
     final: prev: {
       amneziawg = final.callPackage ../../pkgs/amneziawg-3.1/kernel.nix { };
@@ -44,10 +44,8 @@ in
   # AWG 3.1 must update the kernel module and awg userspace as one pair.
   boot.kernelPackages = awg31KernelPackages;
 
-  _module.args = { inherit serverSettings; };
-
-  # First installation: set the disk and service values in settings.nix, boot
-  # the provider rescue system, then run nixos-anywhere with `.#server`.
+  # First installation: select the external server-settings input, build the
+  # system/Disko closures, then pass their --store-paths to nixos-anywhere.
   # `root@<vps-ip>` is only needed to reach that remote rescue machine.
   boot.loader.grub = {
     enable = true;
@@ -168,17 +166,17 @@ in
           && ipv6 ? gateway
           && ipv6 ? vpnNetwork
           && ipv6 ? vpnPrefixLength
-           && ipv6 ? egress
-           && builtins.isString ipv6.wanAddress
-           && builtins.isInt ipv6.wanPrefixLength
-           && ipv6.wanPrefixLength >= 0
-           && ipv6.wanPrefixLength <= 128
-           && builtins.isString ipv6.gateway
-           && builtins.isString ipv6.vpnNetwork
-           && builtins.isInt ipv6.vpnPrefixLength
-           && ipv6.vpnPrefixLength >= 0
-           && ipv6.vpnPrefixLength <= 128
-           && builtins.elem ipv6.egress [
+          && ipv6 ? egress
+          && builtins.isString ipv6.wanAddress
+          && builtins.isInt ipv6.wanPrefixLength
+          && ipv6.wanPrefixLength >= 0
+          && ipv6.wanPrefixLength <= 128
+          && builtins.isString ipv6.gateway
+          && builtins.isString ipv6.vpnNetwork
+          && builtins.isInt ipv6.vpnPrefixLength
+          && ipv6.vpnPrefixLength >= 0
+          && ipv6.vpnPrefixLength <= 128
+          && builtins.elem ipv6.egress [
             "nat66"
             "routed"
           ]

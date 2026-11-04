@@ -63,7 +63,8 @@ home/
 
 hosts/server/
 ├── default.nix                  # system baseline and server module imports
-├── settings.nix                 # VPS-specific domain, ports, interface, SFTP key
+├── settings.nix                 # example only; real settings are an external input
+├── settings-template/           # fail-closed default server-settings input
 ├── installer.nix                # minimal settings-based provider ISO, no Disko/services
 ├── vpn.nix                      # AWG3.1 bootstrap, NAT, profile generation
 ├── adguard.nix                  # private DNS and imported filter set
@@ -393,7 +394,7 @@ wipe-history`: Nix не предоставляет API "keep N", а его histo
 
 - Никакого Docker: AWG3.1 использует NixOS `wg-quick`, AdGuard Home и Caddy — обычные systemd services.
 - `settings.nix` содержит незасекреченные VPS-specific значения. `server-preflight` сначала показывает read-only inventory и открывает wizard только при валидных disk/IPv4 candidates; administrator key всегда вводится вручную полным OpenSSH public key. При отсутствии global IPv6 с default route wizard требует явное `y` для продолжения без IPv6; по умолчанию выходит без записи settings. После явного подтверждения он записывает локальный, некоммитящийся settings-файл. Private keys и профили живут вне Git в `/var/lib/amneziawg` и `/var/lib/naiveproxy`.
-- `hosts/server/settings.nix` описывает ровно один VPS и участвует в каждом `nixosConfigurations.server` evaluation/build/deploy. Локальные evaluation/build не подключаются к VPS и безопасны для общей verification matrix. Перед server deploy агент обязан сверить целевой SSH host с `diskDevice`, WAN interface, IPv4 endpoint и IPv6 VPN ULA в settings; при несовпадении или двух одновременно обслуживаемых VPS остановиться и запросить отдельный host configuration. Никогда не переключать settings между live VPS для обычного обновления.
+- `hosts/server/settings.nix` — только пример. Реальные settings живут вне Git в `~/.config/nix-config/server/settings.nix` и передаются через `--override-input server-settings "path:$HOME/.config/nix-config/server"` (подразумевает `--no-write-lock-file`). Никаких private keys/passwords: input попадает в Nix store. Default input явно отказывает для server/installer; остальные hosts и server HM независимы. Preflight/verifier используют `SERVER_SETTINGS_DIR` или XDG default; verifier также принимает `--server-settings DIR`. Не фиксировать локальный путь в `flake.lock`. Перед server deploy агент обязан сверить SSH target с disk, WAN interface, IPv4 endpoint и IPv6 VPN ULA; при несовпадении остановиться. Один input описывает один live VPS, не переключать его между серверами. Для nixos-anywhere использовать готовые `--store-paths`: этот CLI не принимает override-input. Полные команды — `SERVER_AI_INSTRUCTIONS.md`.
 - `awg-add-client <name>` публикует structured AmneziaVPN `.vpn` и QR, а также native `.conf` и QR; `naive-add-client <name>` публикует Karing/sing-box JSON.
 - `vpn-download` разрешает только `internal-sftp` по одному ключу в `/srv/vpn-download/files`; shell и forwarding запрещены.
 - AdGuard DNS доступен только через `awg0` и localhost; UI — через SSH tunnel на `127.0.0.1:8008`.
@@ -423,7 +424,7 @@ wipe-history`: Nix не предоставляет API "keep N", а его histo
 ### Disko + nixos-anywhere
 
 - `disko` pinned as a flake input; shared layouts live in `hosts/disko/layouts.nix`.
-- Remote VPS install uses `nix run github:nix-community/nixos-anywhere -- --flake .#server root@<vps-ip>` from another machine in provider rescue mode.
+- Remote VPS install uses verified `--store-paths` for nixos-anywhere from another machine in provider rescue mode; obtain both closures with the external settings override per `SERVER_AI_INSTRUCTIONS.md`. Keep both GC-root links via `--out-link` under `~/.local/state/nix-config/deploy/server/` until successful installation, not `--no-link` results that GC may remove.
 - `root@<vps-ip>` is SSH syntax for the remote rescue host. A local laptop/desktop install needs no IP: boot a NixOS installer USB, run Disko locally, then `nixos-install --flake .#laptop-next`.
 - Before any destructive install, replace every `REPLACE_ME` after checking `lsblk`; future desktop must also confirm BIOS vs EFI with `efibootmgr -v`.
 - Current laptop retains `/swapfile` plus `resume_offset`; `laptop-next` uses a swap partition with `resumeDevice = true`, so the two schemes never coexist on one host.
@@ -499,6 +500,10 @@ nix-flake-update-verify --hosts server --no-update
 
 Локальный server build не подключается к VPS. Сверка server settings с VPS
 нужна перед deploy, не перед verification.
+Для `server`, `server-installer` и Linux `--hosts all` verifier требует внешний
+`settings.nix` до update/build. По умолчанию — `~/.config/nix-config/server`,
+переопределение — `--server-settings DIR` или `SERVER_SETTINGS_DIR`.
+Override применяется только к серверным NixOS outputs и не записывается в lock.
 
 На Mac:
 
@@ -547,14 +552,15 @@ FAILED: phase=build; input=nixpkgs; host=laptop; output=home-manager; exit=1
 # NixOS
 sudo nixos-rebuild switch --flake .#laptop
 sudo nixos-rebuild switch --flake .#desktop
-sudo nixos-rebuild switch --flake .#server
+sudo nixos-rebuild switch --flake .#server --override-input server-settings "path:$HOME/.config/nix-config/server"
 
 # Fresh remote VPS: run preflight first. Try only the kexec bootstrap, then
 # use the provider ISO fallback documented in SERVER_AI_INSTRUCTIONS.md.
-nix run github:nix-community/nixos-anywhere -- --flake .#server --phases kexec root@<vps-ip>
-nix build .#nixosConfigurations.server-installer.config.system.build.isoImage
+# First obtain verified $disko_script/$nixos_system per SERVER_AI_INSTRUCTIONS.md.
+nix run github:nix-community/nixos-anywhere -- --store-paths "$disko_script" "$nixos_system" --phases kexec root@<vps-ip>
+nix build --override-input server-settings "path:$HOME/.config/nix-config/server" .#nixosConfigurations.server-installer.config.system.build.isoImage
 # After a NixOS installer is running:
-nix run github:nix-community/nixos-anywhere -- --flake .#server --phases disko,install,reboot root@<vps-ip>
+nix run github:nix-community/nixos-anywhere -- --store-paths "$disko_script" "$nixos_system" --phases disko,install,reboot root@<vps-ip>
 
 # Home Manager
 home-manager switch --flake .#samov-laptop
@@ -562,7 +568,7 @@ home-manager switch --flake .#samov-desktop
 home-manager switch --flake .#samov-server
 
 # Проверка
-nix flake check
+nix flake check --override-input server-settings "path:$HOME/.config/nix-config/server"
 nix eval .#nixosConfigurations.laptop.config.system.build.toplevel --no-build 2>&1 | head
 ```
 
@@ -570,5 +576,5 @@ nix eval .#nixosConfigurations.laptop.config.system.build.toplevel --no-build 2>
 
 - **laptop**: эталон, максимально актуален. HP i7 + Intel/NVIDIA, ext4, GRUB EFI, Hibernate/zram.
 - **desktop**: старше laptop. AMD + NVIDIA, два монитора (DVI 1680x1050 + HDMI 3840x2160@3x). Нет Bluetooth/uinput/xremap/hibernate.
-- **server**: модульный VPS stack без Docker, Disko и generic virtio hardware modules. До первой установки заполнить `hosts/server/settings.nix` по данным rescue environment.
+- **server**: модульный VPS stack без Docker, Disko и generic virtio hardware modules. Preflight пишет внешний settings input по данным rescue environment; в Git остаётся только пример.
 - **mac**: только standalone HM (users + core-set). Без nix-darwin, без GUI, без проверки совместимости Linux-пакетов.

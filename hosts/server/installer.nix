@@ -1,6 +1,10 @@
-{ lib, modulesPath, ... }:
+{
+  lib,
+  modulesPath,
+  serverSettings,
+  ...
+}:
 let
-  serverSettings = import ./settings.nix;
   ipv4 = serverSettings.network.ipv4;
   ipv6 = serverSettings.network.ipv6;
   ipv6Enabled = ipv6 != null;
@@ -77,7 +81,7 @@ in
     }
     {
       assertion = builtins.isString serverSettings.operatorAuthorizedKey;
-      message = "server-installer requires a complete operatorAuthorizedKey in hosts/server/settings.nix";
+      message = "server-installer requires a complete operatorAuthorizedKey in the server-settings input";
     }
   ];
 }

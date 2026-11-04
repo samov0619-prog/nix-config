@@ -46,6 +46,11 @@
     };
     nix-gc-env.url = "github:Julow/nix-gc-env";
     hermes-agent.url = "github:NousResearch/hermes-agent";
+    # Real VPS values are selected with --override-input; never lock local paths.
+    server-settings = {
+      url = "path:./hosts/server/settings-template";
+      flake = false;
+    };
   };
 
   outputs =
@@ -62,10 +67,12 @@
       xremap-flake,
       hermes-agent,
       opencode,
+      server-settings,
       ...
     }:
     let
       lib = nixpkgs.lib;
+      serverSettings = import "${server-settings}/settings.nix";
 
       systems = {
         linux = "x86_64-linux";
@@ -108,12 +115,14 @@
           system,
           modules,
           overlays ? [ ],
+          extraSpecialArgs ? { },
         }:
         lib.nixosSystem {
           inherit system;
           specialArgs = {
             pkgsUnstable = pkgsUnstableFor system;
-          };
+          }
+          // extraSpecialArgs;
           modules = [
             {
               nixpkgs.overlays = overlays;
@@ -129,6 +138,7 @@
 
       mkServerInstaller = lib.nixosSystem {
         system = systems.linux;
+        specialArgs = { inherit serverSettings; };
         modules = [ ./hosts/server/installer.nix ];
       };
     in
@@ -175,6 +185,7 @@
 
         server = mkNixos {
           system = systems.linux;
+          extraSpecialArgs = { inherit serverSettings; };
           modules = [
             disko.nixosModules.disko
             ./hosts/server

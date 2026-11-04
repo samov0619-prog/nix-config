@@ -427,8 +427,21 @@
         "nixpkgs": "nixpkgs_2",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "opencode": "opencode",
+        "server-settings": "server-settings",
         "xremap-flake": "xremap-flake"
       }
+    },
+    "server-settings": {
+      "flake": false,
+      "locked": {
+        "path": "./hosts/server/settings-template",
+        "type": "path"
+      },
+      "original": {
+        "path": "./hosts/server/settings-template",
+        "type": "path"
+      },
+      "parent": []
     },
     "systems": {
       "locked": {

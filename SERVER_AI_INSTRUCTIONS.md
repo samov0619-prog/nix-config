@@ -17,13 +17,27 @@
 - `hosts/server/hardware.nix` loads `virtio_pci` and `virtio_net` in the
   initrd. Keep both for VirtIO-based VPSes: the WAN interface must exist before
   the normal system can configure its address.
-- `hosts/server/settings.nix` contains all provider-specific network values:
+- The external `server-settings` input contains all provider-specific network values:
   disk, public endpoint, WAN interface, address, prefix, gateway, DNS, and
   optional proxy/SFTP values. Do not hardcode these in `default.nix`. The
-  tracked file is a safe template; keep generated VPS values as an intentional
-  local, uncommitted change.
+  tracked `hosts/server/settings.nix` is an example only. Real values live in
+  `~/.config/nix-config/server/settings.nix` (or an explicitly chosen directory).
+  Preflight and the verifier honor `SERVER_SETTINGS_DIR`, defaulting to
+  `$XDG_CONFIG_HOME/nix-config/server` or `~/.config/nix-config/server`.
+  Preflight also accepts `SERVER_SETTINGS_FILE`, an absolute path ending in
+  `/settings.nix`; use its parent directory as the input override.
+  Back up the external directory separately. Never put private keys or passwords
+  there: inputs are copied into the Nix store.
+  Pass `--override-input server-settings "path:$HOME/.config/nix-config/server"`
+  to every server/installer Nix command; it implies `--no-write-lock-file`.
+  No `--impure` is needed. Do not write local paths into `flake.lock`.
+  The verifier accepts filesystem paths and URI-encodes them. For custom paths
+  in direct `--override-input` commands, percent-encode reserved characters
+  (for example, a space becomes `%20`); shell quoting alone is not sufficient.
+  The default input fails explicitly for server/installer evaluation; other hosts
+  and standalone server Home Manager do not require these settings.
 - This repository's `server` configuration represents exactly one live VPS.
-  `settings.nix` is read by every server evaluation, build, and deploy, not
+  The selected input is read by every server evaluation, build, and deploy, not
   only by Disko. Local evaluation and build do not contact or modify that VPS,
   so they are safe in the shared verification matrix. Before a deploy, compare
   its disk, WAN interface, IPv4 endpoint, and IPv6 VPN ULA with the intended
@@ -146,7 +160,7 @@
 
 ## Configuration Branches
 
-Every branch is selected in `hosts/server/settings.nix` or by an explicitly
+Every branch is selected in the external `settings.nix` or by an explicitly
 nullable setting. The NixOS evaluation does not probe a live VPS: run the
 preflight checklist first, record verified facts, then select a branch.
 
@@ -377,12 +391,12 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
    is found, the wizard explains this and requires an explicit `y` to continue
    without IPv6; its default exits without changing settings. Otherwise review
    the final summary, then answer `y` to write local
-   `hosts/server/settings.nix`. A missing prerequisite leaves that file
+   external `settings.nix`. A missing prerequisite leaves that file
    untouched and exits with the inventory for manual analysis. The rescue host
    needs only standard `iproute2` and `util-linux` commands available on Debian
    12 and common provider images; the local Nix shell supplies the predictable
-   `jq` and `ssh` tooling. The resulting local settings are intentionally
-   uncommitted.
+   `jq` and `ssh` tooling. The resulting settings stay outside the checkout.
+   Keep the same settings unchanged between verification and deployment.
 2. Confirm the selected installation disk manually before continuing. Never
    infer it from its name: `/dev/vda`, `/dev/sda`, and NVMe names vary by
    provider and rescue image. Verify a second key-based root SSH connection and
@@ -391,17 +405,31 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
 3. Validate the exact committed workstation checkout before destructive
    deployment:
 
-   ```bash
+   ```fish
    git status --short
    git pull --ff-only
-   nix flake check --no-build
-   nix build .#nixosConfigurations.server.config.system.build.toplevel --no-link
+   nix flake check --no-build --override-input server-settings "path:$HOME/.config/nix-config/server"
+   set install_roots "$HOME/.local/state/nix-config/deploy/server"
+   mkdir -p "$install_roots"
+   set nixos_system (nix build --out-link "$install_roots/system" --print-out-paths --override-input server-settings "path:$HOME/.config/nix-config/server" .#nixosConfigurations.server.config.system.build.toplevel)
+   set disko_script (nix build --out-link "$install_roots/disko" --print-out-paths --override-input server-settings "path:$HOME/.config/nix-config/server" .#nixosConfigurations.server.config.system.build.diskoScript)
    ```
 
-   `git status --short` must be empty except for the intentional local
-   `hosts/server/settings.nix` provider/key values; never commit those values.
-   Skip `git pull --ff-only` when the checkout is already the intended revision
-   or contains those local settings. `nix flake check` evaluates every host;
+   Commands above use Fish syntax. Check that both builds succeeded and both
+   variables name existing store paths before continuing; do not reuse stale
+   values after a failed build. Record the settings file's checksum alongside
+   these paths and recheck it before deployment. Never rotate settings to another VPS.
+   Both `--out-link` symlinks are GC roots outside the checkout. Keep them intact
+   through kexec, any provider ISO fallback, and installation; do not replace them
+   with another build while installation is pending. `--no-link` is suitable for
+   verification-only builds, not these artifacts consumed later by `--store-paths`.
+   If reopening the terminal, recover the same paths with Fish commands
+   `set nixos_system (readlink -f "$HOME/.local/state/nix-config/deploy/server/system")`
+   and `set disko_script (readlink -f "$HOME/.local/state/nix-config/deploy/server/disko")`,
+   then recheck that they exist and correspond to the intended settings/revision.
+   `git status --short` must be empty; real settings are outside Git.
+   Skip `git pull --ff-only` when the checkout is already the intended revision.
+   `nix flake check` evaluates every host;
    `nix build` evaluates and builds the exact server closure locally, so
    deployment transfers an already verified result instead of building on the
    small VPS disk.
@@ -419,7 +447,7 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
 
    ```bash
    nix run github:nix-community/nixos-anywhere -- \
-     --flake .#server --phases kexec root@vps-bootstrap
+     --store-paths "$disko_script" "$nixos_system" --phases kexec root@vps-bootstrap
    ```
 
    This phase does not run Disko or install NixOS. If it succeeds, the host
@@ -433,7 +461,7 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
 1. Build the local settings-based installer ISO:
 
    ```bash
-   nix build .#nixosConfigurations.server-installer.config.system.build.isoImage
+   nix build --override-input server-settings "path:$HOME/.config/nix-config/server" .#nixosConfigurations.server-installer.config.system.build.isoImage
    ```
 
    `result` is the local ISO file. It contains only the minimal installer,
@@ -455,10 +483,17 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
 
    ```bash
    nix run github:nix-community/nixos-anywhere -- \
-     --flake .#server --phases disko,install,reboot root@vps-bootstrap
+     --store-paths "$disko_script" "$nixos_system" --phases disko,install,reboot root@vps-bootstrap
    ```
 
    This erases `settings.nix.diskDevice`. Do not interrupt after Disko begins.
+   Only after the final system boots successfully, remove the two local GC-root
+   links if no longer needed (not the store paths themselves):
+
+   ```fish
+   unlink "$HOME/.local/state/nix-config/deploy/server/system"
+   unlink "$HOME/.local/state/nix-config/deploy/server/disko"
+   ```
 
 ### Post-install
 
@@ -553,13 +588,15 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
 - Deploy a server configuration from the workstation with:
 
   ```bash
-  nixos-rebuild switch --flake .#server --target-host samov@<server-ssh-alias> --sudo
+   nixos-rebuild switch --flake .#server --override-input server-settings "path:$HOME/.config/nix-config/server" --target-host samov@<server-ssh-alias> --sudo
   ```
 
 - `--sudo` is a `nixos-rebuild` option: it runs the final activation command
   on the VPS through `sudo` as `samov`. It is not the shell command
   `sudo nixos-rebuild`; do not prefix this remote deployment command with
   `sudo`, because the build and closure transfer should run as the local user.
+- `nixos-anywhere` does not accept `--override-input`. Use the verified
+  `--store-paths` pair above for installation, not an unoverridden `--flake`.
 - This remote NixOS deployment builds on the workstation, transfers the
   closure over SSH, and activates it through `samov`'s declarative
   passwordless sudo. It avoids using VPS disk space for a system build.
@@ -598,8 +635,13 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
 
 ## Validation
 
+- Small local regression tests: `python3 hosts/server/tests/test_settings.py`.
+  Requires `nix-instantiate`; put `jq` on PATH to run the three preflight tests
+  rather than skip them. Nix builds and SSH are mocked, and the real scripts
+  and lazy flake wiring are exercised. This does not verify a built closure
+  or the live VPS.
 - Run `nix flake check` and build the exact server closure before a server
-  deploy or replacement install.
+  deploy or replacement install, with the same external input override for both.
 - Confirm `wg-quick-awg0`, `adguardhome`, and `sshd` are healthy. Confirm
   `caddy` only after both `domain` and `acmeEmail` are set.
 - Confirm public DNS and the AdGuard UI are unreachable.

@@ -86,7 +86,12 @@ quote_nix() {
 
 [ "$#" -eq 1 ] || usage
 remote_host=$1
-settings_file=${SERVER_SETTINGS_FILE:-hosts/server/settings.nix}
+settings_dir=${SERVER_SETTINGS_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/nix-config/server}
+settings_file=${SERVER_SETTINGS_FILE:-$settings_dir/settings.nix}
+case $settings_file in
+  /*/settings.nix) ;;
+  *) printf 'Settings must be an absolute path ending in /settings.nix.\n' >&2; exit 2 ;;
+esac
 
 for command in ssh jq awk sed tr wc paste mktemp; do
   if ! command -v "$command" >/dev/null 2>&1; then
@@ -337,6 +342,7 @@ else
 fi
 
 umask 077
+mkdir -p "$(dirname "$settings_file")"
 temporary=$(mktemp "${settings_file}.XXXXXX")
 trap 'rm -f "$temporary"' EXIT
 cat > "$temporary" <<EOF
@@ -370,7 +376,7 @@ $ipv6_nix
 EOF
 mv "$temporary" "$settings_file"
 trap - EXIT
-printf 'Wrote local %s. It is intentionally a local, uncommitted change.\n' "$settings_file"
+printf 'Wrote external %s. Keep this directory outside the repository and backed up.\n' "$settings_file"
 
 section "Bootstrap handoff"
 if [ "$is_nixos_installer" = true ]; then
@@ -379,6 +385,7 @@ if [ "$is_nixos_installer" = true ]; then
 else
   printf 'Bootstrap path: attempt kexec first.\n'
   printf '1. Continue with SERVER_AI_INSTRUCTIONS.md, "Kexec installation", step 1:\n'
-  printf '   nix run github:nix-community/nixos-anywhere -- --flake .#server --phases kexec %s\n' "$remote_host"
+  printf '   Build the server and Disko store paths with the server-settings override, then use\n'
+  printf '   nixos-anywhere --store-paths as documented in SERVER_AI_INSTRUCTIONS.md.\n'
   printf '2. If kexec fails, no Disko phase was run. Continue with "Provider ISO installation", step 1.\n'
 fi
