@@ -20,6 +20,7 @@ const {
   applyNoteChanges,
   noteReview,
   cleanNote,
+  organizeTodo,
 } = await import("../plugins/agent-todo.ts");
 const { reviewAnswer, reviewQuestions, readReview, SUBMIT, REVIEW } =
   await import("../plugins/agent-todo-review.ts");
@@ -30,6 +31,8 @@ const consent = (input) =>
   SUBMIT +
   JSON.parse(input.questions.at(-1).question.slice(REVIEW.length)).token;
 const signal = () => new AbortController().signal;
+const withoutStats = (text) =>
+  text.replace(/\n<!-- todo-stats -->\nTotal:[^\n]*\n/, "");
 async function fixture(t, initialized = true) {
   const tmp = await mkdtemp("/tmp/opencode/agent-todo-test-");
   t.after(() => rm(tmp, { recursive: true, force: true }));
@@ -124,7 +127,7 @@ async function plugin(
           {
             base: before.fingerprint,
             content: "# Todo\n\n- Test device\n",
-            reason: "Сохранить идею проверки устройства.",
+            reason: "Save device test idea.",
             message: "add device test note",
             ...extra,
           },
@@ -287,8 +290,8 @@ test("structured proposals are merged, compared, counted and committed without a
     "saved",
   );
   const saved = await readFile(f.file, "utf8");
-  assert.ok(saved.startsWith(before));
-  assert.match(saved, /Обращений: 1 · Приоритет: 1/);
+  assert.ok(withoutStats(saved).startsWith(before));
+  assert.match(saved, /Visits: 1 · Priority: Normal/);
   assert.doesNotMatch(
     p.forms
       .flatMap((form) => form.questions.map((question) => question.question))
@@ -301,7 +304,7 @@ test("structured proposals are merged, compared, counted and committed without a
   );
   assert.match(
     await readFile(f.file, "utf8"),
-    /## \[x\] Existing\n<!-- todo:existing;last:[a-f0-9]+ -->\nОбращений: 5 · Приоритет: 5/,
+    /## \[x\] Existing\n<!-- todo:existing;last:[a-f0-9]+ -->\nVisits: 5 · Priority: Normal/,
   );
   assert.equal(
     (await p.propose({ content: undefined, changes })).status,
@@ -358,7 +361,7 @@ test("approval presents readable changes with English controls and commits only 
     .flatMap((input) => input.questions.map((question) => question.question))
     .join("\n");
   assert.match(review, /Add\n# Todo\n\n- Test device/);
-  assert.match(review, /Сохранить идею проверки устройства/);
+  assert.match(review, /Save device test idea/);
   assert.doesNotMatch(review, /@@|--- todo|\+\+\+|Manual changes/);
   assert.ok(
     p.permissions.some((p) => p.action === "edit" && p.agent === "build"),
@@ -386,8 +389,8 @@ test("confirmation shows only affected notes and lines, hides internal hashes, a
     .flatMap((input) => input.questions.map((question) => question.question))
     .join("\n");
   assert.match(question, /Update\nИдея/);
-  assert.match(question, /Before:\nСтарая цель\./);
-  assert.match(question, /After:\nНовая цель\./);
+  assert.match(question, /Before:\n- Цель:\n  Старая цель\./);
+  assert.match(question, /After:\n- Goal:\n  Новая цель\./);
   assert.doesNotMatch(
     question,
     /Секретная|todo:|last:|@@|Manual changes|^# Todo$/m,
@@ -596,8 +599,8 @@ test("batch review is one native form with one tab per note; final Submit commit
   assert.equal((await p.propose({ content })).status, "saved");
   assert.equal(f.git("rev-list", "--count", "HEAD"), "2");
   const saved = await readFile(f.file, "utf8");
-  assert.ok(saved.startsWith(original));
-  assert.equal((saved.match(/Обращений: 1 · Приоритет: 1/g) ?? []).length, 8);
+  assert.ok(withoutStats(saved).startsWith(original));
+  assert.equal((saved.match(/Visits: 1 · Priority: Normal/g) ?? []).length, 8);
   const review = p.forms
     .flatMap((input) => input.questions.map((question) => question.question))
     .join("\n");
@@ -875,13 +878,13 @@ test("symlinks, oversize text, conflicts and malformed proposals fail closed", a
   assert.equal(p.forms.length, 0);
 });
 
-test("heading blocks start at one; priority grows on returns, deduplicated per user turn", async (t) => {
+test("heading blocks start at one; visits grow independently of priority, deduplicated per user turn", async (t) => {
   const f = await fixture(t);
   const p = await plugin(f);
   const content =
     "# Todo\n\n## Проверить сон\n<!-- todo:suspend -->\n\n- Цель:\n  Проверить прошивку.\n";
   assert.equal((await p.propose({ content })).status, "saved");
-  assert.match(await readFile(f.file, "utf8"), /Обращений: 1 · Приоритет: 1/);
+  assert.match(await readFile(f.file, "utf8"), /Visits: 1 · Priority: Normal/);
   // Same request is not another return, even after another tool call or reload.
   assert.equal(
     (await p.propose({ content, revisited: ["suspend"] })).status,
@@ -895,7 +898,7 @@ test("heading blocks start at one; priority grows on returns, deduplicated per u
     (await p.propose({ content, revisited: ["suspend"] })).status,
     "saved",
   );
-  assert.match(await readFile(f.file, "utf8"), /Обращений: 2 · Приоритет: 2/);
+  assert.match(await readFile(f.file, "utf8"), /Visits: 2 · Priority: Normal/);
   assert.equal(
     (await p.propose({ content, revisited: ["suspend"] })).status,
     "unchanged",
@@ -908,7 +911,7 @@ test("heading blocks start at one; priority grows on returns, deduplicated per u
     (await p.propose({ content, revisited: ["suspend"] })).status,
     "saved",
   );
-  assert.match(await readFile(f.file, "utf8"), /Обращений: 3 · Приоритет: 3/);
+  assert.match(await readFile(f.file, "utf8"), /Visits: 3 · Priority: Normal/);
 });
 
 test("checkbox headings and closed spoilers preserve marks, counters and legacy notes", async (t) => {
@@ -932,9 +935,9 @@ test("checkbox headings and closed spoilers preserve marks, counters and legacy 
   );
   assert.match(
     spoiler,
-    /<!-- todo:suspend;last:[a-f0-9]{64} -->\nОбращений: 1 · Приоритет: 1/,
+    /<!-- todo:suspend;last:[a-f0-9]{64} -->\nVisits: 1 · Priority: Normal/,
   );
-  assert.match(spoiler, /- Цель:\n  Проверить прошивку\./);
+  assert.match(spoiler, /- Goal:\n  Проверить прошивку\./);
   assert.doesNotMatch(saved, /<details\s+open/);
   // A manually checked heading survives another confirmed visit, with a mixed
   // legacy layout untouched and exactly one counter still inside the spoiler.
@@ -956,13 +959,16 @@ test("checkbox headings and closed spoilers preserve marks, counters and legacy 
   );
   assert.match(
     updated.slice(updated.indexOf("<details>"), updated.indexOf("</details>")),
-    /Обращений: 2 · Приоритет: 2/,
+    /Visits: 2 · Priority: Normal/,
   );
   assert.equal(
     updated.slice(updated.indexOf("## Старая заметка")),
     saved.slice(saved.indexOf("## Старая заметка")),
   );
-  assert.equal((updated.match(/Обращений: 2 · Приоритет: 2/g) ?? []).length, 1);
+  assert.equal(
+    (updated.match(/Visits: 2 · Priority: Normal/g) ?? []).length,
+    1,
+  );
   assert.match(
     p.forms
       .flatMap((input) => input.questions.map((question) => question.question))
@@ -973,18 +979,18 @@ test("checkbox headings and closed spoilers preserve marks, counters and legacy 
     new URL("../config/decision-support.md", import.meta.url),
     "utf8",
   );
-  assert.match(rules, /## \[ \] N\. Русский заголовок/);
-  assert.match(rules, /<summary>Краткое резюме задачи<\/summary>/);
+  assert.match(rules, /## \[ \] N\. Short title/);
+  assert.match(rules, /<summary>One-sentence task summary<\/summary>/);
   assert.match(rules, /not a generic label or a repetition of the title/);
   assert.match(
     p.tools.get("agent_todo_propose").input.properties.changes.properties.add
       .items.properties.title.description,
-    /Short descriptive Russian title/,
+    /Short descriptive title, English by default/,
   );
   assert.match(
     p.tools.get("agent_todo_propose").input.properties.changes.properties.add
       .items.properties.summary.description,
-    /One concise meaningful Russian sentence/,
+    /One concise meaningful sentence, English by default/,
   );
 });
 
@@ -996,10 +1002,16 @@ test("counter cannot be changed by model; missing context does not invent a retu
     "Обращений: 4 · Приоритет: 4",
     "Обращений: 999 · Приоритет: 999",
   );
-  assert.equal(countRevisits(before, proposed, [], b), before);
+  assert.equal(
+    countRevisits(before, proposed, [], b),
+    before.replace(
+      "Обращений: 4 · Приоритет: 4",
+      "Visits: 4 · Priority: Normal",
+    ),
+  );
   assert.match(
     countRevisits(before, proposed, ["idea"], b),
-    /Обращений: 5 · Приоритет: 5/,
+    /Visits: 5 · Priority: Normal/,
   );
   assert.throws(
     () => countRevisits(before, proposed, ["idea"], ""),
@@ -1010,6 +1022,344 @@ test("counter cannot be changed by model; missing context does not invent a retu
     /Unknown/,
   );
   assert.throws(() => countRevisits("", before + before, [], b), /unique/);
+});
+
+const record = (
+  id,
+  {
+    status = "Todo",
+    priority = "Normal",
+    visits = 1,
+    created = "Unknown",
+    completed,
+    body = "Unchanged content.",
+  } = {},
+) =>
+  `## [${status === "Done" ? "x" : " "}] ${id}\n<!-- todo:${id} -->\nVisits: ${visits} · Priority: ${priority}\nStatus: ${status}\nCreated: ${created}\n${completed ? `Completed: ${completed}\n` : ""}\n${body}\n\n`;
+const ids = (text) =>
+  [...text.matchAll(/^<!-- todo:([a-z0-9-]+)(?:;last:[a-f0-9]+)? -->$/gm)].map(
+    (match) => match[1],
+  );
+
+test("explicit stable sort follows status, independent priority, visits, age and completion date", () => {
+  const source =
+    "# Todo\n\n" +
+    [
+      record("done-old", {
+        status: "Done",
+        completed: "2026-01-01T00:00:00Z",
+        priority: "High",
+        visits: 100,
+      }),
+      record("todo-low", { priority: "Low", visits: 100 }),
+      record("normal-unknown"),
+      record("normal-new", { created: "2026-02-01T00:00:00Z" }),
+      record("normal-old", { created: "2026-01-01T00:00:00Z" }),
+      record("normal-visits", { visits: 2 }),
+      record("high-tie-one", { priority: "High" }),
+      record("active-low", { status: "In progress", priority: "Low" }),
+      record("high-tie-two", { priority: "High" }),
+      record("active-high", { status: "In progress", priority: "High" }),
+      record("done-unknown", { status: "Done" }),
+      record("done-new", { status: "Done", completed: "2026-02-01T00:00:00Z" }),
+    ].join("");
+  assert.deepEqual(
+    ids(organizeTodo(source, source)),
+    ids(source),
+    "ordinary save must not sort",
+  );
+  const sorted = organizeTodo(source, source, {}, { sort: true });
+  assert.deepEqual(ids(sorted), [
+    "active-high",
+    "active-low",
+    "high-tie-one",
+    "high-tie-two",
+    "normal-visits",
+    "normal-old",
+    "normal-new",
+    "normal-unknown",
+    "todo-low",
+    "done-new",
+    "done-old",
+    "done-unknown",
+  ]);
+  assert.match(sorted, /Total: 12 · Done: 3 · In progress: 2/);
+  assert.equal(
+    organizeTodo(sorted, sorted, {}, { sort: true }),
+    sorted,
+    "sort is idempotent",
+  );
+});
+
+test("creation, explicit status/priority, reopening and later completion are code-owned", () => {
+  const first = "2026-01-01T00:00:00.000Z",
+    second = "2026-02-01T00:00:00.000Z";
+  const draft = {
+    id: "work",
+    title: "Work",
+    summary: "Do the work.",
+    goal: "Finish.",
+    returnWhen: "Ready.",
+    priority: "High",
+  };
+  const changes = { add: [draft] };
+  const initial = organizeTodo(
+    "",
+    countRevisits("", applyNoteChanges("", changes), [], "a".repeat(64)),
+    changes,
+    { now: first },
+  );
+  assert.match(
+    initial,
+    /Visits: 1 · Priority: High\nStatus: Todo\nCreated: 2026-01-01/,
+  );
+  const active = organizeTodo(initial, initial, {
+    update: [{ id: "work", status: "In progress" }],
+  });
+  assert.match(active, /Total: 1 · Done: 0 · In progress: 1/);
+  assert.match(active, /## \[ \] 1\. Work/);
+  const returned = countRevisits(active, active, ["work"], "b".repeat(64));
+  assert.match(returned, /Visits: 2 · Priority: High/);
+  const done = organizeTodo(
+    active,
+    active,
+    { update: [{ id: "work", status: "Done" }] },
+    { now: first },
+  );
+  assert.match(done, /## \[x\] 1\. Work/);
+  assert.match(done, /Total: 1 · Done: 1 · In progress: 0/);
+  assert.ok(done.includes(`Completed: ${first}`));
+  assert.equal(organizeTodo(done, done, {}, { now: second }), done);
+  const reopened = organizeTodo(done, done, {
+    update: [{ id: "work", status: "Todo", priority: "Low" }],
+  });
+  assert.doesNotMatch(reopened, /^Completed:/m);
+  assert.match(reopened, /Priority: Low\nStatus: Todo/);
+  const closedAgain = organizeTodo(
+    reopened,
+    reopened,
+    { update: [{ id: "work", status: "Done" }] },
+    { now: second },
+  );
+  assert.ok(closedAgain.includes(`Completed: ${second}`));
+  assert.ok(closedAgain.includes(`Created: ${first}`));
+  for (const update of [
+    { id: "missing", status: "Done" },
+    { id: "work" },
+    { id: "work", priority: "Urgent" },
+  ])
+    assert.throws(() => organizeTodo(initial, initial, { update: [update] }));
+});
+
+test("manual checkbox completion is observed, never backdated; manual reopen clears Completed", () => {
+  const now = "2026-03-01T00:00:00.000Z";
+  const committed = "# Todo\n\n" + record("manual");
+  const working = committed.replace("## [ ]", "## [x]");
+  const observed = organizeTodo(working, working, {}, { committed, now });
+  assert.ok(observed.includes(`Completed: ${now} (Observed)`));
+  assert.match(observed, /Status: Done/);
+  const reopened = observed.replace("## [x]", "## [ ]");
+  assert.doesNotMatch(
+    organizeTodo(reopened, reopened, {}, { committed: observed }),
+    /^Completed:/m,
+  );
+});
+
+test("legacy migration preserves Russian content, artifact languages, numbering and literal fenced metadata", () => {
+  const artifact =
+    "```text\n## [x] 999. Не задача\n<!-- todo:literal -->\n<!-- todo-stats -->\nTotal: literal artifact\nОбращений: 77 · Приоритет: 77\nStatus: Done\nCreated: keep this\n- Цель:\nОшибка: исходный текст /some/path\n```";
+  const legacy =
+    "# Todo\n\n## [ ] 17. Русская задача\n<!-- todo:legacy -->\nОбращений: 4 · Приоритет: 4\n\n- Цель:\n  Русский контент.\n\n" +
+    artifact +
+    "\n\n## Unmanaged section\nLeave this section alone.\n";
+  const output = organizeTodo(legacy, legacy, {}, { sort: true });
+  assert.ok(output.includes(artifact));
+  assert.match(output, /## \[ \] 17\. Русская задача/);
+  assert.match(
+    output,
+    /Visits: 4 · Priority: Normal\nStatus: Todo\nCreated: Unknown/,
+  );
+  assert.match(output, /- Goal:\n  Русский контент\./);
+  assert.match(output, /Total: 1 · Done: 0 · In progress: 0/);
+  assert.ok(
+    output.endsWith("## Unmanaged section\nLeave this section alone.\n"),
+  );
+  assert.ok(cleanNote(output).includes(artifact));
+  const added = applyNoteChanges(legacy, {
+    add: [
+      {
+        id: "next",
+        title: "Next",
+        summary: "Next task.",
+        goal: "Next.",
+        returnWhen: "Later.",
+      },
+    ],
+  });
+  assert.match(added, /## \[ \] 18\. Next/);
+  assert.ok(
+    countRevisits(legacy, legacy, ["legacy"], "c".repeat(64)).includes(
+      artifact,
+    ),
+  );
+});
+
+test("moving an EOF record preserves heading boundaries and unknown sections stay anchored", () => {
+  const source =
+    "# Todo\n\n" +
+    record("low", { priority: "Low" }) +
+    "## Other section\nKeep this here.\n\n" +
+    record("high", { priority: "High" }).trimEnd();
+  const sorted = organizeTodo(source, source, {}, { sort: true });
+  assert.deepEqual(
+    [...sorted.matchAll(/^## (.+)$/gm)].map((m) => m[1]),
+    ["[ ] high", "Other section", "[ ] low"],
+  );
+  assert.equal(organizeTodo(sorted, sorted, {}, { sort: true }), sorted);
+});
+
+test("local Git backfill records first appearance and latest closure, labelled as history", async (t) => {
+  const f = await fixture(t);
+  const commit = async (content, date) => {
+    await writeFile(f.file, content);
+    f.git("add", "todo.md");
+    execFileSync("git", ["commit", "-qm", "fixture event"], {
+      cwd: f.root,
+      env: { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date },
+    });
+  };
+  const open =
+    "# Todo\n\n## [ ] 7. Legacy\n<!-- todo:legacy -->\nОбращений: 2 · Приоритет: 2\n\nРусский контент.\n";
+  const closed = open.replace("[ ]", "[x]");
+  await commit(open, "2026-01-01T00:00:00Z");
+  await commit(closed, "2026-02-01T00:00:00Z");
+  await commit(open, "2026-03-01T00:00:00Z");
+  await commit(closed, "2026-04-01T00:00:00Z");
+  const history = await f.store.history(f.git("rev-parse", "HEAD"));
+  assert.deepEqual(history.get("legacy"), {
+    created: "2026-01-01T00:00:00.000Z",
+    completed: "2026-04-01T00:00:00.000Z",
+    done: true,
+  });
+  const output = organizeTodo(closed, closed, {}, { sort: true, history });
+  assert.match(output, /Created: 2026-01-01T00:00:00.000Z \(Git history\)/);
+  assert.match(output, /Completed: 2026-04-01T00:00:00.000Z \(Git history\)/);
+  assert.ok(output.includes("Русский контент."));
+});
+
+test("sorting uses existing consent, preserves feedback drafts, and never writes on decline", async (t) => {
+  const f = await fixture(t);
+  const original =
+    "# Todo\n\n" +
+    record("low", { priority: "Low" }) +
+    record("high", { priority: "High" });
+  await writeFile(f.file, original);
+  f.git("add", "todo.md");
+  f.git("commit", "-qm", "fixture notes");
+  const p = await plugin(f, NO);
+  assert.equal(
+    (await p.propose({ content: undefined, sort: true })).status,
+    "declined",
+  );
+  assert.equal(await readFile(f.file, "utf8"), original);
+  assert.match(p.forms[0].questions.at(-1).question, /Reorder:/);
+  const q = await plugin(f, (input) =>
+    input.questions.map((_, i) =>
+      i === input.questions.length - 1 ? ["Reconsider order"] : [],
+    ),
+  );
+  const feedback = await q.propose({ content: undefined, sort: true });
+  assert.equal(feedback.status, "revise");
+  assert.equal(feedback.draft.sort, true);
+  const r = await plugin(f);
+  assert.equal(
+    (await r.propose({ content: undefined, sort: true })).status,
+    "saved",
+  );
+  assert.deepEqual(ids(await readFile(f.file, "utf8")), ["high", "low"]);
+  assert.equal(f.git("rev-list", "--count", "HEAD"), "2");
+  assert.equal(
+    (await r.propose({ content: undefined, sort: true })).status,
+    "unchanged",
+  );
+});
+
+test("language and artifact rules are explicit in instructions and tool contract", async (t) => {
+  const rules = await readFile(
+    new URL("../config/decision-support.md", import.meta.url),
+    "utf8",
+  );
+  assert.match(rules, /English even when the creation request is in Russian/);
+  assert.match(rules, /use Russian content only\n  when explicitly requested/);
+  assert.match(rules, /must retain their original language and wording/);
+  assert.match(rules, /explicitly requests translation of that artifact/);
+  const f = await fixture(t, false),
+    p = await plugin(f);
+  const tool = p.tools.get("agent_todo_propose");
+  assert.match(
+    tool.description,
+    /Default to English content even for non-English requests/,
+  );
+  assert.match(tool.description, /Preserve supplied artifacts/);
+  assert.equal(tool.input.properties.sort.type, "boolean");
+  assert.match(tool.input.properties.reason.description, /English/);
+});
+
+test("native proposal path applies structured status/priority without model-written metadata", async (t) => {
+  const f = await fixture(t),
+    p = await plugin(f);
+  const add = {
+    add: [
+      {
+        id: "task",
+        title: "Task",
+        summary: "Finish task.",
+        goal: "Finish.",
+        returnWhen: "Ready.",
+        priority: "High",
+      },
+    ],
+  };
+  assert.equal(
+    (await p.propose({ content: undefined, changes: add })).status,
+    "saved",
+  );
+  const first = await readFile(f.file, "utf8");
+  const created = first.match(/^Created: (.+)$/m)[1];
+  assert.equal(
+    (
+      await p.propose({
+        content: undefined,
+        changes: { update: [{ id: "task", status: "Done", priority: "Low" }] },
+      })
+    ).status,
+    "saved",
+  );
+  const done = await readFile(f.file, "utf8");
+  assert.match(done, /Visits: 1 · Priority: Low\nStatus: Done/);
+  assert.match(done, /^Completed: \d{4}-/m);
+  assert.ok(done.includes(`Created: ${created}`));
+  assert.equal(
+    (
+      await p.propose({
+        content: undefined,
+        changes: { update: [{ id: "task", status: "In progress" }] },
+      })
+    ).status,
+    "saved",
+  );
+  const active = await readFile(f.file, "utf8");
+  assert.doesNotMatch(active, /^Completed:/m);
+  assert.match(active, /Total: 1 · Done: 0 · In progress: 1/);
+  assert.match(active, /## \[ \] 1\. Task/);
+  const tampered = active.replace(
+    "Visits: 1 · Priority: Low",
+    "Visits: 999 · Priority: High",
+  );
+  assert.match(
+    countRevisits(active, tampered, [], "d".repeat(64)),
+    /Visits: 1 · Priority: Low/,
+  );
 });
 
 test("personal reminder remains exact Russian text with only the extra comma removed", async () => {

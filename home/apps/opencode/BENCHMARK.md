@@ -209,7 +209,7 @@ native dismissal-tag handling without swallowing unrelated errors, no truncation
 diff-looking note lines, decline/free-form revision,
 stale content before/during confirmation, preserving staged/unstaged manual edits,
 Plan denial, cancellation, native index locks, unrelated files, symlinks/size limits,
-reload without implicit approval, deterministic priority/counters, same-user-turn
+reload without implicit approval, independent priority/visit counters, same-user-turn
 deduplication, duplicate IDs, and missing context attribution. Checkbox headings
 and closed `<details>` blocks keep counters inside the spoiler, preserve manual
 completion marks across confirmed revisits, and coexist with unchanged legacy layouts.
@@ -228,6 +228,18 @@ ambiguous fragments and embedded metadata rejection, and revisit-only proposals 
 copying the file. `agent-todo-tui.tsx` uses public dialog/slot/keymap/form APIs;
 `agent-todo-review.ts` is the shared versioned transport, not a separate database.
 Left/right/Tab/Shift+Tab cycle, while text scrolls within each note tab.
+
+Organizer unit fixtures cover explicit-only stable sorting (In progress/Todo/Done,
+priority, visits, oldest-created and newest-completed), unknown dates, lifecycle
+transitions/reopening, observed manual closure, totals, local Git date backfill,
+legacy English-label migration, preserved heading numbers and fenced artifacts.
+Language defaults and artifact-preservation instructions are checked as contracts;
+these tests do not establish how reliably a live model recognizes artifacts.
+All 38 local todo unit tests passed. Manual installed-plugin smoke on 2026-11-04
+exercised read → sort proposal → native consent → one saved local commit; the user
+reported the result looked correct. This covers that real migration/sort/approval
+path, not every lifecycle transition. The full isolated runtime/PTY suites were
+not rerun for this extension; older runtime/PTY evidence does not cover it.
 
 The isolated `test_v2_runtime.py` also installs the actual plugin/decision-check
 skill and uses the **real V2 Promise adapter and native question executor**. A

@@ -32,11 +32,280 @@ type NoteDraft = {
   goal: string;
   returnWhen: string;
   notes?: string;
+  priority?: Priority;
+  status?: Status;
 };
+type Priority = "High" | "Normal" | "Low";
+type Status = "Todo" | "In progress" | "Done";
 type NoteChanges = {
   add?: NoteDraft[];
   replace?: { id: string; before: string; after: string }[];
+  update?: { id: string; priority?: Priority; status?: Status }[];
 };
+
+// Only real Markdown headings delimit records: examples inside fences are artifacts.
+function proseLines(text: string, change: (line: string) => string | null) {
+  let fence = "";
+  return text
+    .split("\n")
+    .flatMap((line) => {
+      const mark = line.match(/^\s*(`{3,}|~{3,})/);
+      if (mark) {
+        if (!fence) fence = mark[1];
+        else if (
+          mark[1][0] === fence[0] &&
+          mark[1].length >= fence.length &&
+          /^\s*(?:`+|~+)\s*$/.test(line)
+        )
+          fence = "";
+        return [line];
+      }
+      if (fence) return [line];
+      const result = change(line);
+      return result === null ? [] : [result];
+    })
+    .join("\n");
+}
+
+function splitNotes(text: string) {
+  let offset = 0;
+  // Preserve original bytes, including blank lines and fenced code.
+  let fence = "";
+  const starts = [0];
+  for (const line of text.split("\n")) {
+    const mark = line.match(/^\s*(`{3,}|~{3,})/);
+    if (mark) {
+      if (!fence) fence = mark[1];
+      else if (
+        mark[1][0] === fence[0] &&
+        mark[1].length >= fence.length &&
+        /^\s*(?:`+|~+)\s*$/.test(line)
+      )
+        fence = "";
+    } else if (!fence && offset && line.startsWith("## ")) starts.push(offset);
+    offset += line.length + 1;
+  }
+  return starts.map((start, i) => text.slice(start, starts[i + 1]));
+}
+
+function plainText(block: string) {
+  let plain = "";
+  proseLines(block, (line) => {
+    plain += line + "\n";
+    return line;
+  });
+  return plain;
+}
+
+function noteData(block: string) {
+  const plain = plainText(block);
+  const id = plain.match(
+    /^<!-- todo:([a-z0-9][a-z0-9-]{0,63})(?:;last:[a-f0-9]{64})? -->$/m,
+  )?.[1];
+  const visits = Number(
+    plain.match(/^(?:Visits|Обращений): ([1-9][0-9]*)/m)?.[1] ?? 1,
+  );
+  const priority = (plain.match(
+    /^Visits: [1-9][0-9]* · Priority: (High|Normal|Low)$/m,
+  )?.[1] ?? "Normal") as Priority;
+  const checked = /^## \[[xX]\] /m.test(plain);
+  const status: Status = checked
+    ? "Done"
+    : /^Status: In progress$/m.test(plain)
+      ? "In progress"
+      : "Todo";
+  const field = (name: string) =>
+    plain.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1];
+  return {
+    id,
+    visits,
+    priority,
+    status,
+    created: field("Created"),
+    completed: field("Completed"),
+    task: Boolean(id || /^## \[[ xX]\] /m.test(plain)),
+  };
+}
+
+type HistoryDates = Map<
+  string,
+  { created?: string; completed?: string; done: boolean }
+>;
+
+// All lifecycle changes, ordering and totals are deterministic, not model-generated.
+export function organizeTodo(
+  before: string,
+  proposed: string,
+  changes: NoteChanges = {},
+  options: {
+    sort?: boolean;
+    now?: string;
+    history?: HistoryDates;
+    committed?: string;
+  } = {},
+) {
+  const now = options.now ?? new Date().toISOString();
+  const old = new Map(
+    splitNotes(before).map((block) => [noteData(block).id, block]),
+  );
+  const committed = new Map(
+    splitNotes(options.committed ?? before).map((block) => [
+      noteData(block).id,
+      block,
+    ]),
+  );
+  const updates = new Map<string, NonNullable<NoteChanges["update"]>[number]>();
+  for (const update of changes.update ?? []) {
+    if (
+      updates.has(update.id) ||
+      (!update.priority && !update.status) ||
+      (update.priority &&
+        !["High", "Normal", "Low"].includes(update.priority)) ||
+      (update.status &&
+        !["Todo", "In progress", "Done"].includes(update.status))
+    )
+      throw Error("Invalid or duplicate todo status/priority update.");
+    updates.set(update.id, update);
+  }
+  const found = new Set<string>();
+  let blocks = splitNotes(proposed).map((block) => {
+    const data = noteData(block);
+    if (!data.id) return block;
+    if (found.has(data.id)) throw Error(`Duplicate todo ID: ${data.id}`);
+    found.add(data.id);
+    const previous = old.get(data.id);
+    const update =
+      updates.get(data.id) ?? changes.add?.find((note) => note.id === data.id);
+    if (
+      (update?.priority &&
+        !["High", "Normal", "Low"].includes(update.priority)) ||
+      (update?.status &&
+        !["Todo", "In progress", "Done"].includes(update.status))
+    )
+      throw Error("Invalid todo status or priority.");
+    const baseline = committed.get(data.id);
+    const observedClosure =
+      baseline &&
+      noteData(baseline).status !== "Done" &&
+      data.status === "Done";
+    const manualReopen =
+      baseline &&
+      noteData(baseline).status === "Done" &&
+      data.status !== "Done";
+    if (
+      !options.sort &&
+      previous?.trimEnd() === block.trimEnd() &&
+      !update &&
+      !observedClosure &&
+      !manualReopen
+    )
+      return block;
+    const previousData = previous ? noteData(previous) : undefined;
+    const priority = update?.priority ?? data.priority;
+    const status = update?.status ?? data.status;
+    const history = options.history?.get(data.id);
+    const knownCreated = data.created ?? previousData?.created;
+    const created =
+      knownCreated && knownCreated !== "Unknown"
+        ? knownCreated
+        : previous
+          ? history?.created
+            ? `${history.created} (Git history)`
+            : "Unknown"
+          : now;
+    let completed = data.completed ?? previousData?.completed;
+    if (status !== "Done") completed = undefined;
+    else if (previous && noteData(previous).status !== "Done") completed = now;
+    else if (observedClosure) completed = `${now} (Observed)`;
+    else if (!completed || completed === "Unknown")
+      completed = history?.completed
+        ? `${history.completed} (Git history)`
+        : previous
+          ? "Unknown"
+          : now;
+    if (update?.status)
+      block = block.replace(
+        /^## (?:\[[ xX]\] )?/,
+        `## [${status === "Done" ? "x" : " "}] `,
+      );
+    const labels: Record<string, string> = {
+      "- Цель:": "- Goal:",
+      "- Условие возврата:": "- Return when:",
+      "- Вернуться, если:": "- Return when:",
+      "- Заметки:": "- Notes:",
+    };
+    block = proseLines(block, (line) => {
+      if (/^(?:Visits:|Обращений:|Status:|Created:|Completed:)/.test(line))
+        return null;
+      return labels[line] ?? line;
+    });
+    return proseLines(block, (line) =>
+      /^<!-- todo:[^\n]+ -->$/.test(line)
+        ? `${line}\nVisits: ${data.visits} · Priority: ${priority}\nStatus: ${status}\nCreated: ${created}` +
+          (completed ? `\nCompleted: ${completed}` : "")
+        : line,
+    );
+  });
+  for (const id of updates.keys())
+    if (!found.has(id)) throw Error(`Unknown todo ID: ${id}`);
+  const time = (value?: string) => {
+    const parsed = Date.parse(
+      (value ?? "").replace(/ \((?:Git history|Observed)\)$/, ""),
+    );
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+  const rank = { "In progress": 0, Todo: 1, Done: 2 };
+  const priorityRank = { High: 0, Normal: 1, Low: 2 };
+  const tasks = blocks.filter((block) => noteData(block).task);
+  if (options.sort) {
+    const sorted = tasks.toSorted((a, b) => {
+      const x = noteData(a),
+        y = noteData(b);
+      return (
+        rank[x.status] - rank[y.status] ||
+        (x.status === "Done"
+          ? (time(y.completed) ?? -Infinity) -
+              (time(x.completed) ?? -Infinity) || 0
+          : priorityRank[x.priority] - priorityRank[y.priority] ||
+            y.visits - x.visits ||
+            (time(x.created) ?? Infinity) - (time(y.created) ?? Infinity) ||
+            0)
+      );
+    });
+    let index = 0;
+    blocks = blocks.map((block) =>
+      noteData(block).task ? sorted[index++] : block,
+    );
+  }
+  let content = blocks
+    .map((block, index) =>
+      index < blocks.length - 1 && block && !block.endsWith("\n")
+        ? block + "\n\n"
+        : block,
+    )
+    .join("");
+  if (tasks.length || content.includes("<!-- todo-stats -->")) {
+    const done = tasks.filter(
+      (block) => noteData(block).status === "Done",
+    ).length;
+    const active = tasks.filter(
+      (block) => noteData(block).status === "In progress",
+    ).length;
+    const stats = `<!-- todo-stats -->\nTotal: ${tasks.length} · Done: ${done} · In progress: ${active}`;
+    // Only the canonical document header is ours; a similar string in a note
+    // (especially a fenced artifact) must never be edited as a counter.
+    const header = /^((?:# [^\n]+\n\n)?)<!-- todo-stats -->\nTotal:[^\n]*/;
+    if (header.test(content))
+      content = content.replace(
+        header,
+        (_match, title: string) => title + stats,
+      );
+    else if (/^# [^\n]+\n/.test(content))
+      content = content.replace(/^(# [^\n]+\n)/, `$1\n${stats}\n`);
+    else content = stats + "\n\n" + content;
+  }
+  return content;
+}
 
 // Models supply useful wording, not a regenerated copy of unrelated notes.
 // This pure merge preserves manual text/layout and never performs any I/O.
@@ -44,7 +313,7 @@ export function applyNoteChanges(before: string, changes: NoteChanges) {
   const validID = (id: string) => /^[a-z0-9][a-z0-9-]{0,63}$/.test(id);
   const marker =
     /^<!-- todo:([a-z0-9][a-z0-9-]{0,63})(?:;last:[a-f0-9]{64})? -->$/m;
-  const blocks = before.split(/(?=^## )/m);
+  const blocks = splitNotes(before);
   for (const edit of changes.replace ?? []) {
     if (/[\x00-\x08\x0b-\x1f\x7f]|\uFFFD/.test(edit.after))
       throw Error(
@@ -54,12 +323,14 @@ export function applyNoteChanges(before: string, changes: NoteChanges) {
       !validID(edit.id) ||
       !edit.before ||
       [edit.before, edit.after].some((text) =>
-        /<!-- todo:|^Обращений:/m.test(text),
+        /<!-- todo:|^(?:Обращений:|Visits:|Status:|Created:|Completed:)/m.test(
+          text,
+        ),
       )
     )
       throw Error("Use an exact text replacement inside a note, not metadata.");
     const matches = blocks.flatMap((block, index) =>
-      block.match(marker)?.[1] === edit.id ? [index] : [],
+      plainText(block).match(marker)?.[1] === edit.id ? [index] : [],
     );
     if (matches.length !== 1)
       throw Error(`Unknown or duplicate todo ID: ${edit.id}`);
@@ -73,14 +344,14 @@ export function applyNoteChanges(before: string, changes: NoteChanges) {
       edit.after +
       block.slice(offset + edit.before.length);
     if (
-      blocks[index].match(marker)?.[1] !== edit.id ||
-      blocks[index].split(/(?=^## )/m).length !== 1
+      plainText(blocks[index]).match(marker)?.[1] !== edit.id ||
+      splitNotes(blocks[index]).length !== 1
     )
       throw Error("Replacement must stay within its existing note block.");
   }
   let content = blocks.join("");
   const ids = new Set(
-    blocks.map((block) => block.match(marker)?.[1]).filter(Boolean),
+    blocks.map((block) => plainText(block).match(marker)?.[1]).filter(Boolean),
   );
   const html = (text: string) =>
     text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -91,7 +362,7 @@ export function applyNoteChanges(before: string, changes: NoteChanges) {
       .join("\n");
   // New numbers are local reading aids, not stable IDs or visit priorities.
   // Preserve existing headings (including legacy/un-numbered/manual entries).
-  const headings = [...content.matchAll(/^## (.+)$/gm)];
+  const headings = [...plainText(content).matchAll(/^## (.+)$/gm)];
   let number = Math.max(
     0,
     headings.length,
@@ -132,8 +403,8 @@ export function applyNoteChanges(before: string, changes: NoteChanges) {
     content +=
       (content.endsWith("\n\n") ? "" : content.endsWith("\n") ? "\n" : "\n\n") +
       `## [ ] ${++number}. ${html(note.title)}\n\n<details>\n<summary>${html(note.summary)}</summary>\n\n<!-- todo:${note.id} -->\n\n` +
-      `- Цель:\n${indent(note.goal)}\n- Условие возврата:\n${indent(note.returnWhen)}\n` +
-      (note.notes ? `- Заметки:\n${indent(note.notes)}\n` : "") +
+      `- Goal:\n${indent(note.goal)}\n- Return when:\n${indent(note.returnWhen)}\n` +
+      (note.notes ? `- Notes:\n${indent(note.notes)}\n` : "") +
       "\n</details>\n";
   }
   return content;
@@ -142,16 +413,18 @@ export function applyNoteChanges(before: string, changes: NoteChanges) {
 // Render changes, not a second copy of the file or Git's patch envelope.
 // Never truncate consent text: every affected line remains available for review.
 function displayText(text: string) {
-  return text
-    .replace(
-      /^<!-- todo:[a-z0-9][a-z0-9-]{0,63}(?:;last:[a-f0-9]{64})? -->\n?/gm,
-      "",
+  return proseLines(text, (line) => {
+    if (
+      /^<!-- todo:[a-z0-9][a-z0-9-]{0,63}(?:;last:[a-f0-9]{64})? -->$/.test(
+        line,
+      )
     )
-    .replace(
-      /^Обращений: ([1-9][0-9]*) · Приоритет: ([1-9][0-9]*)$/gm,
+      return null;
+    return line.replace(
+      /^Обращений: ([1-9][0-9]*) · Приоритет: ([1-9][0-9]*)$/,
       "Visits: $1 · Priority: $2",
-    )
-    .trim();
+    );
+  }).trim();
 }
 
 // Remove only our presentation wrappers, not code samples or arbitrary HTML.
@@ -196,23 +469,31 @@ export async function noteReview(
 ) {
   const split = (text: string) =>
     new Map(
-      text
-        .split(/(?=^## )/m)
-        .map((block, i) => [
-          block.match(
-            /^<!-- todo:([a-z0-9-]+)(?:;last:[a-f0-9]{64})? -->$/m,
-          )?.[1] ?? `document:${i}`,
-          block,
-        ]),
+      splitNotes(text).map((block, i) => [
+        plainText(block).match(
+          /^<!-- todo:([a-z0-9-]+)(?:;last:[a-f0-9]{64})? -->$/m,
+        )?.[1] ?? `document:${i}`,
+        block,
+      ]),
     );
   const old = split(before),
     next = split(after);
   const notes: ReviewNote[] = [];
+  const withoutStats = (text: string) =>
+    text
+      .replace(/^((?:# [^\n]+\n\n)?)<!-- todo-stats -->\nTotal:[^\n]*\n?/, "$1")
+      .trim();
   // Proposed order first. Removed notes follow; each stable ID occurs once.
   for (const id of new Set([...next.keys(), ...old.keys()])) {
     const previous = displayText(old.get(id) ?? ""),
       proposed = displayText(next.get(id) ?? "");
-    if (previous === proposed || (!previous && proposed === "# Todo")) continue;
+    if (
+      previous === proposed ||
+      (!previous && withoutStats(proposed) === "# Todo") ||
+      (id.startsWith("document:") &&
+        withoutStats(previous) === withoutStats(proposed))
+    )
+      continue;
     const title =
       (next.get(id) ?? old.get(id))?.match(/^## (.+)$/m)?.[1] ??
       "Document notes";
@@ -231,6 +512,10 @@ export async function noteReview(
     (next.get(id) ?? old.get(id))?.match(/^## (.+)$/m)?.[1] ?? "Document notes";
   return {
     notes,
+    stats:
+      before.match(/^Total:.*$/m)?.[0] === after.match(/^Total:.*$/m)?.[0]
+        ? ""
+        : (after.match(/^Total:.*$/m)?.[0] ?? ""),
     order:
       previousOrder.join() === nextOrder.join()
         ? ""
@@ -283,17 +568,17 @@ export function countRevisits(
       string,
       { count: number; last: string; block: string }
     >();
-    for (const block of text.split(/(?=^## )/m)) {
-      const marker = block.match(
+    for (const block of splitNotes(text)) {
+      const marker = plainText(block).match(
         /^<!-- todo:([a-z0-9][a-z0-9-]{0,63})(?:;last:([a-f0-9]{64}))? -->$/m,
       );
       if (!marker) continue;
       if (!block.startsWith("## ") || found.has(marker[1]))
         throw Error("Each todo ID must identify one unique heading block.");
-      const count = block.match(
-        /^Обращений: ([1-9][0-9]*) · Приоритет: [1-9][0-9]*$/m,
+      const count = plainText(block).match(
+        /^(?:Обращений: ([1-9][0-9]*) · Приоритет: [1-9][0-9]*|Visits: ([1-9][0-9]*) · Priority: (?:High|Normal|Low))$/m,
       );
-      const number = count ? Number(count[1]) : 1;
+      const number = count ? Number(count[1] ?? count[2]) : 1;
       if (!Number.isSafeInteger(number) || number > 1000000)
         throw Error("Invalid todo counter.");
       found.set(marker[1], { count: number, last: marker[2] ?? "", block });
@@ -309,10 +594,9 @@ export function countRevisits(
   for (const id of revisited)
     if (!old.has(id) || !next.has(id))
       throw Error(`Unknown revisited todo ID: ${id}`);
-  return proposed
-    .split(/(?=^## )/m)
+  return splitNotes(proposed)
     .map((block) => {
-      const marker = block.match(
+      const marker = plainText(block).match(
         /^<!-- todo:([a-z0-9][a-z0-9-]{0,63})(?:;last:([a-f0-9]{64}))? -->$/m,
       );
       if (!marker) return block;
@@ -325,10 +609,14 @@ export function countRevisits(
         return block;
       const count = previous ? previous.count + (bump ? 1 : 0) : 1;
       const last = !previous || bump ? eventKey : previous.last;
-      const metadata = `<!-- todo:${id}${last ? `;last:${last}` : ""} -->\nОбращений: ${count} · Приоритет: ${count}`;
-      return block
-        .replace(/^Обращений: [1-9][0-9]* · Приоритет: [1-9][0-9]*\n?/gm, "")
-        .replace(marker[0], metadata);
+      const metadata = `<!-- todo:${id}${last ? `;last:${last}` : ""} -->\nVisits: ${count} · Priority: ${noteData(previous?.block ?? block).priority}`;
+      return proseLines(block, (line) =>
+        /^(?:Обращений:|Visits:)/.test(line)
+          ? null
+          : line === marker[0]
+            ? metadata
+            : line,
+      );
     })
     .join("");
 }
@@ -542,15 +830,68 @@ export function todoStore(directory: string) {
         )
         .map((line: string) =>
           line.startsWith("--- ")
-            ? "--- todo.md (сейчас)"
+            ? "--- todo.md (current)"
             : line.startsWith("+++ ")
-              ? "+++ todo.md (после согласия)"
+              ? "+++ todo.md (after approval)"
               : line,
         )
         .join("\n");
     } finally {
       await rm(temporary, { recursive: true, force: true });
     }
+  }
+  async function committed(head: string) {
+    return head ? git(["show", `${head}:todo.md`]) : "";
+  }
+  // Explicit sorting may backfill dates from bounded local, first-parent history.
+  // Dates are labelled as Git evidence, never claimed to be exact event times.
+  async function history(head: string): Promise<HistoryDates> {
+    const dates: HistoryDates = new Map();
+    if (!head) return dates;
+    const log = (
+      await git([
+        "log",
+        "--first-parent",
+        "--max-count=201",
+        "--format=%H %cI",
+        head,
+        "--",
+        "todo.md",
+      ])
+    )
+      .trim()
+      .split("\n")
+      .filter(Boolean);
+    const complete = log.length <= 200;
+    for (const [index, row] of log.slice(0, 200).reverse().entries()) {
+      const [revision, date] = row.split(" ");
+      const timestamp = new Date(date).toISOString();
+      const present = new Set<string>();
+      for (const block of splitNotes(await committed(revision))) {
+        const data = noteData(block);
+        if (!data.id) continue;
+        present.add(data.id);
+        const old = dates.get(data.id);
+        const done = data.status === "Done";
+        dates.set(data.id, {
+          created: old
+            ? old.created
+            : complete || index > 0
+              ? timestamp
+              : undefined,
+          completed: done
+            ? old?.done
+              ? old.completed
+              : complete || index > 0
+                ? timestamp
+                : undefined
+            : undefined,
+          done,
+        });
+      }
+      for (const id of dates.keys()) if (!present.has(id)) dates.delete(id);
+    }
+    return dates;
   }
   async function save(
     base: string,
@@ -564,7 +905,7 @@ export function todoStore(directory: string) {
       return {
         status: "stale",
         message:
-          "Файл или Git изменились. Перечитайте и согласуйте новый вариант.",
+          "The file or Git state changed. Reread and request fresh approval.",
       };
     await mkdir(root, { recursive: true, mode: 0o700 });
     if (!(await exists(join(root, ".git"))))
@@ -577,7 +918,7 @@ export function todoStore(directory: string) {
         return {
           status: "busy",
           message:
-            "Другая запись todo ещё выполняется; после сбоя проверьте lock вручную.",
+            "Another todo write is in progress; after a crash, inspect the lock manually.",
         };
       throw error;
     }
@@ -600,7 +941,7 @@ export function todoStore(directory: string) {
       )
         return {
           status: "stale",
-          message: "Состояние изменилось перед записью. Согласуйте заново.",
+          message: "State changed before writing. Request fresh approval.",
         };
       const indexPath = join(lock, "index");
       const gitEnv = { GIT_INDEX_FILE: indexPath };
@@ -632,8 +973,7 @@ export function todoStore(directory: string) {
       if ((await snapshot()).fingerprint !== current.fingerprint)
         return {
           status: "stale",
-          message:
-            "Состояние изменилось во время подготовки. Ничего не записано.",
+          message: "State changed during preparation. Nothing was written.",
         };
       if (signal.aborted) return { status: "cancelled" };
       await rename(next, file);
@@ -647,8 +987,8 @@ export function todoStore(directory: string) {
         status: "error",
         written,
         message: written
-          ? "Согласованный файл записан, но Git мог не завершиться. Проверьте status/log; автоматического отката нет."
-          : "Файл не записан. Проверьте Git identity и состояние репозитория.",
+          ? "The approved file was written, but Git may not have finished. Inspect status/log; there is no automatic rollback."
+          : "The file was not written. Check Git identity and repository state.",
         detail: String(error),
       };
     } finally {
@@ -656,7 +996,7 @@ export function todoStore(directory: string) {
       await rm(lock, { recursive: true, force: true });
     }
   }
-  return { snapshot, preview, save, path: file };
+  return { snapshot, preview, save, committed, history, path: file };
 }
 
 export async function setupTodo(
@@ -687,7 +1027,7 @@ export async function setupTodo(
       name: "agent_todo_propose",
       options: { codemode: false },
       description:
-        "Propose todo changes after agent_todo_read. Prefer changes.add with Russian title, meaningful one-sentence summary, goal, returnWhen and optional notes; code generates checkbox headings, closed spoilers, IDs/counters and merges without copying unrelated notes. Use changes.replace for exact unique text replacements within an existing stable ID; preserve manual marks and legacy layout. Omit changes for a revisit-only proposal; list revisited IDs only for deliberate returns, not reads/retries/import duplicates. Content is a compatibility escape hatch only for explicitly requested whole-file restructuring. Code merges, compares, reviews and writes without model calls during navigation. The TUI shows one scrollable note per tab; left/right and Tab cycle. One final Submit saves the entire batch in one local commit only without feedback. Any own answer blocks writing: feedback carries note IDs/titles, batchFeedback is global, and draft preserves the proposal. Revise only referenced notes, preserve other drafts and request fresh approval for changed wording. Reject/Escape declines everything; do not reopen unless asked or bypass through shell/edit/fabricated form answers. Stale proposals need rereading and renewed consent.",
+        "Propose todo changes after agent_todo_read. Default to English content even for non-English requests; use Russian only when explicitly requested. Preserve supplied artifacts in their original language and wording unless translation of that specific artifact is requested. Prefer changes.add with a short title, meaningful one-sentence summary, goal, returnWhen and optional notes; code generates Markdown and metadata without copying unrelated notes. Use changes.replace for exact unique content edits and changes.update for explicit status/priority changes by stable ID. Priority is High/Normal/Low (default Normal), independent of Visits; status is Todo/In progress/Done. Set sort=true only on request: In progress first, Todo next (priority, visits descending, oldest created first), Done last (newest completed first). Code handles totals and dates. Omit changes for revisit-only proposals; revisited lists deliberate returns only, not reads/retries. Content is only for explicitly requested whole-file restructuring. The TUI shows one scrollable note per tab. Only final Submit without feedback saves the batch in one local commit. Any feedback blocks writing; preserve unaffected drafts and request fresh approval. Reject/Escape declines everything; do not reopen unless asked or bypass confirmation. Stale proposals need rereading and renewed consent.",
       input: {
         type: "object",
         properties: {
@@ -717,12 +1057,12 @@ export async function setupTodo(
                     title: {
                       type: "string",
                       description:
-                        "Short descriptive Russian title, without numbering or heading/checkbox markup; code assigns the next note number",
+                        "Short descriptive title, English by default; no numbering or heading/checkbox markup",
                     },
                     summary: {
                       type: "string",
                       description:
-                        "One concise meaningful Russian sentence, not a repetition of the title",
+                        "One concise meaningful sentence, English by default; not a repetition of the title",
                     },
                     goal: { type: "string" },
                     returnWhen: { type: "string" },
@@ -730,6 +1070,14 @@ export async function setupTodo(
                       type: "string",
                       description:
                         "Optional context; multiline Markdown/code is allowed",
+                    },
+                    priority: {
+                      type: "string",
+                      enum: ["High", "Normal", "Low"],
+                    },
+                    status: {
+                      type: "string",
+                      enum: ["Todo", "In progress", "Done"],
                     },
                   },
                   required: ["id", "title", "summary", "goal", "returnWhen"],
@@ -760,12 +1108,38 @@ export async function setupTodo(
                   additionalProperties: false,
                 },
               },
+              update: {
+                type: "array",
+                description:
+                  "Explicit status or independent priority changes; never infer In progress from discussion alone.",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    priority: {
+                      type: "string",
+                      enum: ["High", "Normal", "Low"],
+                    },
+                    status: {
+                      type: "string",
+                      enum: ["Todo", "In progress", "Done"],
+                    },
+                  },
+                  required: ["id"],
+                  additionalProperties: false,
+                },
+              },
             },
             additionalProperties: false,
           },
+          sort: {
+            type: "boolean",
+            description:
+              "Sort only on explicit request; code migrates managed metadata to English and backfills available dates from local Git history. Preserve content, IDs and heading numbers.",
+          },
           reason: {
             type: "string",
-            description: "Brief explanation in the conversation's language",
+            description: "Brief English explanation for the review interface",
           },
           message: {
             type: "string",
@@ -792,6 +1166,7 @@ export async function setupTodo(
           message,
           changes: requestedChanges,
           revisited = [],
+          sort = false,
         } = input as {
           base: string;
           content?: string;
@@ -799,6 +1174,7 @@ export async function setupTodo(
           reason: string;
           message: string;
           revisited?: string[];
+          sort?: boolean;
         };
         let { content } = input as { content?: string };
         const originalContent = content;
@@ -863,6 +1239,11 @@ export async function setupTodo(
             revisited,
             eventKey,
           );
+          content = organizeTodo(before.content, content, requestedChanges, {
+            sort,
+            committed: await store.committed(before.head),
+            ...(sort ? { history: await store.history(before.head) } : {}),
+          });
         } catch (error) {
           return {
             content: JSON.stringify({
@@ -888,6 +1269,7 @@ export async function setupTodo(
             : "";
         const summary = [
           reason,
+          review.stats,
           review.order,
           manual && cleanNote(manual),
           `File: ${store.path}\nCommit: ${message}\nSubmit saves the entire file in one local commit.\nUnsaved editor buffers are not visible.`,
@@ -939,6 +1321,7 @@ export async function setupTodo(
                           ? { content: originalContent }
                           : {}),
                       revisited,
+                      sort,
                       reason,
                       message,
                     },

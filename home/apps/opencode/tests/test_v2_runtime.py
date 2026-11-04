@@ -1019,11 +1019,11 @@ def main(binary, catalog_only=False, mac=False, native=False):
                         "[user]\n name = Todo Fixture\n email = todo@example.invalid\n"
                     )
                     reviewed = review_todo(answer)
-                    assert "Visits: 1 · Priority: 1" in reviewed, reviewed
+                    assert "Visits: 1 · Priority: Normal" in reviewed, reviewed
                     result = tool_result(todo_session)
                     assert result["status"] == expected, result
                 assert (
-                    "Обращений: 1 · Приоритет: 1"
+                    "Visits: 1 · Priority: Normal"
                     in (root / "agent-todo/todo.md").read_text()
                 )
                 assert ";last:" in (root / "agent-todo/todo.md").read_text(), (
@@ -1037,7 +1037,7 @@ def main(binary, catalog_only=False, mac=False, native=False):
                 )
                 assert (
                     saved_todo.index("<details>")
-                    < saved_todo.index("Обращений: 1 · Приоритет: 1")
+                    < saved_todo.index("Visits: 1 · Priority: Normal")
                     < saved_todo.index("</details>")
                 ), saved_todo
                 assert (
@@ -1058,10 +1058,10 @@ def main(binary, catalog_only=False, mac=False, native=False):
                     {"text": "Вернёмся к проверке устройства."},
                 )
                 reviewed = review_todo("Save all")
-                assert "Visits: 2 · Priority: 2" in reviewed, reviewed
+                assert "Visits: 2 · Priority: Normal" in reviewed, reviewed
                 assert tool_result(todo_session)["status"] == "saved"
                 assert (
-                    "Обращений: 2 · Приоритет: 2"
+                    "Visits: 2 · Priority: Normal"
                     in (root / "agent-todo/todo.md").read_text()
                 )
                 original_todo = (root / "agent-todo/todo.md").read_text()
@@ -1089,7 +1089,7 @@ def main(binary, catalog_only=False, mac=False, native=False):
                             },
                         ]
                     },
-                    "reason": "Проверить пакетный импорт.",
+                    "reason": "Review batch import.",
                     "message": "import batch of todo notes",
                 }
                 MockResponses.next_tool = ("agent_todo_propose", batch)
@@ -1111,7 +1111,14 @@ def main(binary, catalog_only=False, mac=False, native=False):
                 )
                 assert tool_result(todo_session)["status"] == "saved"
                 assert (
-                    (root / "agent-todo/todo.md").read_text().startswith(original_todo)
+                    (root / "agent-todo/todo.md")
+                    .read_text()
+                    .startswith(
+                        original_todo.replace(
+                            "Total: 1 · Done: 0 · In progress: 0",
+                            "Total: 3 · Done: 0 · In progress: 0",
+                        )
+                    )
                 )
                 numbered = (root / "agent-todo/todo.md").read_text()
                 assert "## [ ] 2. Long task" in numbered, numbered
