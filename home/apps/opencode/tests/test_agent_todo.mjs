@@ -1218,6 +1218,42 @@ test("moving an EOF record preserves heading boundaries and unknown sections sta
   assert.equal(organizeTodo(sorted, sorted, {}, { sort: true }), sorted);
 });
 
+test("sorting an EOF spoiler before completed tasks leaves a blank line after details", () => {
+  const done = record("done", {
+    status: "Done",
+    completed: "Unknown",
+    body: "<details>\nCompleted.\n</details>",
+  });
+  for (const ending of ["", "\n", "\n\n", "\n\n\n"]) {
+    const todo =
+      record("todo", { body: "<details>\nPending.\n</details>" }).trimEnd() +
+      ending;
+    const source = "# Todo\n\n" + done + todo;
+    const sorted = organizeTodo(source, source, {}, { sort: true });
+    assert.deepEqual(ids(sorted), ["todo", "done"]);
+    assert.ok(
+      sorted.includes(
+        todo.trimEnd() + (ending.length >= 2 ? ending : "\n\n") + done,
+      ),
+    );
+    assert.equal(organizeTodo(sorted, sorted, {}, { sort: true }), sorted);
+  }
+});
+
+test("ordinary saves repair missing spoiler separators without changing note contents or order", () => {
+  const todo =
+    record("todo", { body: "<details>\nPending.\n</details>" }).trimEnd() +
+    "\n";
+  const done = record("done", {
+    status: "Done",
+    body: "<details>\nCompleted.\n</details>",
+  });
+  const source = "# Todo\n\n" + todo + done;
+  const output = organizeTodo(source, source);
+  assert.equal(withoutStats(output), "# Todo\n\n" + todo + "\n" + done);
+  assert.equal(organizeTodo(output, output), output);
+});
+
 test("local Git backfill records first appearance and latest closure, labelled as history", async (t) => {
   const f = await fixture(t);
   const commit = async (content, date) => {

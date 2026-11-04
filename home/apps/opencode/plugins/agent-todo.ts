@@ -279,8 +279,8 @@ export function organizeTodo(
   }
   let content = blocks
     .map((block, index) =>
-      index < blocks.length - 1 && block && !block.endsWith("\n")
-        ? block + "\n\n"
+      index < blocks.length - 1 && block && !block.endsWith("\n\n")
+        ? block + (block.endsWith("\n") ? "\n" : "\n\n")
         : block,
     )
     .join("");
