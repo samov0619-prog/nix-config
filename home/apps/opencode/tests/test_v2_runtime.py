@@ -202,7 +202,7 @@ class MockResponses(BaseHTTPRequestHandler):
         self.wfile.write(encoded)
 
 
-def main(binary, catalog_only=False, mac=False, native=False):
+def main(binary, catalog_only=False, mac=False, native=False, limits_only=False):
     settings = json.loads(
         subprocess.check_output(
             [
@@ -251,13 +251,16 @@ def main(binary, catalog_only=False, mac=False, native=False):
         config = root / "config" / "opencode"
         config.mkdir(parents=True)
         (config / "opencode.json").write_text(json.dumps(settings))
-        for name, entry in [
+        entries = [
             ("git-offline", "git-offline.ts"),
             ("permission-stats", "permission-stats.ts"),
             ("model-calls", "model-calls.ts"),
             ("skill-stats", "skill-stats.ts"),
             ("agent-todo", "agent-todo.ts"),
-        ]:
+        ]
+        if limits_only:
+            entries = [("limits", "limits/index.ts")]
+        for name, entry in entries:
             plugin = config / "plugins" / name
             generation = os.environ.get("OPENCODE_TEST_HM_GENERATION")
             if generation:
@@ -273,6 +276,11 @@ def main(binary, catalog_only=False, mac=False, native=False):
                 (plugin / "index.ts").write_text(
                     (SOURCE / "plugins" / entry).read_text()
                 )
+                if name == "limits":
+                    for filename in ["policy.ts", "rpc.ts", "writer.ts", "tui.tsx"]:
+                        (plugin / filename).write_text(
+                            (SOURCE / "plugins/limits" / filename).read_text()
+                        )
                 if name == "agent-todo":
                     for source, target in [
                         ("agent-todo-review.ts", "agent-todo-review.ts"),
@@ -449,13 +457,16 @@ def main(binary, catalog_only=False, mac=False, native=False):
                     for plugin in plugins["data"]
                     if plugin["id"].startswith("local.")
                 ]
-                assert {p["id"] for p in local} == {
+                expected_plugins = {
                     "local.git-offline",
                     "local.permission-stats",
                     "local.model-calls",
                     "local.skill-stats",
                     "local.agent-todo",
-                }, local
+                }
+                if limits_only:
+                    expected_plugins = {"local.limits"}
+                assert {p["id"] for p in local} == expected_plugins, local
                 assert all(p["state"]["status"] == "active" for p in local), local
                 print("PASS: configured agents and native local plugins active")
                 catalog = api("model")["data"]
@@ -565,6 +576,83 @@ def main(binary, catalog_only=False, mac=False, native=False):
                     print(
                         f"PASS: {expected_model} {effort or ''}: {len(MockResponses.requests[start:])} actual mock requests"
                     )
+
+                def last_tool(sid):
+                    with sqlite3.connect(
+                        f"file:{root / 'data/opencode/opencode.db'}?mode=ro", uri=True
+                    ) as db:
+                        tools = [
+                            part
+                            for (data,) in db.execute(
+                                "SELECT data FROM session_message WHERE session_id=? AND type='assistant' ORDER BY seq",
+                                (sid,),
+                            )
+                            for part in json.loads(data).get("content", [])
+                            if part["type"] == "tool"
+                        ]
+                    return tools[-1]["state"]
+
+                if limits_only:
+                    assert (
+                        "metadata" not in session["data"]
+                        or session["data"]["metadata"] is None
+                    ), session
+                    prompt(session_id, "gpt-6.1-sol", "high", title=True)
+                    assert not (
+                        api(f"session/{session_id}")["data"].get("metadata") or {}
+                    ).get("local.checkpoint")
+
+                    MockResponses.next_tool = (
+                        "checkpoint_ready",
+                        {
+                            "summary": "Isolated runtime fixture handoff",
+                            "review": "Fixture review has no known blockers",
+                            "checks": "Local mock only; real provider and TUI untested",
+                            "resume": "Validate target UI separately",
+                            "reviewPassed": True,
+                            "commit": "No Git: isolated fixture",
+                        },
+                    )
+                    prompt(session_id, "gpt-6.1-sol", "high")
+                    checkpoint = (
+                        api(f"session/{session_id}")["data"].get("metadata") or {}
+                    ).get("local.checkpoint")
+                    assert checkpoint and checkpoint["ready"] is True, [
+                        item
+                        for item in MockResponses.requests[-1].get("input", [])
+                        if item.get("type") == "function_call_output"
+                    ]
+                    prompt(session_id, "gpt-6.1-sol", "high")
+                    assert (
+                        api(f"session/{session_id}")["data"]["metadata"][
+                            "local.checkpoint"
+                        ]["ready"]
+                        is False
+                    )
+
+                    bare = api("session", {"title": "Bare metadata tool fixture"})[
+                        "data"
+                    ]
+                    assert not bare.get("metadata"), bare
+                    MockResponses.next_tool_command = "true"
+                    prompt(bare["id"], "gpt-6.1-sol", "high")
+                    outputs = [
+                        item
+                        for item in MockResponses.requests[-1].get("input", [])
+                        if item.get("type") == "function_call_output"
+                    ]
+                    assert outputs, (
+                        "ordinary tool must complete through the native before hook"
+                    )
+                    # Shell content is plain text, unlike structured plugin errors.
+                    # Verify native completion, not a guessed provider wire encoding.
+                    assert last_tool(bare["id"])["status"] == "completed", last_tool(
+                        bare["id"]
+                    )
+                    print(
+                        "PASS: limits plugin admits metadata-free prompts/tools and records/resets checkpoints in native runtime"
+                    )
+                    return
 
                 prompt(session_id, "gpt-6.1-sol", "high", title=True)
                 key = "local.model-routing"
@@ -922,21 +1010,6 @@ def main(binary, catalog_only=False, mac=False, native=False):
                     },
                 )["data"]["id"]
 
-                def last_tool(sid):
-                    with sqlite3.connect(
-                        f"file:{root / 'data/opencode/opencode.db'}?mode=ro", uri=True
-                    ) as db:
-                        tools = [
-                            part
-                            for (data,) in db.execute(
-                                "SELECT data FROM session_message WHERE session_id=? AND type='assistant' ORDER BY seq",
-                                (sid,),
-                            )
-                            for part in json.loads(data).get("content", [])
-                            if part["type"] == "tool"
-                        ]
-                    return tools[-1]["state"]
-
                 def tool_result(sid):
                     state = last_tool(sid)
                     assert state["status"] == "completed", state
@@ -1281,4 +1354,5 @@ if __name__ == "__main__":
         "--catalog" in sys.argv[2:],
         "--mac" in sys.argv[2:],
         "--native" in sys.argv[2:],
+        "--limits" in sys.argv[2:],
     )

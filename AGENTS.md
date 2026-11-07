@@ -251,6 +251,33 @@ not import Disko.
   через настоящий runtime, не только plain-object unit fixture.
 - Auto compaction: soft input 244000 − buffer 32000 = 212000; output 128000,
   keep.tokens 15000. V2 не имеет прежнего `prune=false`; между шагами возможен overshoot.
+- `plugins/limits/` — local V2 hooks/RPC/TUI, без стороннего quota-плагина,
+  отдельного LLM и idle network polling. OpenAI ChatGPT OAuth usage snapshot,
+  общий per-account cache и event-driven active workers (не открытые вкладки).
+  Проценты доступны только через legacy Codex OAuth; token sharing показывает
+  `Limits: not exposed by token sharing`, без legacy HTTP/cache/WS и credential
+  fallback. Active и ручные checkpoints сохраняются. `default.nix` напоминает
+  `OPENCODE QUOTA API` при HM evaluation/build и activation (штатный жёлтый warnEcho).
+  Проверять openai/codex#54219/API вручную при обновлении; удалять reminder только
+  после реальных процентов/reset times, account switching и per-window warnings,
+  не просто закрытия issue. Ссылки/границы проверки — README/BENCHMARK.
+  Пятичасовой резерв 15/20/25% для 1/2/3 workers, warning на 10 п.п. раньше;
+  недельные пороги — каждый пятичасовой × 3/22 с округлением до целого процента.
+  Статусный `⚠` рядом с каждым сработавшим окном: ранний серый, основной жёлтый;
+  без отдельного поля предупреждения, автоматических бюджетных инструкций модели
+  и `notices`. Latch сохраняется после checkpoint, уменьшения
+  workers и обновления порогов до подтверждённого renewal / >95% остатка.
+  `/limits-reset` — подтверждённый override текущих limiting windows, не quota reset;
+  `/checkpoint` — явный reviewed handoff request, `/checkpoint-reset` — pending.
+  `Checkpoint +/✓` всегда отображается и означает agent-reported смысловую готовность,
+  не Git status. Review → fixes → repeat review до отсутствия blockers; Git commit
+  только при разрешении, без Git — связный код/текст и resume plan. Plan не обходит.
+  Checkpoint state — session metadata; private hashed account cache — XDG state.
+  `Session.Info.metadata` необязательно: отсутствие означает pending; server hooks
+  не должны ломать prompt/tool admission. `checkpoint_ready` — direct tool с
+  `codemode: false`. Unit/mock и узкий native runtime `test_v2_runtime.py --limits`
+  покрывают отсутствие metadata, prompt/tool и создание/сброс checkpoint; живой
+  OAuth/quota, installed HM layout и настоящий TUI/PTY не проверены. См. README.
 - Audio — только native notifications/OpenTUI; mutable `cli.json` seeded once,
   `attention.sound`/volume/custom permission/done/error sounds. Старые V1
   notifications/mute plugins не устанавливаются. `quiet-urgency.ts` независимо

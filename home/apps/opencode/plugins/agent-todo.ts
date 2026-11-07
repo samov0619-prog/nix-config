@@ -21,7 +21,7 @@ import {
 } from "./agent-todo-review.ts";
 
 const exec = promisify(execFile);
-const LIMIT = 32768;
+const LIMIT = 131072;
 const digest = (text: string) =>
   createHash("sha256").update(text).digest("hex");
 
@@ -685,7 +685,7 @@ export function todoStore(directory: string) {
         stat.size > LIMIT)
     )
       throw Error(
-        "todo.md must be a regular, single-link UTF-8 file of at most 32 KiB.",
+        "todo.md must be a regular, single-link UTF-8 file of at most 128 KiB.",
       );
     const content = stat ? await readFile(file, "utf8") : "";
     if (content.includes("\0") || content.includes("\uFFFD"))
@@ -1256,7 +1256,7 @@ export async function setupTodo(
           return {
             content: JSON.stringify({
               status: "invalid",
-              message: "Formatted todo exceeds 32 KiB.",
+              message: "Formatted todo exceeds 128 KiB.",
             }),
           };
         if (content === before.content && before.head && !before.status)

@@ -854,6 +854,49 @@ test("restart/reload creates no durable proposals or implicit approval", async (
   );
 });
 
+test("128 KiB capacity accepts existing larger notes and structured additions without rewriting them", async (t) => {
+  const f = await fixture(t);
+  const limitText = "x".repeat(131072);
+  await writeFile(f.file, limitText);
+  assert.equal(
+    (await f.store.snapshot()).content,
+    limitText,
+    "exact byte limit is readable",
+  );
+  const existing =
+    "# Todo\n\n## Existing\n<!-- todo:existing -->\n" +
+    "я".repeat(20000) +
+    "\n";
+  await writeFile(f.file, existing);
+  const p = await plugin(f);
+  assert.equal(
+    (
+      await p.propose({
+        content: undefined,
+        changes: {
+          add: [
+            {
+              id: "larger-file",
+              title: "Larger todo",
+              summary: "Save a new note without rewriting the existing text.",
+              goal: "Preserve manual content.",
+              returnWhen: "Testing capacity.",
+            },
+          ],
+        },
+      })
+    ).status,
+    "saved",
+  );
+  const saved = await readFile(f.file, "utf8");
+  assert.ok(Buffer.byteLength(saved) > 32768);
+  assert.ok(
+    withoutStats(saved).startsWith(existing),
+    "unrelated note remains byte-identical",
+  );
+  assert.equal(p.forms.length, 1, "larger files still require native consent");
+});
+
 test("symlinks, oversize text, conflicts and malformed proposals fail closed", async (t) => {
   const f = await fixture(t);
   const target = join(f.root, "../private");
@@ -861,14 +904,25 @@ test("symlinks, oversize text, conflicts and malformed proposals fail closed", a
   await symlink(target, f.file);
   await assert.rejects(f.store.snapshot(), /regular/);
   await rm(f.file);
-  await writeFile(f.file, "x".repeat(32769));
-  await assert.rejects(f.store.snapshot(), /32 KiB/);
+  await writeFile(f.file, "x".repeat(131073));
+  await assert.rejects(f.store.snapshot(), /128 KiB/);
   await rm(f.file);
   const p = await plugin(f);
   assert.equal(
-    (await p.propose({ content: "x".repeat(32769) })).status,
+    (await p.propose({ content: "я".repeat(65537) })).status,
     "invalid",
   );
+  const formatted = await p.propose({
+    content:
+      "# Todo\n\n## [ ] Capacity\n<!-- todo:capacity -->\n" +
+      "x".repeat(130990),
+  });
+  assert.equal(
+    formatted.status,
+    "invalid",
+    "generated metadata counts toward the byte limit",
+  );
+  assert.match(formatted.message, /128 KiB/);
   assert.equal(
     (await p.propose({ message: "bad\nsubject" })).status,
     "invalid",

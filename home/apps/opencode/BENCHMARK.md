@@ -43,6 +43,101 @@ below document reproducibility, not authorization to execute them automatically.
 
 ## Reproducible checks
 
+### Token-sharing quota fallback (2026-11-07)
+
+`chatgpt-token-sharing` has no confirmed source of subscription window percentages
+or reset times. A live diagnostic returned HTTP 401 from `wham/usage` with an
+unexpired sharing token; the user switched to legacy OAuth and confirmed quota
+data returned. This is evidence for the limitation, not live verification of the
+new fallback. Track [openai/codex#54219](https://github.com/openai/codex/issues/54219)
+and the official API references in [README.md](README.md).
+
+The fallback shows `Limits: not exposed by token sharing`, retains active worker
+counting and manual checkpoints, and skips legacy quota HTTP/cache/WS ingestion
+and reset. Credential-switch events invalidate client status; legacy account
+snapshots and latches remain isolated and usable when selected again.
+Unit/mock regressions cover zero incompatible requests or cache creation, ignored
+sharing WS data, waits/completion, checkpoint readiness/reset, credential-switch
+notifications, hiding legacy snapshots/latches and restoring the selected account.
+An in-flight legacy HTTP result is also rechecked against the current identity:
+switching to sharing or another account cannot restore the old percentages.
+The TUI fixture checks the placeholder on both slots, absence of stale percentages
+and markers, transition back to legacy, and explicit checkpoint commands.
+
+Home Manager adds a static evaluation/build warning and a pre-write activation
+warning (`warnEcho`, yellow on color-capable terminals unless `NO_COLOR` is set).
+Neither queries GitHub/API nor reads authorization. Remove the reminder only after
+real token-sharing percentages, window duration/reset data, account switching and
+per-window warnings are verified; issue closure alone is insufficient.
+Build, activation, installed layout, live fallback switching and actual TUI/PTY
+verification remain user-run; they were not performed for this fallback.
+
+Completed: all 19 limits/TUI tests and the combined 72-test
+limits/TUI/todo/model-calls/model-routing suite passed, with no skipped tests.
+Nix parsing, isolated reminder-module evaluation with the pinned HM library,
+generated activation-shell syntax, declared formatters and `git diff --check`
+passed. The isolated evaluation uses stub package/config arguments, not a full
+Home Manager profile evaluation. No build, activation, service restart or
+authorization change was performed by the agent.
+
+### UI-only budget signals and todo capacity (2026-11-05)
+
+This supersedes automatic model warning/wrap-up behavior described in the earlier
+regression below. Budget observation no longer modifies model instructions or reads
+checkpoint metadata; the TUI draws a triangle beside each affected window's
+percentage: gray for the early threshold, yellow for the main threshold or a
+persisted latch. Both windows can have independent markers; healthy/dismissed
+windows have none. There is no separate warning field or command hint.
+Only the explicit `/checkpoint` command requests handoff work. The checkpoint request text
+is unchanged and has been shown to the user for wording review.
+
+Five-hour thresholds are unchanged. Weekly thresholds are each scaled by `3/22`
+and rounded independently, based on one ~39-minute observation: 22 five-hour pp
+versus 3 weekly pp. For 1/2/3 active workers the weekly early/checkpoint thresholds
+are 3/2%, 4/3%, 5/3%. Existing latches intentionally survive threshold changes;
+manual `/limits-reset` dismisses them for the current limiting windows. Old model
+`notices` are not loaded and disappear on the next cache write.
+
+Todo capacity is now 128 KiB, without automatic prompt inclusion or Markdown
+restructuring. Tests cover exact-limit reads, structured additions above 32 KiB,
+byte-identical unrelated note preservation, UTF-8 byte limits, and rejection when
+generated metadata pushes a proposal over the limit, before any consent form.
+
+The 16-test limits/TUI unit/mock set passed after the per-window marker change;
+the earlier combined limits/TUI/todo/model-calls/model-routing set passed 68 tests.
+Coverage includes per-window
+worker-dependent thresholds, frozen model instruction arrays in normal/warn/reserve
+states, legacy latch persistence without notices, independent gray/yellow TUI
+markers (including both windows at once),
+and no automatic prompts. These are public-API-shaped fixtures, not a real PTY.
+No build, new native runtime, live quota or installed HM-layout verification was
+run for this redesign; the native results below predate it.
+
+### Limits regression follow-up (2026-11-05)
+
+The first limits rollout displayed the indicator but failed prompt admission with
+HTTP 500. The server log identified `session.metadata[checkpointKey]` in the prompt
+hook: `Session.Info.metadata` is optional, but the original fixtures always supplied
+it. Server reads now use optional access. A new unit regression reproduced the
+original failure before the fix and covers metadata-free prompt/tool hooks,
+wrap-up, checkpoint creation and resets.
+
+The targeted native runtime also exposed that `checkpoint_ready` was only available
+through Code Mode despite instructions calling it directly. It now explicitly uses
+`codemode: false`. The isolated `--limits` run passed with the existing installed
+binary and copied current plugin sources: real HTTP prompt admission without
+metadata, a successful native tool call, checkpoint tool execution and reset on
+the next prompt. Responses came only from a localhost mock; no personal service,
+credentials or database were used or changed. No agent-run build was performed.
+This does not cover live OAuth/quota, the HM-built plugin layout or real TUI/PTY.
+The 25-test limits/TUI/model-calls/model-routing unit/mock set also passed.
+
+```fish
+env -u OPENCODE_TEST_HM_GENERATION python3 home/apps/opencode/tests/test_v2_runtime.py (command -v opencode) --limits
+```
+
+### General checks
+
 Run from the repository root. None activates a Nix generation:
 
 ```fish

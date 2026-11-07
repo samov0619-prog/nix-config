@@ -9,6 +9,14 @@
 let
   json = pkgs.formats.json { };
   settings = import ./config/v2-settings.nix { inherit lib; };
+  # Static, local reminder: never inspect credentials or query GitHub at evaluation.
+  quotaApiReminder = ''
+    OPENCODE QUOTA API: percentages currently require Codex OAuth (legacy).
+    Token sharing shows "Limits: not exposed by token sharing"; Active and manual checkpoints still work.
+    When updating OpenCode, recheck https://github.com/openai/codex/issues/54219 and the OpenAI API docs.
+    Remove this reminder only after real token-sharing window percentages/reset times,
+    account switching and per-window warnings are verified. See home/apps/opencode/README.md.
+  '';
   # Bun resolves imports relative to the real store path of tui.ts. Keep the
   # module and its dependencies together, not as separate HM file symlinks.
   modelRoutingPlugin = pkgs.runCommand "opencode-model-routing-plugin" { } ''
@@ -16,6 +24,14 @@ let
     cp ${./plugins/model-routing/tui.ts} "$out/tui.ts"
     cp ${./plugins/model-routing/model-routing.ts} "$out/model-routing.ts"
     cp ${./plugins/model-routing/routing-models.json} "$out/routing-models.json"
+  '';
+  limitsPlugin = pkgs.runCommand "opencode-limits-plugin" { } ''
+    mkdir -p "$out"
+    cp ${./plugins/limits/index.ts} "$out/index.ts"
+    cp ${./plugins/limits/tui.tsx} "$out/tui.tsx"
+    cp ${./plugins/limits/policy.ts} "$out/policy.ts"
+    cp ${./plugins/limits/rpc.ts} "$out/rpc.ts"
+    cp ${./plugins/limits/writer.ts} "$out/writer.ts"
   '';
   # Keep runtime imports/assets in the plugin closure, not in the flake's
   # temporary source snapshot (replaceVars does not retain those references).
@@ -58,6 +74,12 @@ let
 in
 {
   imports = [ ./decision-support.nix ];
+  warnings = [ quotaApiReminder ];
+  # Also show for a cached generation's activation; warnEcho uses yellow in a
+  # color-capable terminal and respects NO_COLOR. No state change or network.
+  home.activation.opencodeQuotaApiReminder = lib.hm.dag.entryBefore [ "writeBoundary" ] ''
+    warnEcho ${lib.escapeShellArg quotaApiReminder}
+  '';
   # Explicit home-only opt-in; set false to disable guidance and todo tools.
   programs.opencode.decisionSupport.enable = lib.mkDefault true;
   programs.opencode = {
@@ -97,6 +119,7 @@ in
     "opencode/plugins/permission-stats-v2".source =
       serverPlugin "permission-stats" ./plugins/permission-stats.ts;
     "opencode/plugins/model-calls-v2".source = serverPlugin "model-calls" ./plugins/model-calls.ts;
+    "opencode/plugins/limits-v2".source = limitsPlugin;
     "opencode/plugins/skill-stats-v2".source = serverPlugin "skill-stats" ./plugins/skill-stats.ts;
     "opencode/sounds/permission.wav".source = permissionSound;
     "opencode/sounds/completion.mp3".source = ./sounds/completion-sound.mp3;
