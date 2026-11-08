@@ -1,6 +1,6 @@
 # Замечания и решения пользователя
 
-[Каталог](README.md) · Обновлено: **08.11.2026**.
+[Каталог](README.md) · Обновлено: **09.11.2026**.
 
 Отдельный журнал ревью, не сырая переписка. **Согласовано ≠ реализовано.**
 Неоспоренную пометку агента не считаем выбором между вариантами: открытые решения
@@ -75,6 +75,24 @@
   ключа и подключением. Сервис/autostart v2rayA сохранены: whole-unit snapshot
   26.01 MiB, CPU 0.0% одного ядра за 5 секунд; исторический peak 167.84 MiB не idle.
   [Границы и применение](startup.md#продолжение-proxy-аудита-удаление-неиспользуемого-cli-и-helper).
+- Пользователь подтвердил успешный Acer HM switch после `e2e8cd0`: proxy cleanup
+  собран и активирован. Это не отдельная проверка VPN-соединений или других хостов.
+- Android/MTP в `27a0407`: первоначально выбран ADB, `android-tools` сохранён.
+  По явному выбору пользователя
+  удалены только `adbfs-rootless` и ADB-based `phone-mount`/`phone-unmount` на
+  laptop/desktop. MTP остаётся через `jmtpfs` в `nix shell` по необходимости,
+  без постоянной установки, новых aliases и включения GVfs.
+- Tofi mount-menu признано ненужным дополнением к udiskie. По разрешению пользователя
+  отключено и вынесено в отдельную соседнюю папку
+  [archive](../../home/linux/modules/archive/tofi-mountmenu.nix), не импортируется.
+  Остальные меню Tofi и udiskie сохранены; NixOS UDisks2/ADB groups не менялись.
+- Затем пользователь вспомнил исходную цель `71f3a36`: удобное быстрое подключение
+  телефона, а не отдельные задачи ADB. После уточнения требования USB debugging
+  разрешил убрать и `android-tools`; удалён из HM laptop/desktop. MTP работает без
+  USB debugging, но телефон нужно разблокировать и включить передачу файлов.
+  Новое пожелание — автоматический доступ и видимость в udiskie. Штатно udiskie
+  MTP не обслуживает; возможная GVfs-интеграция и способ запуска mount пока не выбраны,
+  ничего нового не включено. Ручной jmtpfs остаётся запасным вариантом.
 
 ## Явно согласовано
 
@@ -86,7 +104,9 @@
 | Диктовка         | Voice-dictate оставить; Vulkan относится именно к Whisper.cpp, не к remap                                                                                                                                         | Backend/GPU проверить на Lenovo                                                                       |
 | Время            | Workstation-профили: Europe/Moscow + NTP без геолокации пояса. Server/installer: штатные настройки NixOS, без явного пояса и custom time policy                                                                   | Acer: switch и часы подтверждены; остальные машины отдельно                                           |
 | Shell/navigation | Fish, fzf, Atuin, zoxide, direnv/nix-direnv устраивают; не инициировать отдельный review history/sync без новой причины                                                                                           | Оставить                                                                                              |
-| Proxy cleanup    | Убрать неиспользуемые Fish `vpn` и отдельный HM `xray`; сохранить backend v2rayA и Amnezia                                                                                                                        | Удалены в декларациях; HM activation пользователем                                                    |
+| Proxy cleanup    | Убрать неиспользуемые Fish `vpn` и отдельный HM `xray`; сохранить backend v2rayA и Amnezia                                                                                                                        | Acer HM switch подтверждён; остальные профили отдельно                                                |
+| Android/MTP      | По последнему уточнению убрать также android-tools: отдельного ADB workflow нет. adbfs/aliases уже удалены; автоматизацию MTP выбрать отдельно                                                                    | Удалены в HM декларациях laptop/desktop; новый switch отдельно                                        |
+| Mount-menu       | Отключить Tofi mount-menu, перенести в отдельный соседний archive; оставить udiskie                                                                                                                               | Архив не импортируется; остальные меню Tofi сохранены                                                 |
 | Разработка       | Node.js, Tree-sitter, devenv и direnv нужны. Neovim config остаётся внешним, без переноса в Nix                                                                                                                   | Оставить                                                                                              |
 | Браузеры         | Firefox оставить вторым, максимально default; текущий module задаёт enable и legacy configPath, не навязывает профили/расширения                                                                                  | Оставить                                                                                              |
 | Приложения       | Steam, nix-ld, Blender и Minecraft нужны                                                                                                                                                                          | Оставить; Minecraft memory policy отдельно                                                            |
@@ -103,7 +123,7 @@
 | Kitty             | `flake → home/gui-set → home/modules/kitty`. Пакет + generated read-only config из version-matched upstream template, fragments и langmap. Корректный HM module: отличается способом конфигурации от готового `programs.kitty`, не архитектурой imports. Переписывать без необходимости не предлагается |
 | Minecraft memory  | Сейчас `20G` — `-Xmx`, предел Java heap, **не** общий лимит процесса и не стартовая резервация 20 GiB. Уточнить одновременный client/server, сборку и нагрузку; отдельно выбрать heap/service limits с запасом RAM ОС/браузеру                                                                          |
 | v2rayA / Throne   | Неиспользуемый HM CLI удалён по согласию; v2rayA остаётся резервом, служба и autostart не менялись. Возможный переход на Throne оценить отдельно по нужным протоколам, TUN/DNS/routing и интеграции NixOS; наличие Xray-кода в клиенте не требует отдельной команды в HM                                |
-| Android files     | `adbfs-rootless`: собственный NAR около 106 KiB, closure около 264 MiB; часть зависимостей общая, это не обещание освобождения 264 MiB. Пользователь обычно использует MTP через `nix shell`; сравнить jmtpfs и GUI/MTP integration без требования ADB debugging. Пока не удалять                       |
+| Android files     | ADB/adbfs убраны по уточнённой цели переноса файлов. Пользователь хочет автоматический MTP; udiskie его штатно не поддерживает. GVfs — кандидат, но механизм automount/UI для Hyprland/Yazi не выбран. Пока запасной ручной jmtpfs; реальный transfer/unmount проверить на Lenovo                       |
 | Swayimg           | Уменьшить верхнюю надпись/overlay. В локальном API 5.6 есть text size/timeout; scroll zoom и drag уже настроены. Показ при движении мыши, hints и controls — только штатные; доступность ещё не подтверждена, самодельный toolbar не нужен                                                              |
 | Python / Go       | Нужность глобальных CLI не определена. Python не гарантирован NixOS «по умолчанию»: зависимость может быть в store, но не в пользовательском PATH. Проверить scripts/Mason/dev workflows; project dependencies не требуют автоматически global Python/Go                                                |
 | Swap / zram       | Swap-раздел 48 GiB согласован и задан в Lenovo scaffold. Filesystem/encryption/zram и постоянная нужность гибернации открыты; размер не гарантирует работу resume                                                                                                                                       |

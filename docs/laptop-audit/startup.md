@@ -319,11 +319,93 @@ forwardproxy, клиенту нужен Naive-совместимый backend. Э
 уже загруженная функция в старом shell может сохраниться. Удаление helper общее для
 laptop/desktop/server/mac HM; CLI удалён из Linux workstation module laptop/desktop.
 Остальные профили получают изменения при своей HM activation (server — на VPS по SSH,
-Mac — на самом Mac). Документация activation не требует. Полная HM сборка и live
-proxy/DNS/routes не проверялись; службы и активные подключения не менялись.
+Mac — на самом Mac). Документация activation не требует. Пользователь затем подтвердил
+успешный Acer HM switch после `e2e8cd0`; сборка/activation этого proxy diff подтверждены
+им, live proxy/DNS/routes и остальные машины не проверялись. Агент службы и подключения
+не менял.
 Узкая offline evaluation старых/новых модулей с fixture packages подтвердила:
 удалены только Fish helper и HM `xray`; остальные shell-настройки для stateVersion
 25.11/26.05, Linux packages и phone aliases сохранены. Это не полный HM build.
+
+## Android/MTP и съёмные диски: разные протоколы, без лишнего меню
+
+Источники: [Linux CLI](../../home/linux/core-set/default.nix),
+[udiskie](../../home/linux/gui-set/default.nix#L38-L43),
+[активный Tofi](../../home/linux/modules/tofi/default.nix),
+[архив mount-menu](../../home/linux/modules/archive/tofi-mountmenu.nix).
+
+- `adbfs-rootless` и `android-tools` с aliases добавлены вместе в `71f3a36`.
+  Пакет adbfs вызывает `adb` по явному store path; «rootless» означает отсутствие
+  требования root на телефоне, не отсутствие USB debugging/ADB authorization.
+  Это другой протокол, не MTP. [Контракт upstream](https://github.com/spion/adbfs-rootless/blob/fd56381af4dc9ae2f09b904c295686871a46ed0f/README.md).
+- В `27a0407` пользователь первоначально выбрал ADB: `android-tools` был оставлен.
+  По согласию тогда удалены только adbfs и `phone-mount`/`phone-unmount` из shared Linux
+  workstation module laptop/desktop. Системные группы/udev rules не менялись;
+  пригодность нынешних USB permissions для конкретного телефона этим не проверена.
+- Для MTP выбран прежний on-demand `jmtpfs` через `nix shell`, без постоянного
+  пакета/aliases/GVfs. Он даёт обычный каталог для Yazi; на телефоне выбрать
+  «Передача файлов» и разрешить доступ, USB debugging для MTP не нужен.
+  В pinned package используется FUSE 2, upstream unmount — `fusermount -u`,
+  а не слепое сохранение прежнего alias с `fusermount3`.
+- **Последующее уточнение:** пользователь вспомнил, что ADB stack добавлялся ради
+  удобного переноса файлов, и разрешил убрать также `android-tools`. Он удалён
+  из HM laptop/desktop; NixOS группы и USB rules не менялись. Пользователь хочет
+  автоматический доступ к телефону и отображение в udiskie. MTP не требует USB
+  debugging, но требует разблокировки/выбора передачи файлов и разрешений телефона.
+  [Udiskie](https://github.com/coldfix/udiskie) — frontend UDisks2, не MTP UI;
+  установка ADB/GVfs сама по себе не добавляет телефон в его tray menu.
+  Готовая база интеграции — GVfs/MTP с FUSE-представлением в
+  `$XDG_RUNTIME_DIR/gvfs/` для Yazi, но обнаружение телефона не равно mount.
+  Автоматическое монтирование в Hyprland и нужный UI ещё требуют выбора;
+  GVfs/новые службы/GUI не включены, jmtpfs остаётся ручным запасным вариантом.
+  [Границы MTP и интеграция](https://wiki.archlinux.org/title/Media_Transfer_Protocol#File_manager_integration).
+- MTP не полноценный POSIX-диск. В [jmtpfs 0.5](https://github.com/JasonFerrara/jmtpfs/blob/v0.5/README)
+  редактирование/rename может требовать полного копирования файла туда-обратно.
+  Предпочтителен перенос готовых файлов, а не работа с проектом прямо на телефоне;
+  этот аудит не измерял скорость и не проверял реальный transfer.
+- UDisks2 + udiskie управляют дисками, не MTP. В pinned HM defaults udiskie:
+  automount=true, notify=true, tray=auto; конфиг уже задаёт nested menu, Waybar
+  tray включён на обоих ПК. Это source contract, не проверка живого значка.
+- Tofi mount-menu — только ручной `lsblk` → `udisksctl mount/unmount`, не второй
+  daemon и не MTP browser; отдельных hotkeys laptop/desktop для него нет.
+  Пользователь разрешил убрать дублирующий интерфейс и перенести реализацию в
+  `home/linux/modules/archive/` рядом с `tofi/`. Архивный модуль не импортируется;
+  для возврата нужны явный import и `programs.tofi.mountmenu.enable = true`.
+  Исходный скрипт сохранён, не считается исправленным или проверенным на реальных дисках.
+  Tofi launcher/passmenu/sessionmenu/F1-help и udiskie не менялись.
+
+Ручной MTP workflow при необходимости (не выполнялся агентом):
+
+```fish
+nix shell nixpkgs#jmtpfs
+mkdir -p ~/mnt/phone
+jmtpfs ~/mnt/phone
+# Открыть ~/mnt/phone в Yazi; после завершения операций и выхода из каталога:
+fusermount -u ~/mnt/phone
+exit
+```
+
+`nix shell nixpkgs#...` использует пользовательский registry, не гарантированно
+версию из flake.lock этого репозитория. `fusermount` берётся из штатного NixOS
+FUSE setup (по умолчанию включён, с security wrappers), не из нового sudo workaround.
+Не запускать одновременно несколько MTP
+клиентов к одному телефону. Не выполнять mount от root ради обхода ошибки доступа:
+сначала проверить USB mode/udev permissions. Проверки Lenovo добавлены в существующий
+[общий workflow-пункт](lenovo-checklist.md), не в отдельный конкурирующий список.
+
+Применение этого cleanup — HM laptop/desktop (`home-manager switch --flake
+.#samov-laptop` или `.#samov-desktop`), затем новое Fish shell: старые aliases могут
+оставаться загруженными. NixOS rebuild не нужен; server/mac эти модули не импортируют.
+Документация и архив не требуют отдельной activation. Телефон/диски не монтировались,
+ADB server не запускался; реальный MTP/udiskie остаётся ручной проверкой.
+Изолированная offline evaluation настоящих старых/новых Nix-модулей с fixture
+packages/option sinks подтвердила: удалены только adbfs и его aliases; остальные
+Tofi settings и тела скриптов неизменны. В active module нет mountmenu option;
+архивный import без enable ничего не устанавливает, явный opt-in восстанавливает
+исходный package list и скрипт, выключенный Tofi не устанавливает меню даже с opt-in.
+Это не полная HM evaluation/build и не проверка реальных mounts.
+Последующее удаление `android-tools` проверено отдельной offline evaluation
+старого/нового Linux core-set с fixture packages: остался только прежний `btop`.
 
 ## GUI: UWSM владеет сессией, не второй HM compositor service
 
