@@ -115,7 +115,9 @@ guard полностью не защищает. Drive trash занимает к�
    python3 -B home/modules/minecraft/server/test_backup_sync.py
    ```
 
-2. Проверить и собрать только нужный HM output, например Acer:
+2. Необязательно: отдельно собрать нужный HM output без activation, например Acer.
+   Сам `home-manager switch` тоже сначала собирает конфигурацию; отдельный build
+   нужен только для разделения сборки и применения:
 
    ```bash
    nix build --no-link .#homeConfigurations.samov-laptop.activationPackage
