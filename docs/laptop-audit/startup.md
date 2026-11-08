@@ -3,8 +3,9 @@
 [Каталог](README.md) · [Решения и вопросы](feedback.md)
 
 Source-first срез **08.11.2026**, конфигурация `086d82e`. Это описание объявленного
-поведения, не доказательство работающих процессов. Службы, конфиги и ручное
-состояние не менялись. Область: выбранные цепочки Acer; не полный startup/security audit.
+поведения, не доказательство работающих процессов. При исходном срезе службы,
+конфиги и ручное состояние не менялись; последующая backup-правка описана ниже.
+Область: выбранные цепочки Acer; не полный startup/security audit.
 
 ## Как читать зависимости
 
@@ -21,7 +22,7 @@ Source-first срез **08.11.2026**, конфигурация `086d82e`. Это
 
 Источники: [flake](../../flake.nix#L252-L297),
 [instance](../../home/apps/minecraft/default.nix#L9-L12),
-[generic module](../../home/modules/minecraft/server/default.nix#L22-L128),
+[generic module](../../home/modules/minecraft/server/default.nix),
 [его инструкция](../../home/modules/minecraft/server/README.md).
 
 На Acer/desktop подключены instance и generic module; на VPS HM — только generic,
@@ -36,19 +37,20 @@ flowchart TD
     Serve -. "Requires + After, не HTTP readiness" .-> Update
     Update -. "Requires + After: oneshot update перед Java" .-> Server
     Default["User default.target"] --> Watch["ftb-backups-fabric-1214.path"]
-    Watch -->|"PathModified backups/"| Sync["Одноимённый oneshot: rclone sync"]
+    Watch -->|"PathChanged backups.json"| Guard["Готовый полный ZIP-набор + hard-link snapshot"]
+    Guard --> Sync["Одноимённый oneshot: rclone sync + Drive trash"]
 ```
 
-| Элемент            | Что объявлено                                             | Следствие                                                                                                        |
-| ------------------ | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `minecraft.target` | Только Description, без собственного `Install.WantedBy`   | В этом модуле не привязан к логину; ручная команда start в README соответствует коду                             |
-| Packwiz serve      | HTTP 8180, `Restart=always`, WantedBy Minecraft           | Update требует этот процесс, но нет проверки готовности HTTP                                                     |
-| Update             | `Type=oneshot`, Requires/After serve                      | Успешное окончание update предшествует старту Java; сам oneshot не остаётся active                               |
-| Fabric             | Requires/After update, `Restart=always`, `-Xmx20G`        | Heap cap, не лимит всей памяти процесса. Автоматический рестарт не равен повторной активации update              |
-| Backup watcher     | `PathModified` каталога backups, WantedBy user default    | Может работать без запущенного Minecraft; не timer и не запуск после каждого завершённого архива по контракту    |
-| Backup upload      | `rclone sync`, oneshot, без явного network ordering/retry | Источник — локальный backups, назначение — настроенный вручную remote. Успех зависит от внешней авторизации/сети |
+| Элемент            | Что объявлено                                           | Следствие                                                                                           |
+| ------------------ | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `minecraft.target` | Только Description, без собственного `Install.WantedBy` | В этом модуле не привязан к логину; ручная команда start в README соответствует коду                |
+| Packwiz serve      | HTTP 8180, `Restart=always`, WantedBy Minecraft         | Update требует этот процесс, но нет проверки готовности HTTP                                        |
+| Update             | `Type=oneshot`, Requires/After serve                    | Успешное окончание update предшествует старту Java; сам oneshot не остаётся active                  |
+| Fabric             | Requires/After update, `Restart=always`, `-Xmx20G`      | Heap cap, не лимит всей памяти процесса. Автоматический рестарт не равен повторной активации update |
+| Backup watcher     | Теперь `PathChanged` manifest, WantedBy user default    | Может работать без Minecraft; helper проверяет завершённость, watcher не является retry timer       |
+| Backup upload      | Guard + hard-link snapshot → `rclone sync`, oneshot     | Полное зеркало допущенного набора, явная Drive trash; авторизация/сеть остаются внешними            |
 
-### Находки, не исправления
+### Исходные находки и последующие статусы
 
 | ID / важность                                       | Факт и уверенность                                                                                                | Последствие / следующий шаг                                                                                                                                                                           |
 | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -58,14 +60,15 @@ flowchart TD
 | START-04 / до доверия backup                        | `PathModified` + `rclone sync`, нет признака «архив готов»; подтверждено исходниками, реальная гонка не проверена | sync может удалять лишние файлы назначения и реагировать до завершения записи. Уточнить retention, атомарность архивов, retry и нужна ли именно зеркальная копия; проверять на disposable destination |
 
 `rclone sync` не выполнялся. Ни мир, ни backup remote, ни credentials не читались.
-Не менять lifecycle/backup под видом документального аудита.
+START-04 получил отдельную согласованную реализацию ниже; интеграция ещё не проверена.
+У START-02 удалён неверный README-совет enable; opt-in и lifecycle остаются открытыми.
 
 **Последующее решение пользователя:** пока ручной запуск Minecraft, но с простой
 отдельной опцией включения автозапуска при необходимости (по умолчанию выключена).
-Lifecycle/README и эта опция ещё не исправлены. По backup пользователь попросил
+Lifecycle и эта опция ещё не исправлены. По backup пользователь попросил
 пояснение: при локальном удалении архива `sync` удаляет и соответствующий облачный
 файл. Загрузка без удаления облачных копий потребует отдельной политики хранения;
-вариант не выбран, код backup не менялся.
+вариант не был выбран на том шаге, код backup тогда не менялся.
 
 ### Read-only проверка доступности реальных backup
 
@@ -148,10 +151,50 @@ manifest указывает FTB Backups 2 `1.0.29` для Fabric 1.21.4; зап�
   контракта с backup-модом. Нельзя считать guard полноценной защитой от частичного
   случайного удаления.
 
-Код служб/backup не менялся. Нужна отдельная реализация lifecycle/guard/readiness
+На этом документальном шаге код служб/backup не менялся. Нужна была реализация lifecycle/guard/readiness
 и решение о допустимом расходе trash; постоянное удаление и очистка общей корзины
 не разрешены. Не подменять ожидаемую локальную ротацию собственной облачной политикой
 без согласия пользователя.
+
+### Реализованный guard и readiness: только fixture-проверки
+
+После пользовательского «го» добавлен
+[backup-sync.py](../../home/modules/minecraft/server/backup-sync.py) и
+[26 локальных тестов](../../home/modules/minecraft/server/test_backup_sync.py).
+Контракт подтверждён исходниками FTB Backups 2 **1.0.29**:
+[BackupHandler.java](https://github.com/FTBTeam/FTB-Backups-2/blob/0f9c4ff652c57c2f8d3e6b5c78687f8c48623800/common/src/main/java/net/creeperhost/ftbbackups/BackupHandler.java#L224-L227)
+пишет incomplete до архивации, после неё задаёт SHA‑1/размер/complete
+([L355–372](https://github.com/FTBTeam/FTB-Backups-2/blob/0f9c4ff652c57c2f8d3e6b5c78687f8c48623800/common/src/main/java/net/creeperhost/ftbbackups/BackupHandler.java#L355-L372)).
+JSON переписывается неатомарно; закрытие manifest — повод проверить, не гарантия успеха.
+Старые записи без complete принимаются по upstream default=true.
+
+- Требуется непустой полный набор завершённых ZIP и manifest, точное совпадение
+  размеров/имён, regular files, непустой ZIP central directory. Любое расхождение
+  блокирует весь sync. Incomplete/обнаруженная гонка откладывают его.
+- Watcher заменён на `PathChanged` manifest. Hard-link snapshot в приватном
+  marked sibling cache удерживает архивы при локальной ротации, не копируя их байты.
+  Копируется только manifest. Нужны hard links на одной файловой системе; после
+  crash место может удерживаться до следующего запуска/очистки managed snapshot.
+- Весь допущенный набор зеркалируется в прежнее назначение с прежним bandwidth;
+  добавлены check-first/delete-after и explicit Drive trash. Нет собственного
+  ограничения «пять», permanent deletion, очистки корзины или редких uploads.
+- 26 unittest fixtures прошли: guards, ZIP/metadata/layout, ссылки, гонки подготовки,
+  ротация во время fake upload, cache recovery/ownership, lock, файловый отказ,
+  ошибка fake rclone, сохранение lock осиротевшим fake transfer. Узкая offline module evaluation с fixture packages прошла:
+  inactive=null, watcher, wrapper/dependencies/escaping, прежний ручной target.
+  Это не полная HM evaluation и не тест настоящего rclone/systemd.
+- Nix отформатирован nixfmt 1.3.1. Ruff CLI отсутствует; Python не форматировался
+  заменяющим инструментом. Полный SHA‑1/CRC, запуск Minecraft, реальная ротация,
+  Drive sync/deletion/quota/restore, builds и activation **не выполнялись**.
+
+Ограничения: архивы после complete считаются неизменяемыми по FTB-контракту;
+hard links не защищают от записи в тот же inode. Guard не распознает корректный,
+но ошибочно уменьшенный/чужой backup-набор. Persistent incomplete блокирует upload;
+retry timer не добавлен. Drive trash quota остаётся открытым эксплуатационным вопросом.
+Lifecycle/Packwiz HTTP readiness — следующие отдельные шаги, не выполненные здесь.
+Применение только через HM laptop/desktop; порядок и журнал — в
+[инструкции модуля](../../home/modules/minecraft/server/README.md#проверка-и-применение).
+VPS generic import с null не создаёт units; NixOS rebuild для этой правки не нужен.
 
 ## Proxy: два системных daemon и отдельный CLI
 

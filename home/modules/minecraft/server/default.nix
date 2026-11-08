@@ -17,6 +17,13 @@ let
     url = "https://meta.fabricmc.net/v2/versions/loader/1.21.4/0.17.2/1.1.1/server/jar";
     sha256 = "sha256-vc5/e+BA33fyRDWICwynzfWcuYYyICYI4ewA2z92zT4=";
   };
+
+  backupSync = pkgs.writeShellScript "minecraft-backup-sync" ''
+    exec ${pkgs.python3}/bin/python3 ${./backup-sync.py} \
+      ${lib.escapeShellArg "${cfg.serverDir}/backups"} \
+      gd-backups:minecraft_backups_fabric_1.21.4 \
+      --rclone ${pkgs.rclone}/bin/rclone
+  '';
 in
 {
   options.minecraft.server = lib.mkOption {
@@ -114,8 +121,8 @@ in
     };
 
     systemd.user.paths.ftb-backups-fabric-1214 = {
-      Unit.Description = "Watch Minecraft 1.21.4 Fabric Backups folder for changes";
-      Path.PathModified = "${cfg.serverDir}/backups/";
+      Unit.Description = "Watch FTB backup completion metadata";
+      Path.PathChanged = "${cfg.serverDir}/backups/backups.json";
       Install.WantedBy = [ "default.target" ];
     };
 
@@ -123,7 +130,7 @@ in
       Unit.Description = "Sync Minecraft 1.21.4 Fabric Backups to Google Drive";
       Service = {
         Type = "oneshot";
-        ExecStart = "${pkgs.rclone}/bin/rclone sync ${cfg.serverDir}/backups/ gd-backups:minecraft_backups_fabric_1.21.4 --bwlimit 2200k --quiet";
+        ExecStart = toString backupSync;
       };
     };
   };
