@@ -1,0 +1,80 @@
+--- a/src/modules/power_profiles_daemon.cpp
++++ b/src/modules/power_profiles_daemon.cpp
+@@ -1,1 +1,2 @@
++#include "power-profile-cycle.hpp"
+ #include "modules/power_profiles_daemon.hpp"
+@@ -93,6 +94,7 @@
+   using ProfilesType = std::vector<std::map<Glib::ustring, Glib::Variant<std::string>>>;
+   Glib::Variant<ProfilesType> profilesVariant;
+   powerProfilesProxy_->get_cached_property(profilesVariant, "Profiles");
++  availableProfiles_.clear();
+   for (auto& variantDict : profilesVariant.get()) {
+     Glib::ustring name;
+     Glib::ustring driver;
+@@ -122,6 +124,10 @@
+   // We're likely connected if this callback gets triggered.
+   // But better be safe than sorry.
+   if (connected_) {
++    if (changedProperties.find("Profiles") != changedProperties.end()) {
++      populateInitState();
++      return;
++    }
+     if (auto activeProfileVariant = changedProperties.find("ActiveProfile");
+         activeProfileVariant != changedProperties.end()) {
+       std::string activeProfile =
+@@ -150,10 +156,26 @@
+ auto PowerProfilesDaemon::update() -> void {
+   if (connected_ && activeProfile_ != availableProfiles_.end()) {
+     auto profile = (*activeProfile_);
++    const auto index = static_cast<std::size_t>(activeProfile_ - availableProfiles_.begin());
++    const auto& previous = availableProfiles_[*powerProfileCycleIndex(availableProfiles_.size(), index, false)];
++    const auto& next = availableProfiles_[*powerProfileCycleIndex(availableProfiles_.size(), index, true)];
++    auto profileLabel = [this](const std::string& name) {
++      const auto& labels = config_["profile-labels"];
++      return labels.isObject() && labels[name].isString() ? labels[name].asString() : name;
++    };
++    // Keep owned strings alive until both vformat calls finish.
++    const auto currentLabel = profileLabel(profile.name);
++    const auto previousLabel = profileLabel(previous.name);
++    const auto nextLabel = profileLabel(next.name);
+     // Set label
+     fmt::dynamic_format_arg_store<fmt::format_context> store;
+     store.push_back(fmt::arg("profile", profile.name));
+     store.push_back(fmt::arg("driver", profile.driver));
++    store.push_back(fmt::arg("previous_profile", previous.name));
++    store.push_back(fmt::arg("next_profile", next.name));
++    store.push_back(fmt::arg("profile_label", currentLabel));
++    store.push_back(fmt::arg("previous_profile_label", previousLabel));
++    store.push_back(fmt::arg("next_profile_label", nextLabel));
+     store.push_back(fmt::arg("icon", getIcon(0, profile.name)));
+     label_.set_markup(fmt::vformat(format_, store));
+     if (tooltipEnabled()) {
+@@ -177,20 +199,14 @@
+ bool PowerProfilesDaemon::handleToggle(GdkEventButton* const& e) {
+-  if (e->type == GdkEventType::GDK_BUTTON_PRESS && connected_) {
+-    if (e->button == 1) /* left click */ {
+-      activeProfile_++;
+-      if (activeProfile_ == availableProfiles_.end()) {
+-        activeProfile_ = availableProfiles_.begin();
+-      }
+-    } else {
+-      if (activeProfile_ == availableProfiles_.begin()) {
+-        activeProfile_ = availableProfiles_.end();
+-      }
+-      activeProfile_--;
+-    }
++  if (e->type == GdkEventType::GDK_BUTTON_PRESS && connected_ &&
++      activeProfile_ != availableProfiles_.end()) {
++    const auto index = static_cast<std::size_t>(activeProfile_ - availableProfiles_.begin());
++    const auto target = powerProfileCycleIndex(availableProfiles_.size(), index, e->button == 1);
++    if (!target) return true;
++    // Display confirmed PPD state, not an optimistic selection on a denied request.
+-
++
+     using VarStr = Glib::Variant<Glib::ustring>;
+     using SetPowerProfileVar = Glib::Variant<std::tuple<Glib::ustring, Glib::ustring, VarStr>>;
+-    VarStr activeProfileVariant = VarStr::create(activeProfile_->name);
++    VarStr activeProfileVariant = VarStr::create(availableProfiles_[*target].name);
+     auto callArgs = SetPowerProfileVar::create(
+         std::make_tuple("net.hadess.PowerProfiles", "ActiveProfile", activeProfileVariant));
+     powerProfilesProxy_->call("org.freedesktop.DBus.Properties.Set",

@@ -92,8 +92,11 @@ Lenovo draft: `laptop-next` now has a separate `samov-laptop-next` HM output and
 `home/linux/laptop-next` leaf. Existing profiles are unchanged. The NixOS draft
 deliberately fails an assertion pending hardware/PRIME, storage, login/security
 and GC decisions; see `hosts/laptop-next/README.md`. Do not apply the Lenovo HM
-profile on Acer. Native PPD/Waybar switching is Lenovo-only; dynamic next/previous
-profile names in the tooltip are deferred, not implemented by the stock module.
+profile on Acer. Native PPD/Waybar switching is Lenovo-only. The leaf selects a
+local Waybar override for dynamic previous/current/next tooltip labels, sharing
+one cycle helper with clicks; stock Waybar has no such placeholders. See
+`home/linux/laptop-next/waybar/README.md` for checks and update obligations.
+Only the helper/patch/declarations are checked, not the full binary or live UI.
 
 ## Ключевые паттерны и gotchas
 

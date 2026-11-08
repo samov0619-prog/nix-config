@@ -10,8 +10,10 @@ none of its configuration or other existing profiles changes in this step.
 - Hyprland/UWSM, familiar Dwindle controls, Russian/English layouts, three-finger
   workspace gesture, audio/Bluetooth/UDisks2 and the existing VPN clients.
 - PPD and a native Waybar profile icon: left click selects the next available
-  profile, right click the previous. Tooltip currently describes these actions;
-  naming the actual next/previous profiles requires a separate Waybar extension.
+  profile, right click the previous. A
+  [Lenovo-only Waybar extension](../../home/linux/laptop-next/waybar/README.md)
+  names both destinations in the tooltip using the actual available profile list.
+  Its algorithm/patch checks passed; the full binary/UI remain unbuilt and untested.
 - Open NVIDIA kernel modules for RTX 5060, not Acer's proprietary/legacy override.
   This does not yet choose a driver branch, PRIME mode or PCI Bus IDs.
 - Existing workstation CLI/devtools (including shared Python/Node prerequisites

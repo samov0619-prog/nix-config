@@ -20,6 +20,12 @@ let
     freesmlauncher = "freesm";
     packwiz = "packwiz";
     jdk_headless = "jdk";
+    waybar.overrideAttrs =
+      f:
+      f {
+        patches = [ "upstream.patch" ];
+        postPatch = "upstream-hook\n";
+      };
   };
   host = import ./default.nix {
     inherit lib pkgs;
@@ -40,6 +46,13 @@ assert host.users.users.samov.extraGroups == [ "wheel" ];
 assert lib.all (a: !a.assertion) host.assertions;
 assert host.system.stateVersion == "26.05";
 assert home.wayland.windowManager.hyprland.configType == "hyprlang";
+assert
+  home.programs.waybar.package.patches == [
+    "upstream.patch"
+    ../../home/linux/laptop-next/waybar/power-profile-tooltip.patch
+  ];
+assert lib.hasPrefix "upstream-hook\n" home.programs.waybar.package.postPatch;
+assert lib.hasInfix "power-profile-cycle.hpp" home.programs.waybar.package.postPatch;
 assert !(home ? voiceDictate);
 assert !(home ? minecraft);
 assert
@@ -54,4 +67,5 @@ assert !(builtins.elem ../../home/linux/modules/xremap home.imports);
   noAcerHardwareOrLoginOverrides = true;
   noUnpreparedMinecraftInstance = true;
   installGuardPresent = true;
+  lenovoWaybarOverridePreservesUpstreamHooks = true;
 }

@@ -8,6 +8,8 @@
 
   # Keep the agreed raw configuration workflow on fresh HM 26.05 as well.
   wayland.windowManager.hyprland.configType = "hyprlang";
+  # Only Lenovo uses this override; existing profiles retain stock Waybar.
+  programs.waybar.package = import ./waybar/package.nix { waybar = pkgs.waybar; };
   xdg.configFile."hypr/hyprland.conf".source = ./hyprland.conf;
   xdg.configFile."waybar/config.jsonc".source = ./waybar-config.jsonc;
 

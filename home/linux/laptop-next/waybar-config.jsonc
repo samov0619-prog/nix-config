@@ -17,7 +17,12 @@
   ],
   "power-profiles-daemon": {
     "format": "{icon}",
-    "tooltip-format": "Power profile: {profile}\nLeft click: next profile\nRight click: previous profile",
+    "tooltip-format": "{previous_profile_label} ← ПКМ | {profile_label} | ЛКМ → {next_profile_label}",
+    "profile-labels": {
+      "power-saver": "Сбережение",
+      "balanced": "Баланс",
+      "performance": "Производительность",
+    },
     "format-icons": {
       "default": "",
       "performance": "",
