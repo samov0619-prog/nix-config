@@ -19,6 +19,7 @@ Acer после backup/lifecycle fixes; это не проверка Minecraft r
 - [Замечания и решения](feedback.md): отдельный журнал пользовательского ревью и открытых вопросов.
 - [Пояс и часы](time.md): общая NixOS policy и отдельная ручная настройка Mac.
 - [Карта запуска](startup.md): Minecraft, proxy и GUI; источники, зависимости и открытые риски.
+- [Питание и температуры](power.md): активная policy Acer, происхождение настроек и варианты Lenovo.
 - [Lenovo: живые проверки](lenovo-checklist.md): короткий todo после установки,
   включая ранний сон/resume и отложенную проверку Minecraft/backup только на новом ПК.
 - [Источник композиции](../../flake.nix): два независимых output — NixOS и standalone Home Manager.

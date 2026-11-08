@@ -102,6 +102,13 @@
   server без добавления этих глобальных runtimes. Пакеты и версии не менялись;
   отдельные копии интерпретаторов, обёртка запуска и автоматическая починка Mason
   environments не добавлены. Direnv-интеграция отложена в agent-todo, не настраивается.
+- Пользователь подтвердил успешный HM switch Acer после `85f62ee`: применены также
+  предшествующие Android/Tofi cleanup изменения `331af86`. Это не live-проверка
+  MTP, Mason/LSP, VPN или других хостов; отдельных повторных сборок не запускали.
+- [Power/thermal audit](power.md): на Acer read-only подтверждены active
+  `intel_pstate`/`performance` и работающий thermald; обе декларации происходят из
+  `f7de937` без отдельного обоснования. Поведение не меняли. Для Lenovo PPD/balanced
+  предложен, но ещё не согласован; thermald оценить отдельно по платформе.
 
 ## Явно согласовано
 
@@ -114,7 +121,7 @@
 | Время            | Workstation-профили: Europe/Moscow + NTP без геолокации пояса. Server/installer: штатные настройки NixOS, без явного пояса и custom time policy                                                                   | Acer: switch и часы подтверждены; остальные машины отдельно                                           |
 | Shell/navigation | Fish, fzf, Atuin, zoxide, direnv/nix-direnv устраивают; не инициировать отдельный review history/sync без новой причины                                                                                           | Оставить                                                                                              |
 | Proxy cleanup    | Убрать неиспользуемые Fish `vpn` и отдельный HM `xray`; сохранить backend v2rayA и Amnezia                                                                                                                        | Acer HM switch подтверждён; остальные профили отдельно                                                |
-| Android/MTP      | По последнему уточнению убрать также android-tools: отдельного ADB workflow нет. adbfs/aliases уже удалены; автоматизацию MTP выбрать отдельно                                                                    | Удалены в HM декларациях laptop/desktop; новый switch отдельно                                        |
+| Android/MTP      | По последнему уточнению убрать также android-tools: отдельного ADB workflow нет. adbfs/aliases уже удалены; автоматизацию MTP выбрать отдельно                                                                    | Acer HM switch подтверждён; desktop и MTP runtime отдельно                                            |
 | Mount-menu       | Отключить Tofi mount-menu, перенести в отдельный соседний archive; оставить udiskie                                                                                                                               | Архив не импортируется; остальные меню Tofi сохранены                                                 |
 | Разработка       | Node.js, Tree-sitter, devenv и direnv нужны. Neovim config остаётся внешним, без переноса в Nix                                                                                                                   | Оставить                                                                                              |
 | Браузеры         | Firefox оставить вторым, максимально default; текущий module задаёт enable и legacy configPath, не навязывает профили/расширения                                                                                  | Оставить                                                                                              |
