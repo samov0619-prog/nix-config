@@ -88,6 +88,13 @@ targets. It runs only through an explicit Disko/nixos-anywhere command, never
 through `nixos-rebuild switch`. Current `laptop` and `desktop` intentionally do
 not import Disko.
 
+Lenovo draft: `laptop-next` now has a separate `samov-laptop-next` HM output and
+`home/linux/laptop-next` leaf. Existing profiles are unchanged. The NixOS draft
+deliberately fails an assertion pending hardware/PRIME, storage, login/security
+and GC decisions; see `hosts/laptop-next/README.md`. Do not apply the Lenovo HM
+profile on Acer. Native PPD/Waybar switching is Lenovo-only; dynamic next/previous
+profile names in the tooltip are deferred, not implemented by the stock module.
+
 ## Ключевые паттерны и gotchas
 
 ### stateVersion

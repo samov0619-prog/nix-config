@@ -36,10 +36,11 @@
 оптимально обработаны все датчики и ограничения платформы. Не переносить его на
 Lenovo только потому, что там тоже Intel; не обходить CPUID check без диагностики.
 
-## Предложение для Lenovo, ещё не выбранная policy
+## Выбранное направление Lenovo и открытые вопросы
 
-- Не наследовать Acer `performance`; рассмотреть PPD (`power-profiles-daemon`) с
-  обычным `balanced` и доступными `power-saver`/`performance` по потребности.
+- Не наследовать Acer `performance`; пользователь выбрал PPD (`power-profiles-daemon`)
+  со штатным значком Waybar только для Lenovo, с обычным `balanced` и доступными
+  `power-saver`/`performance` по потребности.
   Фактические профили и backend зависят от поддержки CPU/firmware/kernel.
 - Не включать одновременно PPD, TLP и auto-cpufreq: pinned NixOS явно запрещает
   сочетание PPD с двумя остальными. Это не запрет на совместную работу PPD и thermald;
@@ -47,8 +48,8 @@ Lenovo только потому, что там тоже Intel; не обход�
 - Не добавлять undervolt, ручные fan curves, отключение turbo и автоматические
   scripts AC/battery до базовой проверки. UI и автоматическое переключение профилей
   тоже отдельные решения, простое включение daemon их не специфицирует.
-- В [Lenovo scaffold](../../hosts/laptop-next/default.nix) этих настроек пока нет;
-  Acer host не импортируется. Реальные температура, throttling, CPU/GPU idle и
+- В [Lenovo draft](../../hosts/laptop-next/default.nix) PPD включён; Acer host
+  не импортируется. Thermald ещё не выбран. Реальные температура, throttling, CPU/GPU idle и
   батарея проверяются в существующем коротком checklist, а не новым списком.
 
 ## Источники и границы
@@ -61,6 +62,6 @@ Lenovo только потому, что там тоже Intel; не обход�
 - Профили/backend: [PPD 0.30 API](https://upower.pages.freedesktop.org/power-profiles-daemon/gdbus-org.freedesktop.UPower.PowerProfiles.html).
 
 Это не полный NixOS evaluation/build и не подтверждение совместимости Lenovo.
-Изменена только документация: сборка, NixOS/HM activation и ручное переключение
-режимов для этого шага не нужны. Следующее действие — выбрать baseline Lenovo;
-изменение поведения Acer требует отдельного согласия.
+Первый audit-шаг менял только документацию; затем создана отдельная заготовка
+Lenovo с PPD и Waybar, без применения. [Блокеры](../../hosts/laptop-next/README.md)
+не сняты: не запускать установку/activation. Acer оставлен без изменений.

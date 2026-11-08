@@ -1,0 +1,56 @@
+# Lenovo draft: laptop-next
+
+Temporary outputs: `nixosConfigurations.laptop-next` and
+`homeConfigurations.samov-laptop-next`. Acer still owns `laptop`/`samov-laptop`;
+none of its configuration or other existing profiles changes in this step.
+
+## Already represented in configuration
+
+- NixOS/HM stateVersion 26.05; standalone HM stays separate from NixOS activation.
+- Hyprland/UWSM, familiar Dwindle controls, Russian/English layouts, three-finger
+  workspace gesture, audio/Bluetooth/UDisks2 and the existing VPN clients.
+- PPD and a native Waybar profile icon: left click selects the next available
+  profile, right click the previous. Tooltip currently describes these actions;
+  naming the actual next/previous profiles requires a separate Waybar extension.
+- Open NVIDIA kernel modules for RTX 5060, not Acer's proprietary/legacy override.
+  This does not yet choose a driver branch, PRIME mode or PCI Bus IDs.
+- Existing workstation CLI/devtools (including shared Python/Node prerequisites
+  for Mason), OpenCode, browsers, Blender and Minecraft applications. Global Go
+  is preserved as in the current workstation composition; cleanup is separate.
+- Minecraft generic server module is imported, but instance is **unset**: no world,
+  update service or backup watcher is activated. Heap/data/remote preflight remain
+  unresolved; do not import the current app module merely to get the launcher.
+- Voice dictation remains available with no Acer Vulkan device override. CPU is
+  the provisional fallback, not a final Lenovo backend decision.
+- No xremap/uinput/input group, fixed battery name, Acer display coordinates,
+  resume offset, TPM workaround, performance governor or inherited thermald.
+  Periodic `nvidia-smi` polling is omitted pending dGPU idle validation.
+
+## Still blocked, not installation instructions
+
+The system has an explicit failing assertion until target hardware/PRIME settings,
+disk/filesystem/encryption, login/security and generation retention are reviewed.
+Remove it only after resolving those items. The disk is still `REPLACE_ME`;
+ext4/no-encryption and weekly five-generation GC are scaffold defaults, not newly
+approved decisions. Swap partition capacity alone is agreed: **48 GiB**.
+
+The user has no copied initial password or autologin. Do not apply this HM profile
+on Acer: it manages the same user paths with Lenovo's configuration. No switch is
+needed for the current machine. Do not install or run Disko from this draft.
+
+Source-only check (does not build NixOS or Home Manager):
+
+```fish
+nix eval --impure --json --offline --option allow-import-from-derivation false --file hosts/laptop-next/test-draft.nix
+```
+
+The check exercises real module declarations with fixture packages, not merged
+NixOS/HM configuration, hardware, graphics or UI integration. Real checks remain
+in the [single Lenovo checklist](../../docs/laptop-audit/lenovo-checklist.md).
+Builds and activation are left to the user after the draft blockers are resolved;
+do not attempt either output as an installation-ready configuration now.
+
+For this draft, declaration fixtures, Nix syntax, formatter checks and source
+composition comparisons passed. Existing output module lists were preserved;
+only the Lenovo NixOS overlay and the new HM output were added in `flake.nix`.
+No full NixOS/HM evaluation, build, activation or live UI validation was run.

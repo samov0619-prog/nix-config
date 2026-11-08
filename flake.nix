@@ -198,6 +198,7 @@
 
         laptop-next = mkNixos {
           system = systems.linux;
+          overlays = [ self.overlays.amnezia-vpn ];
           modules = [
             ./hosts/profiles/time.nix
             disko.nixosModules.disko
@@ -277,6 +278,33 @@
             ./home/apps/creative.nix
 
             ./home/linux/laptop
+          ];
+        };
+
+        samov-laptop-next = mkHM {
+          pkgs = pkgsFor systems.linux [
+            self.overlays.filemanager1-common
+            freesm.overlays.default
+          ];
+          username = "samov";
+          modules = [
+            ./home/users/samov
+            ./home/users/samov/state-26.05.nix
+            ./home/core-set
+            ./home/core-set/nix-authoring.nix
+            ./home/core-set/devtools/git-maintenance.nix
+            ./home/core-set/go.nix
+            ./home/core-set/devtools/neovim-mason.nix
+            ./home/core-set/devenv.nix
+            ./home/core-set/native-build.nix
+            ./home/core-set/treesitter.nix
+            ./home/core-set/devtools/github.nix
+            ./home/apps/opencode
+            ./home/gui-set
+            ./home/modules/minecraft/server
+            # Instance/heap and backup preflight remain separate decisions.
+            ./home/apps/creative.nix
+            ./home/linux/laptop-next
           ];
         };
 

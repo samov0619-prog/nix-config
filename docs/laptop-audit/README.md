@@ -89,8 +89,9 @@ Acer после backup/lifecycle fixes; это не проверка Minecraft r
 Перед финальными сборками/установкой Acer получит имена `laptop-old` /
 `samov-laptop-old`, Lenovo — `laptop` / `samov-laptop`. Переименование должно
 охватывать каталоги, outputs, hostname, helpers, completions и документацию вместе.
-Сейчас оно **не выполнено**. `laptop-next` — лишь незавершённый Disko scaffold без
-собственного HM output, не готовый Lenovo-профиль.
+Сейчас оно **не выполнено**. `laptop-next` и `samov-laptop-next` — отдельная
+[заготовка Lenovo](../../hosts/laptop-next/README.md) с согласованным набором,
+но с явным блокером установки до аппаратных/storage/security решений.
 
 Три поколения NixOS/HM и weekly GC на Acer — компромисс из-за недостатка места на
 SSD. Глубину rollback, расписание и запас места Lenovo выбрать отдельно.
