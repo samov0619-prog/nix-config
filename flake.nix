@@ -223,6 +223,7 @@
 
             ./home/core-set
             ./home/core-set/nix-authoring.nix
+            ./home/core-set/devtools/git-maintenance.nix
             ./home/core-set/go.nix
             ./home/core-set/node.nix
             ./home/core-set/python.nix
@@ -255,6 +256,7 @@
 
             ./home/core-set
             ./home/core-set/nix-authoring.nix
+            ./home/core-set/devtools/git-maintenance.nix
             ./home/core-set/go.nix
             ./home/core-set/node.nix
             ./home/core-set/python.nix
@@ -299,6 +301,7 @@
             ./home/modules/profile-gc
             ./home/core-set
             ./home/core-set/nix-authoring.nix
+            ./home/core-set/devtools/git-maintenance.nix
             ./home/core-set/go.nix
             ./home/core-set/node.nix
             ./home/core-set/python.nix

@@ -3,9 +3,14 @@
 [Обзор и границы](README.md) · [Компоненты](components.md)
 
 Карта исходного среза `a2d1767`: после ревью imports Aider закомментированы
-на laptop/desktop, поэтому теперь локальных HM module files для Acer 37, а не 38.
+на laptop/desktop, поэтому локальных HM module files для Acer стало 37, а не 38.
 Остальные изменения/решения — в [журнале ревью](feedback.md). Таблица ниже сохраняет
 исходный состав, не является свежей оценкой установленного профиля.
+
+Отдельным структурным шагом `git-filter-repo` вынесен в
+`home/core-set/devtools/git-maintenance.nix`, подключённый явно рядом с
+`nix-authoring.nix` на laptop/desktop/mac. Теперь для Acer снова 38 локальных HM
+module files, **без добавления пакетов**; server новый module не импортирует.
 
 ## Два независимых слоя
 
