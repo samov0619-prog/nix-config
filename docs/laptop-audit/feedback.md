@@ -66,6 +66,15 @@
   сна/гибернации, сервера и прочие Lenovo-only проверки собраны в один
   [короткий checklist](lenovo-checklist.md); остальные донастройку/фиксы и аудит
   продолжаем. На Acer не создавать server/world/remote ради закрытия пунктов.
+- Продолжен bounded proxy/source разбор без подключения туннелей/чтения credentials.
+  Разделены HM Xray CLI, backend v2rayA и собственная статическая Xray-библиотека
+  Amnezia. Пользователь подтвердил: отдельный `xray` и Fish `vpn` не использует,
+  proxy env задаёт напрямую. По его разрешению удалены HM CLI, helper и его тест;
+  последний proxy-коммит amend вместо сохранения ненужного scope-fix.
+  Amnezia — основной клиент, v2rayA — резерв с периодической проверкой/обновлением
+  ключа и подключением. Сервис/autostart v2rayA сохранены: whole-unit snapshot
+  26.01 MiB, CPU 0.0% одного ядра за 5 секунд; исторический peak 167.84 MiB не idle.
+  [Границы и применение](startup.md#продолжение-proxy-аудита-удаление-неиспользуемого-cli-и-helper).
 
 ## Явно согласовано
 
@@ -77,6 +86,7 @@
 | Диктовка         | Voice-dictate оставить; Vulkan относится именно к Whisper.cpp, не к remap                                                                                                                                         | Backend/GPU проверить на Lenovo                                                                       |
 | Время            | Workstation-профили: Europe/Moscow + NTP без геолокации пояса. Server/installer: штатные настройки NixOS, без явного пояса и custom time policy                                                                   | Acer: switch и часы подтверждены; остальные машины отдельно                                           |
 | Shell/navigation | Fish, fzf, Atuin, zoxide, direnv/nix-direnv устраивают; не инициировать отдельный review history/sync без новой причины                                                                                           | Оставить                                                                                              |
+| Proxy cleanup    | Убрать неиспользуемые Fish `vpn` и отдельный HM `xray`; сохранить backend v2rayA и Amnezia                                                                                                                        | Удалены в декларациях; HM activation пользователем                                                    |
 | Разработка       | Node.js, Tree-sitter, devenv и direnv нужны. Neovim config остаётся внешним, без переноса в Nix                                                                                                                   | Оставить                                                                                              |
 | Браузеры         | Firefox оставить вторым, максимально default; текущий module задаёт enable и legacy configPath, не навязывает профили/расширения                                                                                  | Оставить                                                                                              |
 | Приложения       | Steam, nix-ld, Blender и Minecraft нужны                                                                                                                                                                          | Оставить; Minecraft memory policy отдельно                                                            |
@@ -88,22 +98,26 @@
 
 ## Разобрать отдельно
 
-| Тема                   | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Kitty                  | `flake → home/gui-set → home/modules/kitty`. Пакет + generated read-only config из version-matched upstream template, fragments и langmap. Корректный HM module: отличается способом конфигурации от готового `programs.kitty`, не архитектурой imports. Переписывать без необходимости не предлагается |
-| Minecraft memory       | Сейчас `20G` — `-Xmx`, предел Java heap, **не** общий лимит процесса и не стартовая резервация 20 GiB. Уточнить одновременный client/server, сборку и нагрузку; отдельно выбрать heap/service limits с запасом RAM ОС/браузеру                                                                          |
-| Xray / v2rayA / Throne | v2rayA уже получает `pkgs.xray` через `cliPackage`; отдельный HM package даёт прямой CLI, не второй автоматически работающий proxy. Нужен ли ручной CLI? Throne сравнить по нужным протоколам, TUN/DNS/routing и интеграции NixOS, не заменять ради «более правильного ядра»                            |
-| Android files          | `adbfs-rootless`: собственный NAR около 106 KiB, closure около 264 MiB; часть зависимостей общая, это не обещание освобождения 264 MiB. Пользователь обычно использует MTP через `nix shell`; сравнить jmtpfs и GUI/MTP integration без требования ADB debugging. Пока не удалять                       |
-| Swayimg                | Уменьшить верхнюю надпись/overlay. В локальном API 5.6 есть text size/timeout; scroll zoom и drag уже настроены. Показ при движении мыши, hints и controls — только штатные; доступность ещё не подтверждена, самодельный toolbar не нужен                                                              |
-| Python / Go            | Нужность глобальных CLI не определена. Python не гарантирован NixOS «по умолчанию»: зависимость может быть в store, но не в пользовательском PATH. Проверить scripts/Mason/dev workflows; project dependencies не требуют автоматически global Python/Go                                                |
-| Swap / zram            | Swap-раздел 48 GiB согласован и задан в Lenovo scaffold. Filesystem/encryption/zram и постоянная нужность гибернации открыты; размер не гарантирует работу resume                                                                                                                                       |
-| Minecraft backup       | Полный набор → sync сохранён; guard/readiness/hard-link staging реализованы и проверены на fixtures. Не реальный Drive/restore: источник и remote на Acer отсутствовали. Квота 30-дневной trash, первая осознанная инициализация/restore и live-проверка остаются открытыми                             |
-| Temperature/power      | Не копировать Acer `performance`/thermald вслепую. Нужен поддерживаемый baseline Lenovo, проверка throttling, battery/AC и suspend; без экспериментальных undervolt/fan tweaks                                                                                                                          |
+| Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kitty             | `flake → home/gui-set → home/modules/kitty`. Пакет + generated read-only config из version-matched upstream template, fragments и langmap. Корректный HM module: отличается способом конфигурации от готового `programs.kitty`, не архитектурой imports. Переписывать без необходимости не предлагается |
+| Minecraft memory  | Сейчас `20G` — `-Xmx`, предел Java heap, **не** общий лимит процесса и не стартовая резервация 20 GiB. Уточнить одновременный client/server, сборку и нагрузку; отдельно выбрать heap/service limits с запасом RAM ОС/браузеру                                                                          |
+| v2rayA / Throne   | Неиспользуемый HM CLI удалён по согласию; v2rayA остаётся резервом, служба и autostart не менялись. Возможный переход на Throne оценить отдельно по нужным протоколам, TUN/DNS/routing и интеграции NixOS; наличие Xray-кода в клиенте не требует отдельной команды в HM                                |
+| Android files     | `adbfs-rootless`: собственный NAR около 106 KiB, closure около 264 MiB; часть зависимостей общая, это не обещание освобождения 264 MiB. Пользователь обычно использует MTP через `nix shell`; сравнить jmtpfs и GUI/MTP integration без требования ADB debugging. Пока не удалять                       |
+| Swayimg           | Уменьшить верхнюю надпись/overlay. В локальном API 5.6 есть text size/timeout; scroll zoom и drag уже настроены. Показ при движении мыши, hints и controls — только штатные; доступность ещё не подтверждена, самодельный toolbar не нужен                                                              |
+| Python / Go       | Нужность глобальных CLI не определена. Python не гарантирован NixOS «по умолчанию»: зависимость может быть в store, но не в пользовательском PATH. Проверить scripts/Mason/dev workflows; project dependencies не требуют автоматически global Python/Go                                                |
+| Swap / zram       | Swap-раздел 48 GiB согласован и задан в Lenovo scaffold. Filesystem/encryption/zram и постоянная нужность гибернации открыты; размер не гарантирует работу resume                                                                                                                                       |
+| Minecraft backup  | Полный набор → sync сохранён; guard/readiness/hard-link staging реализованы и проверены на fixtures. Не реальный Drive/restore: источник и remote на Acer отсутствовали. Квота 30-дневной trash, первая осознанная инициализация/restore и live-проверка остаются открытыми                             |
+| Temperature/power | Не копировать Acer `performance`/thermald вслепую. Нужен поддерживаемый baseline Lenovo, проверка throttling, battery/AC и suspend; без экспериментальных undervolt/fan tweaks                                                                                                                          |
 
 Freesm сейчас приходит из собственного flake overlay, не через `pkgsUnstable`:
 «свежий upstream Freesm» и «переключить nixpkgs на unstable» — разные решения.
 Throne, согласно [upstream](https://throneproj.github.io/get_started/), использует
 sing-box и Xray для соответствующих профилей; пригодность NixOS-пакета ещё не проверена.
+Текущий pinned Throne 1.0.13 поставляет собственный sing-box Core, отдельного HM
+`xray` не требует; runtime/TUN и совместимость нужного профиля не проверены.
+NaiveProxy также не требует Xray: текущий серверный модуль использует Caddy с
+forwardproxy; клиент/его Naive backend выбираются отдельно.
 
 ## Vulkan и RTX 5060
 

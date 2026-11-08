@@ -14,10 +14,6 @@
         end
       end
     '';
-    functions.vpn = ''
-      set -x all_proxy socks5://127.0.0.1:20170
-      $argv
-    '';
   };
   programs.fzf = {
     enable = true;

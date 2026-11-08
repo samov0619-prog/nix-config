@@ -1,7 +1,6 @@
 { pkgs, ... }:
 {
   home.packages = with pkgs; [
-    xray
     adbfs-rootless
     android-tools
     btop

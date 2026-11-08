@@ -256,25 +256,74 @@ entry; HTTP readiness ограничена по времени; после ус�
 собраны в [коротком checklist](lenovo-checklist.md); не переносить их обратно в
 план запуска Minecraft на Acer. Остальные согласованные fixes и аудит продолжаются.
 
-## Proxy: два системных daemon и отдельный CLI
+## Proxy: основной Amnezia и резервный v2rayA
 
 Источники: [host](../../hosts/laptop/default.nix#L64-L95),
-[HM CLI](../../home/linux/core-set/default.nix#L3-L8),
-[Fish vpn](../../home/core-set/shell.nix#L17-L20),
+[Linux HM packages](../../home/linux/core-set/default.nix),
+[Fish](../../home/core-set/shell.nix),
 [локальный Amnezia package](../../pkgs/amnezia-vpn/default.nix#L148-L175).
 
-| Компонент            | Кто запускает                                                                                                                                   | Что это не доказывает                                                                                                                   |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| v2rayA               | Pinned NixOS module: system `v2raya.service`, WantedBy multi-user, root, `Restart=on-failure`; After network/nss/firewall targets               | `network.target` не гарантирует интернет. Profiles, активный tunnel и routing зависят от runtime state                                  |
-| Xray для v2rayA      | `cliPackage = pkgs.xray` подменяет backend в package v2rayA                                                                                     | HM `xray` не нужен для этой зависимости                                                                                                 |
-| HM Xray              | Только `home.packages`; прямой пользовательский CLI                                                                                             | Само добавление пакета не объявляет второй system/user Xray daemon                                                                      |
-| Amnezia              | NixOS module регистрирует package units/D-Bus, Wants через multi-user для `AmneziaVPN.service`, включает resolved; host добавляет iptables/gawk | Старт daemon не равен GUI/autoconnect. Package умеет генерировать GUI autostart, но текущие пользовательские настройки не обследовались |
-| Fish `vpn <command>` | Ручной запуск команды с локальным `all_proxy`                                                                                                   | Не включает VPN-сервис и не направляет весь system traffic; приложение должно поддерживать переменную                                   |
+| Компонент           | Кто запускает                                                                                                                                   | Что это не доказывает                                                                                                                   |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| v2rayA              | Pinned NixOS module: system `v2raya.service`, WantedBy multi-user, root, `Restart=on-failure`; After network/nss/firewall targets               | `network.target` не гарантирует интернет. Profiles, активный tunnel и routing зависят от runtime state                                  |
+| Xray для v2rayA     | `cliPackage = pkgs.xray` подменяет backend в package v2rayA                                                                                     | HM `xray` не нужен для этой зависимости                                                                                                 |
+| Xray внутри Amnezia | Локальный пакет линкует собственную `amnezia-xray-bindings` 1.3.0 как статическую библиотеку                                                    | Не тот же экземпляр CLI из HM; наличие Xray-кода не означает активный Xray tunnel                                                       |
+| Amnezia             | NixOS module регистрирует package units/D-Bus, Wants через multi-user для `AmneziaVPN.service`, включает resolved; host добавляет iptables/gawk | Старт daemon не равен GUI/autoconnect. Package умеет генерировать GUI autostart, но текущие пользовательские настройки не обследовались |
 
 **START-05 / до изменения proxy, подтверждено исходниками:** v2rayA и Amnezia
 подключены одновременно как системные службы. Возможный конфликт DNS/routes —
-гипотеза, не факт двух активных туннелей. Следующий выбор: нужность отдельного CLI
-и сценарии одновременной работы; сравнение Throne остаётся отдельным шагом.
+гипотеза, не факт двух активных туннелей. Пользователь уточнил: Amnezia — основной
+клиент, v2rayA — резерв для проверки/обновления ключа и подключения при необходимости.
+Смена клиента на Throne остаётся отдельным возможным шагом, не принятым решением.
+
+### Продолжение proxy-аудита: удаление неиспользуемого CLI и helper
+
+В пределах Nix/source declarations разделены три роли Xray:
+
+- v2rayA получает `pkgs.xray` через `cliPackage`; его backend не зависит от наличия
+  `xray` в пользовательском PATH. Настройка существовала до выделения laptop
+  (`f7de937`, исходная desktop-конфигурация — `6399ae7`).
+- Прямой HM CLI добавлен отдельно коммитом `232684e` (`add xray`). Пользователь
+  подтвердил, что не запускает его вручную, и разрешил убрать: удалён только `xray`
+  из Linux HM package list laptop/desktop. Backend v2rayA остаётся в NixOS;
+  удаление HM entry не обещает освобождения его store closure.
+- Amnezia использует собственную
+  [статическую библиотеку](../../pkgs/amnezia-vpn/xray-lib.nix) и явную
+  [линковку](../../pkgs/amnezia-vpn/default.nix#L160-L165), не HM CLI. Pin/patches
+  AWG и backend в этом проходе не менялись. Два daemon не доказывают два активных VPN.
+
+**PROXY-01 / устранён удалением неиспользуемой функции:** исходный `vpn` мог менять
+уже существующий global `all_proxy`. После локального воспроизведения пользователь
+уточнил, что helper не использует: переменные задаёт напрямую в нужных сессиях.
+По его разрешению удалены функция и ставший ненужным `test_vpn.py`; промежуточный
+scope-fix не сохраняется как отдельное изменение. Ручные переменные не менялись.
+
+**Стоимость резервного сервиса, Acer, 08.11.2026:** whole-unit snapshot v2rayA
+вместе с дочерним Xray — **26.01 MiB RAM**, CPU за **5 секунд — 0.0% одного ядра**.
+Исторический peak с запуска — **167.84 MiB**, не текущий idle расход. Это короткое
+наблюдение, не долгосрочный benchmark и не проверка отсутствия активного tunnel.
+Рекомендация — сохранить сервис для быстрого резервного подключения; остановка или
+отключение autostart не согласованы и не выполнялись. Ключи, профили и routes не читались.
+
+**Будущие Throne / NaiveProxy:** в текущем pinned nixpkgs пакет Throne 1.0.13
+поставляет собственный `Core`, собранный на sing-box, без зависимости от отдельного
+HM `xray`. По [текущему upstream](https://throneproj.github.io/get_started/) новые
+версии используют также Xray для части профилей; перед переходом проверить именно
+выбранный пакет/протокол и NixOS TUN integration, а не сохранять ненужный CLI заранее.
+NaiveProxy не требует Xray: [сервер здесь](../../hosts/server/proxy.nix) — Caddy с
+forwardproxy, клиенту нужен Naive-совместимый backend. Это не live-тест соединения
+и не обещание поддержки Naive старым pinned Throne.
+
+Применение — только HM, не NixOS rebuild: на Acer
+`home-manager switch --flake .#samov-laptop`, затем новый терминал/Fish shell;
+уже загруженная функция в старом shell может сохраниться. Удаление helper общее для
+laptop/desktop/server/mac HM; CLI удалён из Linux workstation module laptop/desktop.
+Остальные профили получают изменения при своей HM activation (server — на VPS по SSH,
+Mac — на самом Mac). Документация activation не требует. Полная HM сборка и live
+proxy/DNS/routes не проверялись; службы и активные подключения не менялись.
+Узкая offline evaluation старых/новых модулей с fixture packages подтвердила:
+удалены только Fish helper и HM `xray`; остальные shell-настройки для stateVersion
+25.11/26.05, Linux packages и phone aliases сохранены. Это не полный HM build.
 
 ## GUI: UWSM владеет сессией, не второй HM compositor service
 
