@@ -20,7 +20,7 @@
     delete_generations = "+5";
   };
 
-  # Fresh host: replace the placeholder disk and swap size in disko.nix first.
+  # Fresh host: replace the placeholder disk and review filesystem/encryption first.
   # Local installer use needs no IP: see ../disko/README.md.
   system.stateVersion = "26.05";
 }
