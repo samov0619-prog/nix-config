@@ -6,9 +6,46 @@
 systemctl --user start minecraft.target
 ```
 
-Пока запуск ручной. Stop/restart `minecraft.target` ещё не распространяется на
-все процессы: lifecycle и отдельный opt-in autostart требуют следующей правки.
-Не использовать restart target как гарантию перезапуска Java/Packwiz.
+По умолчанию запуск ручной. Для остановки и полного перезапуска стека:
+
+```bash
+systemctl --user stop minecraft.target
+systemctl --user restart minecraft.target
+```
+
+Это альтернативные операции, не обязательная последовательность. Три службы имеют
+`PartOf=minecraft.target`: stop останавливает Java/Packwiz, restart повторяет
+serve → update → Java. Backup watcher и уже запущенная передача независимы от target.
+`Restart=always` не отменяет явную остановку через systemd.
+
+Packwiz serve считается готовым после успешного HTTP-запроса к
+`http://127.0.0.1:8180/pack.toml`: curl игнорирует `.curlrc`, обходит proxy, ограничивает запрос одной
+секундой и повторяет ошибки до примерно 30 секунд; общий start timeout — 40 секунд.
+`ExecStartPost` участвует в `After`, поэтому update ждёт этой проверки. Это HTTP
+readiness, не проверка корректности всего pack: его проверяет сам installer.
+После успеха update остаётся `active (exited)` (`RemainAfterExit=true`), чтобы
+restart target повторял update, а обычный рестарт Java не обновлял моды неожиданно.
+
+При ошибке serve/update Java не должна стартовать. Сам `minecraft.target` через
+WantedBy может остаться active при неработающем дочернем service: проверять нужно
+службы и журнал, не один target. После устранения причины перезапустить target.
+Автоматический рестарт только Packwiz не является восстановлением всего стека.
+Остановка Java использует штатный SIGTERM и timeout systemd; сохранение реального
+мира и достаточность времени остановки требуют отдельной проверки на рабочем сервере.
+
+## Автозапуск: явный opt-in
+
+В конфигурации нужного Home Manager host:
+
+```nix
+minecraft.server.autoStart = true;
+```
+
+Default — `false`. Опция добавляет target к user `default.target`, то есть запуску
+пользовательского systemd manager, не обязательно GUI-логину (например, при linger).
+Применять через HM, не через ручной `enable`. Возврат к `false` убирает эту привязку;
+для немедленной остановки уже работающего стека использовать `stop minecraft.target`.
+`minecraft.server = null` по-прежнему не создаёт ни серверные, ни backup units.
 
 ## Логи
 
@@ -104,3 +141,33 @@ guard полностью не защищает. Drive trash занимает к�
 изменение manifest даёт новую попытку; постоянная incomplete-запись блокирует
 sync до устранения причины. Ручной start service выполняет **реальный sync**, не тест.
 Unit fixtures не проверяют настоящий systemd watcher, Drive/API, сеть или restore.
+
+## Проверки lifecycle без Minecraft
+
+Из корня репозитория, без сборок и запуска user services:
+
+```fish
+nix eval --impure --json --offline --option allow-import-from-derivation false \
+  --expr 'let f = builtins.getFlake (toString ./.); in import ./home/modules/minecraft/server/test_module.nix { lib = f.inputs.nixpkgs.lib; }' \
+  | python3 -B home/modules/minecraft/server/test_lifecycle.py /dev/stdin
+```
+
+Нужны локально доступные flake inputs, Python, curl и systemd-analyze. Nix fixtures
+проверяют null/manual/opt-in, зависимости и неизменность backup. Python проверяет
+граф через `systemd-analyze verify` на fixture units с подставленными executable
+paths; ни одна unit не запускается. Настоящая curl-команда проверяется на tiny
+loopback HTTP fixture: success без proxy/влияния `.curlrc`, retry после 503, ограниченный отказ 404.
+Тест занимает около 33 секунд, параметры retry не ослабляются ради ускорения.
+Это не тест настоящих Packwiz/Java, native HM unit rendering или runtime stop/restart.
+
+Полную ручную проверку выполнять позже **на машине с подготовленным сервером**:
+
+1. Применить HM после review (команды выше); на Acer запускать Minecraft ради теста
+   не требуется. Оставить `autoStart=false`, пока не выбран другой режим.
+2. Запустить target, проверить `packwiz-serve`, `minecraft-packwiz-update` и
+   `minecraft-server` через `systemctl --user status`; в журнале update должен
+   завершиться до запуска Java. Проверить подключение клиента.
+3. Остановить target: Java и Packwiz должны стать inactive; проверить завершение
+   сохранения мира в журнале. Backup watcher при этом остаётся включённым.
+4. Запустить снова и отдельно проверить restart target: update повторяется, старые
+   Java/Packwiz не остаются параллельно. Это действия с реальным миром, не fixtures.

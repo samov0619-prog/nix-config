@@ -31,24 +31,25 @@ Source-first срез **08.11.2026**, конфигурация `086d82e`. Это
 ```mermaid
 flowchart TD
     Manual["Ручной start minecraft.target"] --> Target["minecraft.target"]
+    Default["User default.target"] -. "autoStart=true, default=false" .-> Target
     Target --> Serve["packwiz-serve.service"]
     Target --> Update["minecraft-packwiz-update.service"]
     Target --> Server["minecraft-server.service"]
-    Serve -. "Requires + After, не HTTP readiness" .-> Update
+    Serve -. "Requires + After: HTTP pack.toml готов" .-> Update
     Update -. "Requires + After: oneshot update перед Java" .-> Server
-    Default["User default.target"] --> Watch["ftb-backups-fabric-1214.path"]
+    Default --> Watch["ftb-backups-fabric-1214.path"]
     Watch -->|"PathChanged backups.json"| Guard["Готовый полный ZIP-набор + hard-link snapshot"]
     Guard --> Sync["Одноимённый oneshot: rclone sync + Drive trash"]
 ```
 
-| Элемент            | Что объявлено                                           | Следствие                                                                                           |
-| ------------------ | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `minecraft.target` | Только Description, без собственного `Install.WantedBy` | В этом модуле не привязан к логину; ручная команда start в README соответствует коду                |
-| Packwiz serve      | HTTP 8180, `Restart=always`, WantedBy Minecraft         | Update требует этот процесс, но нет проверки готовности HTTP                                        |
-| Update             | `Type=oneshot`, Requires/After serve                    | Успешное окончание update предшествует старту Java; сам oneshot не остаётся active                  |
-| Fabric             | Requires/After update, `Restart=always`, `-Xmx20G`      | Heap cap, не лимит всей памяти процесса. Автоматический рестарт не равен повторной активации update |
-| Backup watcher     | Теперь `PathChanged` manifest, WantedBy user default    | Может работать без Minecraft; helper проверяет завершённость, watcher не является retry timer       |
-| Backup upload      | Guard + hard-link snapshot → `rclone sync`, oneshot     | Полное зеркало допущенного набора, явная Drive trash; авторизация/сеть остаются внешними            |
+| Элемент            | Что объявлено                                                    | Следствие                                                                                           |
+| ------------------ | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `minecraft.target` | Ручной по умолчанию, `autoStart=false`; три службы PartOf target | Stop/restart распространяется на стек; opt-in привязывает к user default, не обязательно GUI login  |
+| Packwiz serve      | HTTP 8180, ExecStartPost curl readiness, start timeout 40s       | Update ждёт HTTP pack.toml; запросы обходят proxy, ошибку повторяют примерно до 30s                 |
+| Update             | `Type=oneshot`, RemainAfterExit, Requires/After serve            | После успеха active (exited); restart target повторяет update перед Java                            |
+| Fabric             | Requires/After update, `Restart=always`, `-Xmx20G`               | Heap cap, не лимит всей памяти процесса. Автоматический рестарт не равен повторной активации update |
+| Backup watcher     | Теперь `PathChanged` manifest, WantedBy user default             | Может работать без Minecraft; helper проверяет завершённость, watcher не является retry timer       |
+| Backup upload      | Guard + hard-link snapshot → `rclone sync`, oneshot              | Полное зеркало допущенного набора, явная Drive trash; авторизация/сеть остаются внешними            |
 
 ### Исходные находки и последующие статусы
 
@@ -61,11 +62,12 @@ flowchart TD
 
 `rclone sync` не выполнялся. Ни мир, ни backup remote, ни credentials не читались.
 START-04 получил отдельную согласованную реализацию ниже; интеграция ещё не проверена.
-У START-02 удалён неверный README-совет enable; opt-in и lifecycle остаются открытыми.
+START-01..03 получили lifecycle/opt-in/HTTP-readiness правку ниже; настоящий
+Minecraft runtime не испытывался. Строки таблицы выше сохраняют исходные находки.
 
 **Последующее решение пользователя:** пока ручной запуск Minecraft, но с простой
 отдельной опцией включения автозапуска при необходимости (по умолчанию выключена).
-Lifecycle и эта опция ещё не исправлены. По backup пользователь попросил
+Позже lifecycle и эта опция реализованы ниже. По backup пользователь попросил
 пояснение: при локальном удалении архива `sync` удаляет и соответствующий облачный
 файл. Загрузка без удаления облачных копий потребует отдельной политики хранения;
 вариант не был выбран на том шаге, код backup тогда не менялся.
@@ -191,10 +193,46 @@ JSON переписывается неатомарно; закрытие manifes
 hard links не защищают от записи в тот же inode. Guard не распознает корректный,
 но ошибочно уменьшенный/чужой backup-набор. Persistent incomplete блокирует upload;
 retry timer не добавлен. Drive trash quota остаётся открытым эксплуатационным вопросом.
-Lifecycle/Packwiz HTTP readiness — следующие отдельные шаги, не выполненные здесь.
+Lifecycle/Packwiz HTTP readiness выполнены следующим отдельным шагом ниже.
 Применение только через HM laptop/desktop; порядок и журнал — в
 [инструкции модуля](../../home/modules/minecraft/server/README.md#проверка-и-применение).
 VPS generic import с null не создаёт units; NixOS rebuild для этой правки не нужен.
+
+### Lifecycle, ручной default и HTTP readiness
+
+Пользователь сообщил об успешном `home-manager switch --flake ~/nix-config/.#samov-laptop`
+после `05ed0d7`. Это подтверждает пользовательскую сборку/activation предыдущего
+шага на Acer, не текущего lifecycle diff и не фактический upload/restore.
+На сомнение, стоило ли заниматься Minecraft на Acer, пользователь отдельно уточнил:
+**не прекращать начатую донастройку и фиксы**. Продолжаем согласованные исправления,
+но не запускаем здесь настоящий Minecraft ради проверки.
+
+- `PartOf=minecraft.target` у serve/update/Java распространяет stop/restart.
+  Backup watcher/service остаются независимыми. Update `RemainAfterExit=true`
+  сохраняет завершённый oneshot активным до stop/restart, не держит процесс Java.
+- `minecraft.server.autoStart` — bool default=false. Только true добавляет target
+  в user default.target; null по-прежнему не создаёт units. Ручной сценарий сохранён.
+- Serve использует Type=exec и ExecStartPost curl к тому же loopback URL, что
+  installer. Query timeout 1s, retry window примерно 30s, unit start timeout 40s;
+  proxy обходится явно, `.curlrc` игнорируется. Restart=always сохранён, задержка повторного старта serve 5s.
+  `After` учитывает ExecStartPost по
+  [systemd.service(5)](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html#ExecStartPre=).
+- Reusable [module fixtures](../../home/modules/minecraft/server/test_module.nix)
+  проверяют null/manual/opt-in, PartOf/order/Requires/RemainAfterExit/readiness
+  и прежнюю независимость backup. [Lifecycle tests](../../home/modules/minecraft/server/test_lifecycle.py)
+  прошли: fixture unit graph через systemd-analyze verify и настоящая curl-команда
+  на loopback HTTP: 200 без proxy/влияния `.curlrc`, 503→200 retry и ограниченный отказ 404 с production
+  retry-параметрами (4 теста). Все 26 backup-тестов также повторно прошли. Это лёгкие
+  локальные проверки без сборок и запуска user services.
+
+Ограничения: статическая проверка graph не является runtime stop/restart; не проверены
+реальный Packwiz cold start, installer/mods, Java shutdown/save, клиент, autostart
+при входе или full HM build нового diff. Target active не гарантирует здоровье
+Wanted services. Падение только serve не автоматически восстанавливает весь стек;
+после исправления причины — restart target. Heap `20G` и выбор машины не менялись.
+Реальные cloud/quota/restore по-прежнему вне выполненных проверок. Ruff недоступен.
+Применение — только HM laptop/desktop; NixOS rebuild не нужен. Безопасные fixtures
+и отложенная ручная проверка на машине с реальным сервером описаны в README модуля.
 
 ## Proxy: два системных daemon и отдельный CLI
 

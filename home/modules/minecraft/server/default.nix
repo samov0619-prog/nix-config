@@ -32,6 +32,11 @@ in
         options = {
           packwizDir = lib.mkOption { type = lib.types.str; };
           serverDir = lib.mkOption { type = lib.types.str; };
+          autoStart = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = "Start the Minecraft stack with the user systemd manager.";
+          };
           memory = lib.mkOption {
             type = lib.types.str;
             default = "20G";
@@ -51,6 +56,7 @@ in
 
     systemd.user.targets.minecraft = {
       Unit.Description = "Minecraft user stack";
+      Install.WantedBy = lib.optional cfg.autoStart "default.target";
     };
 
     ################################
@@ -59,11 +65,20 @@ in
 
     systemd.user.services.packwiz-serve = {
       Unit.Description = "Packwiz HTTP server";
+      Unit.PartOf = [ "minecraft.target" ];
 
       Service = {
+        Type = "exec";
         WorkingDirectory = cfg.packwizDir;
         ExecStart = "${pkgs.packwiz}/bin/packwiz serve --port 8180";
+        # After= waits for ExecStartPost, not just the HTTP process being forked.
+        ExecStartPost =
+          "${pkgs.curl}/bin/curl --disable --fail --silent --show-error --noproxy '*' "
+          + "--retry 30 --retry-delay 1 --retry-max-time 30 --retry-connrefused --retry-all-errors "
+          + "--max-time 1 --output /dev/null http://127.0.0.1:8180/pack.toml";
+        TimeoutStartSec = "40s";
         Restart = "always";
+        RestartSec = "5s";
       };
 
       Install.WantedBy = [ "minecraft.target" ];
@@ -78,16 +93,18 @@ in
 
       Unit.After = [ "packwiz-serve.service" ];
       Unit.Requires = [ "packwiz-serve.service" ];
+      Unit.PartOf = [ "minecraft.target" ];
 
       Service = {
         Type = "oneshot";
+        RemainAfterExit = true;
         WorkingDirectory = cfg.serverDir;
 
         ExecStart = ''
           ${pkgs.jdk_headless}/bin/java \
             -jar ${packwizBootstrap} \
             -g -s server \
-            http://localhost:8180/pack.toml
+            http://127.0.0.1:8180/pack.toml
         '';
       };
 
@@ -103,6 +120,7 @@ in
 
       Unit.After = [ "minecraft-packwiz-update.service" ];
       Unit.Requires = [ "minecraft-packwiz-update.service" ];
+      Unit.PartOf = [ "minecraft.target" ];
 
       Service = {
         WorkingDirectory = cfg.serverDir;
