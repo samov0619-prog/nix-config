@@ -402,6 +402,11 @@ nix-gc.service`; штатный `nix-gc.timer` вызывает этот же se
 - Home Manager generations сохраняются по host policy: server `+2` daily,
   laptop `+3` weekly, desktop `+5` weekly. Это обеспечивает rollback именно
   конфигурации Home Manager.
+- Короткий retention текущего laptop (Acer): три поколения NixOS и три HM,
+  weekly GC — вынужденный компромисс из-за недостатка места на SSD, не общая
+  рекомендация. После переименования в laptop-old эта причина сохраняется.
+  Для нового Lenovo отдельно согласовать глубину rollback, расписание и запас
+  места для updates; не переносить агрессивную политику Acer автоматически.
 - Modern `nix profile` сохраняет только current generation через `nix profile
 wipe-history`: Nix не предоставляет API "keep N", а его history откатывает
   bootstrap CLI, не Home Manager configuration. Не применять `nix-env` к modern
@@ -601,7 +606,7 @@ nix eval .#nixosConfigurations.laptop.config.system.build.toplevel --no-build 2>
 
 ## Текущее состояние хостов
 
-- **laptop**: эталон, максимально актуален. HP i7 + Intel/NVIDIA, ext4, GRUB EFI, Hibernate/zram.
+- **laptop**: текущий Acer с Intel/NVIDIA, ext4, GRUB EFI, Hibernate/zram; точная модель здесь не зафиксирована. Перед установкой Lenovo переименовать в laptop-old, имя laptop передать Lenovo. Снимок stable inputs требует актуализации; короткий GC-retention обусловлен нехваткой места на SSD Acer.
 - **desktop**: старше laptop. AMD + NVIDIA, два монитора (DVI 1680x1050 + HDMI 3840x2160@3x). Нет Bluetooth/uinput/xremap/hibernate.
 - **server**: модульный VPS stack без Docker, Disko и generic virtio hardware modules. Preflight пишет внешний settings input по данным rescue environment; в Git остаётся только пример.
 - **mac**: только standalone HM (users + core-set). Без nix-darwin, без GUI, без проверки совместимости Linux-пакетов.
