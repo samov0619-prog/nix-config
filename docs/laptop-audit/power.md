@@ -38,6 +38,39 @@ Lenovo только потому, что там тоже Intel; не обход�
 
 ## Выбранное направление Lenovo и открытые вопросы
 
+### CPU подтверждён, поддержка thermald проверена по исходникам
+
+Пользователь сообщил: **«в биос записан 356h»**. Это подтверждение CPU на самом
+Lenovo, а не противоречивые карточки магазинов 356H/358H. По
+[спецификации Intel](https://www.intel.com/content/www/us/en/products/sku/245532/intel-core-ultra-7-processor-356h-18m-cache-up-to-4-70-ghz/specifications.html)
+это **Core Ultra 7 356H, Panther Lake**. Проходить первоначальную настройку
+Windows или повторно собирать те же характеристики сейчас не требуется.
+
+В root locked stable и проверенном свежем stable из
+[package-source audit](package-sources.md) thermald имеет версию **2.5.11**.
+[Upstream release notes этой версии](https://github.com/intel/thermal_daemon/blob/v2.5.11/README.txt)
+указывают поддержку Panther Lake начиная с **2.5.9** и исправление пути DPTF для
+Panther Lake в **2.5.10**. В
+[таблице поддерживаемых CPU](https://github.com/intel/thermal_daemon/blob/v2.5.11/src/thd_engine.cpp)
+есть family 6 / model `0xcc` с комментарием `Panther Lake L`.
+**Обновление thermald ради поддержки семейства сейчас не требуется.**
+
+Это source evidence о поддержке семейства, не измерение CPUID или эффективности
+на конкретном ThinkBook. Тот же код проверяет sensors/cooling devices/thermal
+zones и содержит blocklist для некоторых Lenovo с
+`thinkpad_acpi/dytc_lapmode`; наличие этого интерфейса на ThinkBook не установлено.
+Не делать вывод ни о необходимости службы, ни о её запрете только по бренду.
+
+Открытый вопрос теперь — доступность firmware/DPTF и реальная польза thermald на
+данном ноутбуке, **не неизвестная модель CPU**. Рекомендация: сохранить подготовленный
+PPD, thermald пока не включать; в существующую живую проверку питания входит
+проверка датчиков, firmware interfaces и журналов перед решением о службе.
+Это не новое пользовательское решение включить или окончательно исключить её.
+Проверка Linux возможна позже с Live USB без установки и изменения SSD; никакой
+SSH через BIOS или предварительная настройка Windows для неё не нужны.
+
+### Согласованный baseline
+
 - Не наследовать Acer `performance`; пользователь выбрал PPD (`power-profiles-daemon`)
   со штатным значком Waybar только для Lenovo, с обычным `balanced` и доступными
   `power-saver`/`performance` по потребности.
@@ -46,8 +79,8 @@ Lenovo только потому, что там тоже Intel; не обход�
   сочетание PPD с двумя остальными. Это не запрет на совместную работу PPD и thermald;
   пригодность последнего проверяется отдельно по платформе и её firmware tables.
 - Не добавлять undervolt, ручные fan curves, отключение turbo и автоматические
-  scripts AC/battery до базовой проверки. UI и автоматическое переключение профилей
-  тоже отдельные решения, простое включение daemon их не специфицирует.
+  scripts AC/battery до базовой проверки. Ручной UI Waybar подготовлен отдельно;
+  автоматическое переключение профилей AC/battery не согласовано и не реализовано.
 - В [Lenovo draft](../../hosts/laptop-next/default.nix) PPD включён; Acer host
   не импортируется. Thermald ещё не выбран. Реальные температура, throttling, CPU/GPU idle и
   батарея проверяются в существующем коротком checklist, а не новым списком.
