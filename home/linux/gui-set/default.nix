@@ -32,7 +32,9 @@
     platformTheme.name = "adwaita";
   };
 
-  services.easyeffects.enable = true;
+  # EasyEffects adds PipeWire effects (e.g. EQ/noise reduction), not basic audio.
+  # Disabled until a specific effect is needed and configured deliberately.
+  # services.easyeffects.enable = true;
   services.udiskie = {
     enable = true;
     settings = {

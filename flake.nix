@@ -230,7 +230,8 @@
             ./home/core-set/native-build.nix
             ./home/core-set/treesitter.nix
             ./home/core-set/devtools/github.nix
-            ./home/apps/aider
+            # Aider is no longer used; keep the module for an explicit opt-in.
+            # ./home/apps/aider
             ./home/apps/opencode
             # Hermes временно отключён.
             # ./home/apps/hermes
@@ -261,7 +262,8 @@
             ./home/core-set/native-build.nix
             ./home/core-set/treesitter.nix
             ./home/core-set/devtools/github.nix
-            ./home/apps/aider
+            # Aider is no longer used; keep the module for an explicit opt-in.
+            # ./home/apps/aider
             ./home/apps/opencode
             # Hermes временно отключён.
             # ./home/apps/hermes
