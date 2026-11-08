@@ -229,8 +229,7 @@
             ./home/core-set/nix-authoring.nix
             ./home/core-set/devtools/git-maintenance.nix
             ./home/core-set/go.nix
-            ./home/core-set/node.nix
-            ./home/core-set/python.nix
+            ./home/core-set/devtools/neovim-mason.nix
             ./home/core-set/devenv.nix
             ./home/core-set/native-build.nix
             ./home/core-set/treesitter.nix
@@ -262,8 +261,7 @@
             ./home/core-set/nix-authoring.nix
             ./home/core-set/devtools/git-maintenance.nix
             ./home/core-set/go.nix
-            ./home/core-set/node.nix
-            ./home/core-set/python.nix
+            ./home/core-set/devtools/neovim-mason.nix
             ./home/core-set/devenv.nix
             ./home/core-set/native-build.nix
             ./home/core-set/treesitter.nix
@@ -307,8 +305,7 @@
             ./home/core-set/nix-authoring.nix
             ./home/core-set/devtools/git-maintenance.nix
             ./home/core-set/go.nix
-            ./home/core-set/node.nix
-            ./home/core-set/python.nix
+            ./home/core-set/devtools/neovim-mason.nix
             ./home/core-set/devenv.nix
             ./home/core-set/native-build.nix
             ./home/core-set/treesitter.nix

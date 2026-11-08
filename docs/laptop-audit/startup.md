@@ -407,6 +407,40 @@ Tofi settings и тела скриптов неизменны. В active module 
 Последующее удаление `android-tools` проверено отдельной offline evaluation
 старого/нового Linux core-set с fixture packages: остался только прежний `btop`.
 
+## Python/Node: глобальные CLI и явные prerequisites Mason
+
+Пользователь сохраняет Python/Node для разовых скриптов и тестовых серверов.
+Mason остаётся единым менеджером LSP/линтеров/форматтеров, Neovim config — внешним.
+[Opt-in модуль](../../home/core-set/devtools/neovim-mason.nix) явно импортирует базовый
+Neovim и существующие [Node](../../home/core-set/node.nix)/[Python](../../home/core-set/python.nix)
+modules. В `flake.nix` он заменяет прежние отдельные Node/Python imports только
+на laptop/desktop/mac; server остаётся на базовом Neovim без этих глобальных CLI.
+Повторный import базового Neovim дедуплицируется Nix module system по пути файла.
+
+Это группировка зависимостей профиля, **не** отдельное герметичное окружение Neovim:
+CLI остаются в общем PATH. Используются те же `pkgs.nodejs`/`pkgs.python3`, не вторые
+версии или копии. Nix уже переиспользует одинаковые store paths; само наличие пакета
+в PATH не запускает daemon и не потребляет CPU/RAM процесса.
+
+Версии/lock не менялись. Node LTS policy сохраняется для отдельного обновления
+inputs; этот шаг не подтверждает, что нынешний снимок содержит самую свежую LTS.
+У Python нет отдельной LTS-ветки; выбирать поддерживаемую совместимую версию.
+Mason PyPI tools создают venv с внешним интерпретатором: при смене Nix Python и GC
+старые ссылки могут требовать пересоздания окружений. Ни глобальный CLI, ни новый
+import module сами эту проблему не устраняют. Не копировать Mason venv на Lenovo
+как гарантированно переносимый runtime; новую установку проверить отдельно.
+
+Go, direnv и внешние Neovim/Lazy/Mason files не менялись. Direnv project-switching
+сохранён в agent-todo, не реализуется сейчас. Применение структуры — HM нужного
+профиля (Acer: `home-manager switch --flake .#samov-laptop`); server без изменений,
+NixOS rebuild не нужен. Документация activation не требует. Сборка/activation нового
+diff и реальные Mason/LSP на Lenovo этим не проверены.
+Узкие offline checks сравнивают фактические module lists из flake через HM stub и
+старые/новые Neovim runtime modules через pinned `lib.evalModules` с fixture packages:
+состав трёх workstation/mac профилей сохранён, server list неизменен, базовый Neovim
+дедуплицирован, те же три package references и editor/aliases settings сохранены.
+Это не полная HM evaluation/build или runtime-проверка Mason.
+
 ## GUI: UWSM владеет сессией, не второй HM compositor service
 
 ```mermaid
