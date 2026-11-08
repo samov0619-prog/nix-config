@@ -22,7 +22,6 @@
   # boot.loader.efi.efiSysMountPoint = "/boot/efi";
   # Define on which hard drive you want to install Grub.
   boot.loader.grub.device = "nodev"; # or "nodev" for efi only
-  services.automatic-timezoned.enable = true;
   boot.loader.grub.useOSProber = true;
 
   nix.gc = {
@@ -49,7 +48,10 @@
   };
 
   # The daemon invokes iptables, ip6tables, and awk for its firewall rules.
-  systemd.services.AmneziaVPN.path = lib.mkAfter [ pkgs.iptables pkgs.gawk ];
+  systemd.services.AmneziaVPN.path = lib.mkAfter [
+    pkgs.iptables
+    pkgs.gawk
+  ];
 
   warnings = lib.optional (lib.versionAtLeast pkgsUnstable.amnezia-vpn.version "5.0.3.1") ''
     A newer nixpkgs-unstable AmneziaVPN (${pkgsUnstable.amnezia-vpn.version}) is available after the broken Linux 5.0.3.0 test. Before replacing the local ${pkgs.amnezia-vpn.version} override, verify that upstream PR #2840 (dual-stack IPv4 address assignment) and #3231 (Linux endpoint-route handling) are included, then build and connection-test the package.
@@ -141,8 +143,7 @@
     LIBVA_DRIVER_NAME = "nvidia";
   };
 
-  # Set your time zone.
-  # time.timeZone = "Europe/Amsterdam";
+  # Timezone and NTP are configured by the shared hosts/profiles/time.nix.
 
   # Configure network proxy if necessary
   # networking.proxy.default = "http://user:password@proxy:port/";

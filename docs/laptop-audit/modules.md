@@ -12,6 +12,12 @@
 `nix-authoring.nix` на laptop/desktop/mac. Теперь для Acer снова 38 локальных HM
 module files, **без добавления пакетов**; server новый module не импортирует.
 
+Добавлен четвёртый локальный NixOS module:
+[hosts/profiles/time.nix](../../hosts/profiles/time.nix) — фиксированный пояс и NTP.
+Он явно импортирован только laptop/desktop и `*-next`, не server/installer;
+исходный граф ниже сохраняется как снимок до этих изменений.
+[Применение и проверка](time.md).
+
 ## Два независимых слоя
 
 ```mermaid

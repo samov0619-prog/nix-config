@@ -62,8 +62,6 @@ in
     size = serverSettings.swapMiB;
   };
 
-  time.timeZone = "Europe/Moscow";
-
   networking = {
     hostName = "hommy";
     useDHCP = ipv4.mode == "dhcp";

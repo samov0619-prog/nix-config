@@ -171,6 +171,7 @@
           system = systems.linux;
           overlays = [ self.overlays.amnezia-vpn ];
           modules = [
+            ./hosts/profiles/time.nix
             ./hosts/desktop
           ];
         };
@@ -179,6 +180,7 @@
           system = systems.linux;
           overlays = [ self.overlays.amnezia-vpn ];
           modules = [
+            ./hosts/profiles/time.nix
             ./hosts/laptop
           ];
         };
@@ -197,6 +199,7 @@
         laptop-next = mkNixos {
           system = systems.linux;
           modules = [
+            ./hosts/profiles/time.nix
             disko.nixosModules.disko
             ./hosts/laptop-next
           ];
@@ -205,6 +208,7 @@
         desktop-next = mkNixos {
           system = systems.linux;
           modules = [
+            ./hosts/profiles/time.nix
             disko.nixosModules.disko
             ./hosts/desktop-next
           ];
