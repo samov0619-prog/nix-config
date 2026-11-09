@@ -66,6 +66,7 @@ in
 
           F1                  this help
           F3                  agent todo in Neovim
+          Print               select screenshot region, edit in Swappy
           Super+M             fullscreen
           Super+F             focus floating window
           Super+Shift+F       focus tiled window

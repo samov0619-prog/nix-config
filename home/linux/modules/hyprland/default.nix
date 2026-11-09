@@ -42,6 +42,19 @@ let
       exec hypr-semantic-switcher activate "$selection"
     '';
   };
+  screenshotRegion = pkgs.writeShellApplication {
+    name = "hypr-screenshot-region";
+    runtimeInputs = [
+      pkgs.grim
+      pkgs.slurp
+      pkgs.swappy
+    ];
+    text = ''
+      geometry=$(slurp) || exit 0
+      [ -n "$geometry" ] || exit 0
+      grim -g "$geometry" - | swappy -f -
+    '';
+  };
   agentTodoOpen = pkgs.writeShellApplication {
     name = "agent-todo-open";
     runtimeInputs = [
@@ -70,6 +83,7 @@ in
   home.packages = [
     semanticSwitcher
     semanticSwitcherTofi
+    screenshotRegion
     agentTodoOpen
     onionbell
   ];
