@@ -416,6 +416,15 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
 
 ### Hyprland
 
+- Disk status in shared Waybar is `custom/disk` on Acer/desktop/Lenovo: home
+  filesystem available/total GiB plus whole backing-disk I/O busy %, read/write
+  MiB/s in tooltip. A Waybar-owned Python JSON stream reads statvfs/sysfs every 5s,
+  no new service/cache/load test. Missing/stacked devices never pretend idle 0%.
+  `programs.yazi.freeSpaceStatus.enable` disables only the legacy FREE widget on
+  those GUI profiles; Mac/server retain it, the separate Yazi context hook stays.
+  Helper fixtures/configs/five selected HM declarations and a short real Acer
+  read-only helper smoke pass; installed panel/GTK/other hardware not verified.
+  See `home/linux/modules/waybar/README.md`; apply HM and reload Waybar via USR2.
 - Qt appearance — shared `home/linux/modules/qt-theme` on Acer/desktop/Lenovo only:
   native qt5ct/qt6ct proxies with Adwaita, no fixed `QT_STYLE_OVERRIDE`. F11 updates
   mutable appearance-only INI keys; native plugin watchers reload open Qt Widgets

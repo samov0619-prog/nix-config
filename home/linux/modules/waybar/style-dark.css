@@ -36,6 +36,7 @@ window#waybar.chromium {
 #cpu,
 #memory,
 #disk,
+#custom-disk,
 #temperature,
 #backlight,
 #language,

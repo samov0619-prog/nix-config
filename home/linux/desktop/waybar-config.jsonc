@@ -9,6 +9,7 @@
 		"custom/startup",
 		"cpu",
 		"memory",
+		"custom/disk",
 		"custom/gpu",
 		"network",
 		"custom/nix-updates"
@@ -40,6 +41,12 @@
 		"format": "cpu:{usage}% ",
 		"max-length": 9,
 		"min-length": 9
+	},
+	"custom/disk": {
+		"exec": "~/.config/waybar/scripts/disk-status",
+		"return-type": "json",
+		"restart-interval": 5,
+		"tooltip": true
 	},
 	"custom/gpu": {
 		"format": "{}",

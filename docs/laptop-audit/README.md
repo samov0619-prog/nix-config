@@ -24,6 +24,7 @@ Acer после backup/lifecycle fixes; это не проверка Minecraft r
 - [Личные переменные Fish](fish-local-env.md): unmanaged `local-env.fish`, пример синтаксиса и ручной переход со старого dotenv.
 - [Тема Ardour](../../home/linux/modules/ardour/README.md): системный light/dark при следующем запуске, без live-hook и правок из F11.
 - [Тема GTK3/Blueman](gtk-theme.md): F11 согласует `gtk-theme` с системным light/dark через штатный dconf.
+- [Диск в Waybar](../../home/linux/modules/waybar/README.md): I/O busy, свободно/всего и скорости вместо `FREE` в Yazi на Linux GUI.
 - [Карта запуска](startup.md): Minecraft, proxy и GUI; источники, зависимости и открытые риски.
 - [Питание и температуры](power.md): активная policy Acer, происхождение настроек и варианты Lenovo.
 - [Графика Lenovo](graphics.md): поддержка Panther Lake/RTX 5060 в locked stack и границы до живой проверки.

@@ -1,5 +1,19 @@
-{ ... }:
 {
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+let
+  diskStatus = pkgs.writeShellScriptBin "waybar-disk-status" ''
+    exec ${pkgs.python3}/bin/python3 ${./scripts/disk-status.py} \
+      --path ${lib.escapeShellArg config.home.homeDirectory}
+  '';
+in
+{
+  # These GUI profiles receive the replacement at the same time as this opt-out.
+  programs.yazi.freeSpaceStatus.enable = false;
+
   programs.waybar = {
     enable = true;
   };
@@ -8,6 +22,7 @@
     "waybar/style-dark.css".source = ./style-dark.css;
     "waybar/style-light.css".source = ./style-light.css;
     "waybar/style.css".source = ./style.css;
+    "waybar/scripts/disk-status".source = "${diskStatus}/bin/waybar-disk-status";
 
     "waybar/scripts/gp.sh" = {
       source = ./scripts/gp.sh;

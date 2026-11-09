@@ -5,6 +5,8 @@
   ...
 }:
 {
+  imports = [ ./yazi-free-space.nix ];
+
   programs.fish = {
     enable = true;
     interactiveShellInit = ''
@@ -71,14 +73,6 @@
         }
       ];
     };
-    initLua = ''
-      -- show disk in status bar
-      Status:children_add(function()
-          local command = "df -kh .|awk '!/^Filesystem/{printf \" %s FREE \", $(NF-2)}'"
-          local info = ui.Span(io.popen(command):read('*a')):fg("green")
-          return info
-      end, 1500, Header.RIGHT)
-    '';
     # Archive extensions must extract even when `file` reports a MIME that
     # misses Yazi's built-in archive rule. Otherwise xdg-open reopens Yazi.
     settings.open.prepend_rules = [
