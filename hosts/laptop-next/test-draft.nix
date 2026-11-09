@@ -62,8 +62,16 @@ assert lib.hasInfix "--delete-generations +10" gc.config.systemd.services.samov-
 assert gc.config.systemd.services.samov-profile-gc.before == [ "nix-gc.service" ];
 assert !(host.boot ? resumeDevice);
 assert !(host.hardware ? uinput);
-assert !(host.services ? getty);
-assert !(host.users.users.samov ? initialPassword);
+assert host.services.getty.autologinUser == "samov";
+assert host.services.getty.autologinOnce;
+assert host.users.mutableUsers;
+assert host.users.users.samov.initialPassword == "changeme";
+assert host.security.sudo.wheelNeedsPassword;
+assert !(host.services ? fprintd);
+assert !(host.programs ? hyprlock);
+assert !(home.programs ? hyprlock);
+assert !((home.services or { }) ? hypridle);
+assert !(host.nix.settings ? trusted-users);
 assert host.users.users.samov.extraGroups == [ "wheel" ];
 assert lib.all (a: !a.assertion) host.assertions;
 assert host.system.stateVersion == "26.05";
@@ -86,7 +94,8 @@ assert
 assert !(builtins.elem ../../home/linux/modules/xremap home.imports);
 {
   lenovoDeclarations = true;
-  noAcerHardwareOrLoginOverrides = true;
+  noAcerHardwareOrExtraPrivileges = true;
+  requestedBootstrapAutologinAndSudoDeclarations = true;
   noUnpreparedMinecraftInstance = true;
   installGuardPresent = true;
   lenovoWaybarOverridePreservesUpstreamHooks = true;

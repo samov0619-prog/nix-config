@@ -90,10 +90,13 @@ not import Disko.
 
 Lenovo draft: `laptop-next` now has a separate `samov-laptop-next` HM output and
 `home/linux/laptop-next` leaf. Existing profiles are unchanged. The NixOS draft
-deliberately fails an assertion pending hardware/PRIME, target disk and
-login/security; see `hosts/laptop-next/README.md`. Agreed: plain ext4 + 48 GiB swap,
+deliberately fails an assertion pending hardware/PRIME and target disk;
+see `hosts/laptop-next/README.md`. Agreed: plain ext4 + 48 GiB swap,
 no zram initially (commented opt-in with evidence-based conditions), weekly GC
-keeping 10 NixOS + 10 HM generations. Do not apply the Lenovo HM
+keeping 10 NixOS + 10 HM generations. Initial login matches Acer: one tty1 autologin
+per boot, the same public bootstrap password and password-authenticated sudo,
+no Hyprlock/fprintd; improvements wait for live Lenovo. No extra Acer groups or
+trusted-users privileges are copied. Do not apply the Lenovo HM
 profile on Acer. Native PPD/Waybar switching is Lenovo-only. The leaf selects a
 local Waybar override for dynamic previous/current/next tooltip labels, sharing
 one cycle helper with clicks; stock Waybar has no such placeholders. See

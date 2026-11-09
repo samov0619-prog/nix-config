@@ -38,6 +38,15 @@ none of its configuration or other existing profiles changes in this step.
   introduced. This is a generation count, not a guaranteed time window or disk
   quota; review actual space after updates. Modern `nix profile` still retains
   only its current generation, independently of HM rollback history.
+- Initial login deliberately matches Acer: `samov` autologin on tty1 **once per
+  boot**, followed by the existing UWSM startup. Logging out does not repeatedly
+  autologin. `sudo` still requires authentication with the user's password.
+  The initial password is the same deliberately public bootstrap value as Acer,
+  declared in the host module, not a secret. `users.mutableUsers = true` allows
+  a later manual `passwd` change without activation resetting it. No Hyprlock,
+  idle locking or fingerprint authentication is configured. Login/biometric
+  improvements are deferred until live Lenovo testing; no extra Acer groups or
+  `nix.settings.trusted-users` privileges are copied.
 
 ## Still blocked, not installation instructions
 
@@ -47,17 +56,18 @@ This matches the existing scaffold; no partition operation has been performed.
 Later encryption remains possible, with backup/reinstallation as the predictable
 route, not a promised one-click conversion. Fingerprint login/`sudo` is a separate
 requested investigation: sensor support, PAM integration and password fallback
-remain unreviewed. No fingerprint authentication, autologin, passwordless `sudo`,
-TPM unlock or Secure Boot configuration is enabled by this decision.
+remain unreviewed. No fingerprint authentication, passwordless `sudo`, TPM unlock
+or Secure Boot configuration is enabled. Autologin is a separate explicit choice
+described above, not an implication of using unencrypted storage.
 
-The system has an explicit failing assertion until target hardware/PRIME settings,
-target disk and login/security are reviewed. Remove it only after resolving those
-items. The disk is still `REPLACE_ME`. Filesystem, encryption, swap, initial zram
-policy and generation retention are settled, not permission to install.
+The system has an explicit failing assertion until target hardware/PRIME settings
+and target disk are reviewed. Remove it only after resolving those items. The
+disk is still `REPLACE_ME`. Storage, initial memory/GC and bootstrap login choices
+are settled, not permission to install or proof of hardware/boot compatibility.
 
-The user has no copied initial password or autologin. Do not apply this HM profile
-on Acer: it manages the same user paths with Lenovo's configuration. No switch is
-needed for the current machine. Do not install or run Disko from this draft.
+Do not apply this HM profile on Acer: it manages the same user paths with Lenovo's
+configuration. No switch is needed for the current machine. Do not install or run
+Disko from this draft.
 
 Source-only check (does not build NixOS or Home Manager):
 

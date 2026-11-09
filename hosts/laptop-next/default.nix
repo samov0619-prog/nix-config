@@ -13,7 +13,7 @@
   assertions = [
     {
       assertion = false;
-      message = "Lenovo laptop-next is not install-ready: review hardware/PRIME IDs, target disk and login/security before removing this guard.";
+      message = "Lenovo laptop-next is not install-ready: review hardware/PRIME IDs and target disk before removing this guard.";
     }
   ];
 
@@ -29,7 +29,11 @@
     enable = true;
     withUWSM = true;
   };
-  # Preserve the existing explicit TTY -> UWSM route, not Acer's autologin.
+  # Same initial login workflow as Acer: one autologin on tty1 per boot -> UWSM.
+  services.getty = {
+    autologinUser = "samov";
+    autologinOnce = true;
+  };
   programs.bash.loginShellInit = ''
     if [ "$XDG_VTNR" = "1" ] \
        && [ -z "$DISPLAY" ] \
@@ -105,11 +109,16 @@
     A newer nixpkgs-unstable AmneziaVPN (${pkgsUnstable.amnezia-vpn.version}) is available after the broken Linux 5.0.3.0 test. Before replacing the local ${pkgs.amnezia-vpn.version} override, verify upstream PR #2840 and #3231, then build and connection-test the package.
   '';
 
+  # Deliberately public bootstrap credentials, as requested for initial setup.
+  # A later manual passwd change survives activation; never put a real secret here.
+  users.mutableUsers = true;
   users.users.samov = {
     isNormalUser = true;
     extraGroups = [ "wheel" ];
-    # Login credentials, autologin and additional privileges are not yet agreed.
+    initialPassword = "changeme";
   };
+  security.sudo.wheelNeedsPassword = true;
+  # No Hyprlock/idle locking or fprintd yet; revisit authentication on live Lenovo.
   nixpkgs.config.allowUnfree = true;
   nix.settings.experimental-features = [
     "nix-command"
