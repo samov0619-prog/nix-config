@@ -13,7 +13,7 @@
   assertions = [
     {
       assertion = false;
-      message = "Lenovo laptop-next is not install-ready: review hardware/PRIME IDs, target disk, login/security and GC policy before removing this guard.";
+      message = "Lenovo laptop-next is not install-ready: review hardware/PRIME IDs, target disk and login/security before removing this guard.";
     }
   ];
 
@@ -58,6 +58,18 @@
     HandleSuspendKey = "ignore";
     HandleHibernateKey = "ignore";
   };
+
+  # Start without zram. Revisit only after sustained memory pressure in normal
+  # workloads: low MemAvailable plus memory PSI, disruptive swap I/O or OOMs.
+  # Used swap or low "free" RAM alone is not a reason; review app/Java heap first.
+  # Optional starting point (~16 GiB logical capacity, not preallocated RAM):
+  # zramSwap = {
+  #   enable = true;
+  #   memoryPercent = 50;
+  #   algorithm = "zstd";
+  # };
+  # If enabled later, keep its priority above disk swap and repeat resume tests.
+  # The separate 48 GiB disk swap remains the hibernation target, not zram.
 
   security.rtkit.enable = true;
   services.pipewire = {
@@ -131,13 +143,15 @@
   };
 
   nix.gc = {
-    # Existing scaffold defaults, not a settled Lenovo retention policy.
+    # Lenovo-only: retain ten NixOS generations and collect weekly.
     automatic = true;
     dates = "weekly";
-    delete_generations = "+5";
+    delete_generations = "+10";
   };
+  # The shared pre-GC service prunes standalone HM before the same store GC.
+  samov.profileGc.homeManager.keep = 10;
 
-  # Fresh host: replace the placeholder disk and review filesystem/encryption first.
+  # Plain ext4 + 48 GiB swap are agreed; verify the target disk before installation.
   # Local installer use needs no IP: see ../disko/README.md.
   system.stateVersion = "26.05";
 }

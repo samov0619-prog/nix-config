@@ -90,8 +90,10 @@ not import Disko.
 
 Lenovo draft: `laptop-next` now has a separate `samov-laptop-next` HM output and
 `home/linux/laptop-next` leaf. Existing profiles are unchanged. The NixOS draft
-deliberately fails an assertion pending hardware/PRIME, storage, login/security
-and GC decisions; see `hosts/laptop-next/README.md`. Do not apply the Lenovo HM
+deliberately fails an assertion pending hardware/PRIME, target disk and
+login/security; see `hosts/laptop-next/README.md`. Agreed: plain ext4 + 48 GiB swap,
+no zram initially (commented opt-in with evidence-based conditions), weekly GC
+keeping 10 NixOS + 10 HM generations. Do not apply the Lenovo HM
 profile on Acer. Native PPD/Waybar switching is Lenovo-only. The leaf selects a
 local Waybar override for dynamic previous/current/next tooltip labels, sharing
 one cycle helper with clicks; stock Waybar has no such placeholders. See
@@ -415,8 +417,9 @@ nix-gc.service`; штатный `nix-gc.timer` вызывает этот же se
 - Короткий retention текущего laptop (Acer): три поколения NixOS и три HM,
   weekly GC — вынужденный компромисс из-за недостатка места на SSD, не общая
   рекомендация. После переименования в laptop-old эта причина сохраняется.
-  Для нового Lenovo отдельно согласовать глубину rollback, расписание и запас
-  места для updates; не переносить агрессивную политику Acer автоматически.
+  Для Lenovo (`laptop-next`) согласованы 10 поколений NixOS и 10 HM, weekly GC через
+  общий service. Запас места оценить после updates; не переносить агрессивную
+  политику Acer автоматически.
 - Modern `nix profile` сохраняет только current generation через `nix profile
 wipe-history`: Nix не предоставляет API "keep N", а его history откатывает
   bootstrap CLI, не Home Manager configuration. Не применять `nix-env` к modern

@@ -34,6 +34,13 @@ let
   home = import ../../home/linux/laptop-next/default.nix { inherit pkgs; };
   disk = (import ./disko.nix { }).disko.devices.disk.main;
   partitions = disk.content.partitions;
+  gc = import ../profiles/gc.nix {
+    inherit lib pkgs;
+    config.samov.profileGc = {
+      user = "samov";
+      homeManager.keep = host.samov.profileGc.homeManager.keep;
+    };
+  };
 in
 assert disk.device == "/dev/disk/by-id/REPLACE_ME";
 assert partitions.root.content.type == "filesystem";
@@ -47,6 +54,12 @@ assert host.hardware.nvidia.open;
 assert !((host.powerManagement or { }) ? cpuFreqGovernor);
 assert !(host.services ? thermald);
 assert !(host ? zramSwap);
+assert host.nix.gc.automatic;
+assert host.nix.gc.dates == "weekly";
+assert host.nix.gc.delete_generations == "+10";
+assert host.samov.profileGc.homeManager.keep == 10;
+assert lib.hasInfix "--delete-generations +10" gc.config.systemd.services.samov-profile-gc.script;
+assert gc.config.systemd.services.samov-profile-gc.before == [ "nix-gc.service" ];
 assert !(host.boot ? resumeDevice);
 assert !(host.hardware ? uinput);
 assert !(host.services ? getty);
@@ -78,4 +91,5 @@ assert !(builtins.elem ../../home/linux/modules/xremap home.imports);
   installGuardPresent = true;
   lenovoWaybarOverridePreservesUpstreamHooks = true;
   unencryptedExt4And48GiBSwapDeclarations = true;
+  zramDisabledAndWeeklyTenGenerationRetention = true;
 }

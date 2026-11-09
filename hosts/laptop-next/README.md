@@ -27,6 +27,17 @@ none of its configuration or other existing profiles changes in this step.
 - No xremap/uinput/input group, fixed battery name, Acer display coordinates,
   resume offset, TPM workaround, performance governor or inherited thermald.
   Periodic `nvidia-smi` polling is omitted pending dGPU idle validation.
+- No zram initially. The host keeps a commented 50%/zstd starting point for later,
+  not an enabled service. Revisit after sustained memory pressure in normal use:
+  low `MemAvailable` together with memory PSI, disruptive swap I/O or OOMs, after
+  checking application/Java heap sizes. Used swap or low free RAM alone is not
+  sufficient evidence. If enabled, check swap priorities and repeat hibernation
+  tests; the 48 GiB disk swap remains the resume target. No sysctl tuning is added.
+- Weekly GC through the existing shared service, retaining **10 NixOS and 10
+  standalone Home Manager generations**. No extra timer or cleanup service is
+  introduced. This is a generation count, not a guaranteed time window or disk
+  quota; review actual space after updates. Modern `nix profile` still retains
+  only its current generation, independently of HM rollback history.
 
 ## Still blocked, not installation instructions
 
@@ -40,10 +51,9 @@ remain unreviewed. No fingerprint authentication, autologin, passwordless `sudo`
 TPM unlock or Secure Boot configuration is enabled by this decision.
 
 The system has an explicit failing assertion until target hardware/PRIME settings,
-target disk, login/security and generation retention are reviewed.
-Remove it only after resolving those items. The disk is still `REPLACE_ME`;
-weekly five-generation GC remains a scaffold default, not an approved choice.
-Filesystem, encryption policy and swap size are settled, not permission to install.
+target disk and login/security are reviewed. Remove it only after resolving those
+items. The disk is still `REPLACE_ME`. Filesystem, encryption, swap, initial zram
+policy and generation retention are settled, not permission to install.
 
 The user has no copied initial password or autologin. Do not apply this HM profile
 on Acer: it manages the same user paths with Lenovo's configuration. No switch is
