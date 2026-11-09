@@ -10,6 +10,7 @@
     ../modules/filemanager1-common
     ../modules/hyprland
     ../modules/nomacs
+    ../modules/qt-theme
     ../modules/tofi
     ../modules/waybar
   ];
@@ -26,11 +27,6 @@
     qbittorrent
     libnotify
   ];
-
-  qt = {
-    enable = true;
-    platformTheme.name = "adwaita";
-  };
 
   # EasyEffects adds PipeWire effects (e.g. EQ/noise reduction), not basic audio.
   # Disabled until a specific effect is needed and configured deliberately.

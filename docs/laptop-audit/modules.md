@@ -18,6 +18,12 @@ module files, **без добавления пакетов**; server новый 
 исходный граф ниже сохраняется как снимок до этих изменений.
 [Применение и проверка](time.md).
 
+К Linux GUI set также добавлен
+[qt-theme](../../home/linux/modules/qt-theme/default.nix): native qt5ct/qt6ct +
+Adwaita, appearance-only activation и F11 helper. Он общий для Acer/desktop/Lenovo,
+не server/Mac; исторический счётчик 38 ниже его не включает.
+[Механизм, применение и границы проверки](../../home/linux/modules/qt-theme/README.md).
+
 ## Два независимых слоя
 
 ```mermaid

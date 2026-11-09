@@ -130,7 +130,8 @@ assert builtins.elem ../../home/linux/gui-set home.imports;
 assert builtins.elem ../../home/linux/modules/nomacs sharedGui.imports;
 assert !(builtins.pathExists ../../home/linux/modules/swayimg/default.nix);
 assert !(builtins.pathExists ../../home/linux/modules/swayimg/swayimg.lua);
-assert !(sharedGui.qt ? style);
+assert !(sharedGui ? qt);
+assert builtins.elem ../../home/linux/modules/qt-theme sharedGui.imports;
 assert !(home ? disabledModules);
 assert viewer.home.packages == [ pkgs.nomacs ];
 assert

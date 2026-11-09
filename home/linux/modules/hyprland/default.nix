@@ -136,8 +136,8 @@ in
 
   xdg.configFile."uwsm/env.d/theme.sh" = {
     text = ''
-      # Source theme toggle variables if they exist
-      [ -f "$XDG_CONFIG_HOME/uwsm/env-toggle" ] && . "$XDG_CONFIG_HOME/uwsm/env-toggle"
+      # qtct supplies the live style; do not import the old fixed F11 override.
+      unset QT_STYLE_OVERRIDE
     '';
   };
 

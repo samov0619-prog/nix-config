@@ -366,6 +366,16 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
 
 ### Hyprland
 
+- Qt appearance — shared `home/linux/modules/qt-theme` on Acer/desktop/Lenovo only:
+  native qt5ct/qt6ct proxies with Adwaita, no fixed `QT_STYLE_OVERRIDE`. F11 updates
+  mutable appearance-only INI keys; native plugin watchers reload open Qt Widgets
+  apps (qt6ct debounce ~3 seconds), no daemon/polling. HM activation also migrates
+  nomacs to `System.css` + `qt6ct-style`, with one-time backups and unrelated
+  preferences preserved. Close Qt apps before activation and start a fresh session
+  to replace stale environments; old `uwsm/env-toggle` is no longer sourced.
+  Helper/F11 fixtures, five profiles' selected merged attributes and isolated real
+  nomacs Qt6 startup/live/reopen rendering passed. Qt5, all other apps, installed
+  HM layout and live Wayland/F11 remain unverified. See the module README.
 - Конфиги хостов — raw `.conf` файлы, подключаемые через `xdg.configFile`. Не NixOS-модули.
 - Laptop: без compose:ralt (xremap перехватывает), есть `on_focus_under_fullscreen`.
 - Desktop: compose:ralt активен, есть `new_window_takes_over_fullscreen`.

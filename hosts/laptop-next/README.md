@@ -31,9 +31,17 @@ nomacs viewer below also apply to existing Linux GUI profiles.
   is preserved as in the current workstation composition; cleanup is separate.
 - The shared Linux GUI set replaces Swayimg with stable nomacs on Acer, desktop
   and Lenovo, for Yazi and the image MIME types advertised by nomacs. The Swappy
-  screenshot workflow stays unchanged. No custom UI, Qt workaround or settings file is
-  imposed; Paint loading, native Wayland/HiDPI and editing saved copies still need
-  live validation. Unstable nomacs is not selected because it is an upstream Beta.
+  screenshot workflow stays unchanged. Unstable nomacs is not selected because it
+  is an upstream Beta. No custom UI is imposed; Paint loading, native Wayland/HiDPI
+  and editing saved copies still need live validation.
+- [Shared Qt appearance](../../home/linux/modules/qt-theme/README.md) installs
+  native qt5ct/qt6ct proxies and Adwaita styles on those same GUI profiles. F11
+  updates only managed appearance keys; native directory watchers update open
+  applications without a daemon or fixed style environment override. Activation
+  also sets nomacs to System CSS plus the Qt6 proxy, preserving other preferences
+  with a one-time backup. Close Qt apps before HM activation and start a new session
+  afterward. Isolated real nomacs startup/live light-dark-light/dark reopening passed;
+  Qt5, other applications and actual Wayland/F11 remain unverified.
 - The shared Node module selects `pkgs.nodejs_latest` unconditionally for every
   profile that imports it: Acer, desktop, Mac and Lenovo. It provides the global
   Node/npm CLI and Mason's prerequisite, not an LTS-only major; projects pin their
