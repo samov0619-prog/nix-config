@@ -22,6 +22,7 @@ Acer после backup/lifecycle fixes; это не проверка Minecraft r
 - [Пояс и часы](time.md): общая NixOS policy и отдельная ручная настройка Mac.
 - [Карта запуска](startup.md): Minecraft, proxy и GUI; источники, зависимости и открытые риски.
 - [Питание и температуры](power.md): активная policy Acer, происхождение настроек и варианты Lenovo.
+- [Графика Lenovo](graphics.md): поддержка Panther Lake/RTX 5060 в locked stack и границы до живой проверки.
 - [Источники пакетов](package-sources.md): история исключений unstable и сравнение со свежим stable.
 - [Lenovo: живые проверки](lenovo-checklist.md): короткий todo после установки,
   включая ранний сон/resume и отложенную проверку Minecraft/backup только на новом ПК.
@@ -94,7 +95,7 @@ Acer после backup/lifecycle fixes; это не проверка Minecraft r
 охватывать каталоги, outputs, hostname, helpers, completions и документацию вместе.
 Сейчас оно **не выполнено**. `laptop-next` и `samov-laptop-next` — отдельная
 [заготовка Lenovo](../../hosts/laptop-next/README.md) с согласованным набором,
-но с явным блокером установки до аппаратных/storage/security решений.
+но с явным блокером установки до проверки железа/PRIME и целевого диска.
 
 Три поколения NixOS/HM и weekly GC на Acer — компромисс из-за недостатка места на
 SSD. Для Lenovo согласованы 10 поколений NixOS + 10 HM и weekly GC через общий

@@ -16,6 +16,8 @@ none of its configuration or other existing profiles changes in this step.
   Its algorithm/patch checks passed; the full binary/UI remain unbuilt and untested.
 - Open NVIDIA kernel modules for RTX 5060, not Acer's proprietary/legacy override.
   This does not yet choose a driver branch, PRIME mode or PCI Bus IDs.
+  The [graphics source audit](../../docs/laptop-audit/graphics.md) found baseline
+  support in the locked kernel/Mesa/NVIDIA stack, not proof of live compatibility.
 - Existing workstation CLI/devtools (including shared Python/Node prerequisites
   for Mason), OpenCode, browsers, Blender and Minecraft applications. Global Go
   is preserved as in the current workstation composition; cleanup is separate.

@@ -8,6 +8,17 @@
 
 ## Последние выполненные шаги
 
+- [Проверена основа графики Lenovo](graphics.md): доступны locked kernel 6.18.38,
+  Mesa 26.1.4, linux-firmware 20260622 и NVIDIA 595.71.05. Upstream kernel/Mesa/NVIDIA
+  подтверждают базовую поддержку Panther Lake/RTX 5060 Laptop; конкретные firmware
+  blobs не сверены. Признаков необходимости force-probe или замены
+  ветки по этому проходу нет; stable/production/latest дают одну версию. Это не
+  живая проверка ThinkBook, итогового kernel config или firmware. PRIME/MUX,
+  Bus IDs, dGPU idle и suspend/hibernate ещё открыты; Intel desktop с NVIDIA
+  по требованию — пока рекомендация, не выбор пользователя. NVIDIA
+  powerManagement не включён; notifier default сам по себе его не включает.
+  Пакеты/lock/config не менялись, сборок/activation/Live USB inventory не было.
+
 - Пользователь выбрал начальный вход **как на Acer**: автологин, тот же публичный
   bootstrap-пароль пользователя для `sudo`, без Hyprlock. Перенесены только
   `getty.autologinUser`/`autologinOnce = true` (tty1 один раз за загрузку),
