@@ -287,8 +287,9 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
   priority over saved system-theme colors, after explicit light/dark locks. Never
   delete personal cache/preferences to mask this startup bug. Four actual-patch
   policy tests pass; approved isolated installed-binary PTY reproduces the old
-  stale-cache bug and fresh-cache control. Fixed binary build/PTY/live acceptance
-  remain pending. Reopen TUI after applying this client-only patch; no service
+  stale-cache bug and fresh-cache control. The user built the fixed HM output;
+  both PTY controls pass on that result after fixing relative-path resolution
+  in the harness. Live Kitty acceptance remains pending. Reopen TUI after applying this client-only patch; no service
   restart required. See README/BENCHMARK and `tests/test_theme_mode_tui.py`.
 - `plugins/limits/` — local V2 hooks/RPC/TUI, без стороннего quota-плагина,
   отдельного LLM и idle network polling. OpenAI ChatGPT OAuth usage snapshot,

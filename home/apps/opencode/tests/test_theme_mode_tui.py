@@ -188,5 +188,9 @@ if __name__ == "__main__":
     parser.add_argument("binary")
     parser.add_argument("--expect-stale-cache-bug", action="store_true")
     args = parser.parse_args()
+    # Popen runs in the temporary HOME, not the caller's working directory.
+    binary = Path(args.binary).expanduser().resolve()
+    if not binary.is_file():
+        parser.error(f"OpenCode binary does not exist: {binary}")
     for cached_mode in (False, True):
-        scenario(args.binary, cached_mode, args.expect_stale_cache_bug)
+        scenario(str(binary), cached_mode, args.expect_stale_cache_bug)

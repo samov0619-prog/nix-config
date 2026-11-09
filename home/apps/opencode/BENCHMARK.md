@@ -77,8 +77,13 @@ This is not full Solid/OpenTUI integration. The saved PTY test passed fresh-cach
 and stale-cache negative controls on the old installed binary; its normal regression
 mode intentionally fails there at renderer light / TUI dark. It checks real public
 theme/renderer state and Flexoki text tokens, subscription and unchanged preferences,
-not visible rendering in a real Kitty. **No fixed-binary build, fixed-binary PTY
-run or live post-fix acceptance has occurred.** Use the HM build/application steps
+not visible rendering in a real Kitty. The user subsequently built the HM output.
+The documented relative binary path first exposed a harness bug: Popen resolved it
+against temporary HOME. The harness now resolves and validates the binary path
+before changing cwd. Rerunning the exact relative-path command against the user's
+built result passed both fresh-cache control and stale-cache regression, including
+native renderer/theme state and Flexoki tokens. No additional build was run by the
+agent. **Live post-fix Kitty acceptance is still pending.** Use the HM build/application steps
 in [README.md](README.md). This client-only patch needs reopening the TUI, not a
 shared-service restart. The independent corporate Mac archive is unchanged.
 

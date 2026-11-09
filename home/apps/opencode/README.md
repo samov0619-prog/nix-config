@@ -46,8 +46,10 @@ plugin IDs и storage не меняются. Пустой прежний `lib/` 
 
 Четыре policy-теста проходят на настоящем patched startup block. На установленном
 **старом** binary изолированный PTY воспроизвёл `rendererMode=light` при
-`themeMode=dark` со старым кешем; без кеша light/dark работает. Исправленный binary
-ещё не собран и не проверен в PTY/живом Kitty. После review:
+`themeMode=dark` со старым кешем; без кеша light/dark работает. Пользователь затем
+собрал HM output; после исправления относительного пути в тесте обе PTY-проверки
+прошли на его `./result/home-path/bin/opencode`. Проверка живого Kitty ещё впереди.
+Правка Python-теста сама по себе не требует пересборки OpenCode. После review:
 
 1. Собрать свой HM output: `nix build .#homeConfigurations.samov-laptop.activationPackage`.
 2. Проверить binary из собранного профиля:
