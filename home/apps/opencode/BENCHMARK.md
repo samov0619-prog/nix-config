@@ -83,7 +83,16 @@ against temporary HOME. The harness now resolves and validates the binary path
 before changing cwd. Rerunning the exact relative-path command against the user's
 built result passed both fresh-cache control and stale-cache regression, including
 native renderer/theme state and Flexoki tokens. No additional build was run by the
-agent. **Live post-fix Kitty acceptance is still pending.** Use the HM build/application steps
+agent. A subsequent live test found a second, terminal-side bug: Kitty 0.47.0
+updated colors then raised `TypeError: argument 1 must be str or None, not tuple`
+in its background-image runtime call, before notifying its subscribed child.
+Separately authorized one-call tracing captured the exception. With a temporary
+upstream Kitty backport in that diagnostic terminal, the user confirmed live F11
+both ways; protocol-only observation confirmed real notifications and renderer/theme
+mode changes. All temporary Kitty replacements/tracing were restored and the
+opt-in TUI observer disabled. **The fixed Kitty package has not been built or
+activated.** See [Kitty checks/application](../../modules/kitty/README.md).
+Use the HM build/application steps
 in [README.md](README.md). This client-only patch needs reopening the TUI, not a
 shared-service restart. The independent corporate Mac archive is unchanged.
 

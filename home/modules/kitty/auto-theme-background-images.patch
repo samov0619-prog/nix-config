@@ -1,0 +1,25 @@
+Backport of https://github.com/kovidgoyal/kitty/commit/2d9b10413490c6d8e9e029ddeda7b7b379538480
+Fix #10058; included upstream in Kitty 0.47.1.
+Adapt the config's image sequence at the single-image runtime API boundary.
+
+diff --git a/kitty/colors.py b/kitty/colors.py
+--- a/kitty/colors.py
++++ b/kitty/colors.py
+@@ -24,5 +24,5 @@
+ class BackgroundImageOptions(TypedDict, total=False):
+-    background_image: str | None
++    background_image: Sequence[str] | None
+     background_image_layout: str | None
+     background_image_linear: bool | None
+     background_tint: float | None
+@@ -292,8 +292,9 @@
+     notify_bg = notify_on_bg_change and default_bg_changed
+     boss = get_boss()
+     if background_image_options is not None:
++        bg = background_image_options.get('background_image')
+         boss.set_background_image(
+-            background_image_options.get('background_image'), tuple(os_window_ids), configured,
++            bg[0] if bg else None, tuple(os_window_ids), configured,
+             layout=background_image_options.get('background_image_layout'),
+             linear_interpolation=background_image_options.get('background_image_linear'), tint=background_image_options.get('background_tint'),
+             tint_gaps=background_image_options.get('background_tint_gaps'))

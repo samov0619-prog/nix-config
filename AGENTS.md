@@ -289,7 +289,8 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
   policy tests pass; approved isolated installed-binary PTY reproduces the old
   stale-cache bug and fresh-cache control. The user built the fixed HM output;
   both PTY controls pass on that result after fixing relative-path resolution
-  in the harness. Live Kitty acceptance remains pending. Reopen TUI after applying this client-only patch; no service
+  in the harness. A separate Kitty 0.47.0 auto-theme exception then explained the
+  remaining live failure; see the Kitty backport below. Reopen TUI after applying this client-only patch; no service
   restart required. See README/BENCHMARK and `tests/test_theme_mode_tui.py`.
 - `plugins/limits/` — local V2 hooks/RPC/TUI, без стороннего quota-плагина,
   отдельного LLM и idle network polling. OpenAI ChatGPT OAuth usage snapshot,
@@ -370,6 +371,19 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
 
 ### Kitty langmap
 
+- Linux HM Kitty has `home/modules/kitty/overlay.nix` backporting upstream
+  `2d9b10413490` (included in 0.47.1). Auto-theme background_image is a tuple,
+  but the native runtime setter requires one path/None. The old call changed
+  colors then raised TypeError before sending theme notifications. Preserve the
+  collection in config; pass its first/default path or None at this API boundary.
+  Six actual-source/contract-fixture tests and five selected HM declarations pass.
+  Separately approved temporary live replacement in one Kitty restored F11 both
+  ways, confirmed by the user and protocol-only observer; all tracing/replacements
+  were restored. The fixed package is not yet built/installed. No daemon/polling or
+  forced OpenCode preferences. Apply HM then fully reopen Kitty, not just its TUI.
+  Mac retains stock Kitty; server gains none. Remove the backport/overlay after
+  verifying the pinned upstream includes the fix; see the module README. Full
+  multi-image auto-theme collection replacement/cycling remains unverified.
 - `home/modules/kitty/default.nix` собирает version-matched template из `${pkgs.kitty}` с common и Linux/macOS fragments, затем `build.py` дублирует каждую active `map`-строку с русской раскладкой. Commented upstream examples никогда не активировать. Не возвращать полную snapshot-копию upstream `kitty.conf` в репозиторий.
 - `map.txt`: две строки — латиница и транслит (йцукен→qwerty).
 - Активные настройки в сгенерированном конфиге: Fish, 10k scrollback, nvim pager, font size 14, NotoSansM Nerd Font Mono, grid layout, remote control, powerline tabs. Linux сохраняет stock Kitty shortcuts; macOS `kitty_mod = Cmd+Shift`, `Cmd+N`/`kitty_mod+N` создают nvim tab, `Cmd+E` — Yazi, panes `kitty_mod+Left/Right`.

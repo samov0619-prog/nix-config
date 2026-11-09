@@ -48,7 +48,11 @@ plugin IDs и storage не меняются. Пустой прежний `lib/` 
 **старом** binary изолированный PTY воспроизвёл `rendererMode=light` при
 `themeMode=dark` со старым кешем; без кеша light/dark работает. Пользователь затем
 собрал HM output; после исправления относительного пути в тесте обе PTY-проверки
-прошли на его `./result/home-path/bin/opencode`. Проверка живого Kitty ещё впереди.
+прошли на его `./result/home-path/bin/opencode`. Дальнейшая живая проверка обнаружила
+независимый баг Kitty 0.47.0: применение auto-theme падало до отправки уведомления.
+Для него подготовлен [upstream backport](../../modules/kitty/README.md); временная
+проверка в одном Kitty подтверждена пользователем в обе стороны. Сам исправленный
+пакет Kitty ещё не собран/применён.
 Правка Python-теста сама по себе не требует пересборки OpenCode. После review:
 
 1. Собрать свой HM output: `nix build .#homeConfigurations.samov-laptop.activationPackage`.

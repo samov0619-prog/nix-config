@@ -18,7 +18,11 @@ let
   '';
 in
 {
-  home.packages = [ pkgs.kitty pkgs.nerd-fonts.noto ];
+  nixpkgs.overlays = [ (import ./overlay.nix) ];
+  home.packages = [
+    pkgs.kitty
+    pkgs.nerd-fonts.noto
+  ];
 
   # Всё декларативно и read-only. Обновления из репы доезжают сами,
   # результат воспроизводим на любой машине.
