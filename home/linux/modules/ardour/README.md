@@ -58,8 +58,10 @@ nix eval --impure --offline --json --option allow-import-from-derivation false -
 Выборочная merged evaluation проверяет wrapper ровно в трёх GUI-профилях,
 исключение server/Mac и сохранение Audacious/pwvucontrol.
 
-Полная HM-сборка, установленный desktop launcher и реальный Ardour UI не проверены.
-Агент личные настройки не читал и Ardour не запускал.
+После `bbe8075` пользователь проверил сценарий на Acer и подтвердил «все работает».
+Это пользовательская live-проверка, не независимая проверка всех вариантов запуска
+или desktop/Lenovo. Агент полную HM-сборку не запускал, личные настройки не читал
+и Ardour не открывал.
 
 1. После review собрать только нужный HM output, например на Acer:
    `nix build .#homeConfigurations.samov-laptop.activationPackage`.

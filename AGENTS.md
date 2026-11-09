@@ -375,6 +375,8 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
   are left alone. Major comes from the package. Synthetic launcher/F11/process
   fixtures and selected merged declarations are checked, not the full HM build,
   installed desktop or real DAW UI. See the module README for limits/application.
+  The user subsequently confirmed the Acer startup-theme scenario works; this
+  does not establish independent agent UI coverage or desktop/Lenovo acceptance.
 - `alacritty-preview` позволяет пролистать все темы из alacritty-theme.
 
 ### Hyprland
