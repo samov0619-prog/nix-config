@@ -8,6 +8,16 @@
 
 ## Последние выполненные шаги
 
+- Пользователь согласовал **свежую релизную графику из unstable только для Lenovo**:
+  kernel latest, NVIDIA latest/open из набора выбранного ядра, Mesa 64/32-bit и
+  linux-firmware. Beta/bleeding_edge/testing не выбираются, номера не закреплены.
+  [Реализация и границы](graphics.md#согласовано-свежие-релизные-пакеты-только-для-lenovo):
+  isolated unfree-enabled package import, одна firmware подмена без удаления
+  остальных definitions; существующие hosts/HM package sets не меняются. Current
+  lock: kernel 7.2.11, NVIDIA 615.78.08, Mesa 26.2.5, firmware 20260916. Input updates
+  и будущая NixOS activation обновят пакеты, фонового updater нет. PRIME/Bus IDs,
+  GPU power policy и живые тесты остаются открытыми; install guard сохранён.
+
 - Пользователь уточнил: **`nodejs_latest` нужен на всех хостах с Node, без условий**,
   не только Lenovo. Предыдущий Lenovo-only selector удалён; общий Node module
   напрямую устанавливает `pkgs.nodejs_latest` для Acer/desktop/mac/Lenovo. Server

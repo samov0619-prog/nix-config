@@ -7,6 +7,7 @@
 {
   imports = [
     ./disko.nix
+    ./graphics.nix
   ];
 
   # Draft only: never inherit Acer's hardware scan or compatibility workarounds.
@@ -42,14 +43,6 @@
       exec uwsm start default
     fi
   '';
-
-  hardware.graphics.enable = true;
-  services.xserver.videoDrivers = [ "nvidia" ];
-  hardware.nvidia = {
-    open = true; # RTX 5060 requires open NVIDIA kernel modules, not Nouveau.
-    modesetting.enable = true;
-    # PRIME mode/Bus IDs and driver branch need target inventory; no Acer IDs.
-  };
 
   services.power-profiles-daemon.enable = true;
   # No forced performance governor, TLP/auto-cpufreq, or inherited thermald.

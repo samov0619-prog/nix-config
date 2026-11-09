@@ -32,6 +32,20 @@ let
     pkgsUnstable.amnezia-vpn.version = "5.0.3.0";
   };
   home = import ../../home/linux/laptop-next/default.nix { inherit pkgs; };
+  pkgsGraphics = {
+    linuxPackages_latest = {
+      kernel = "unstable-latest-kernel";
+      nvidiaPackages.latest = "matching-nvidia-latest";
+    };
+    mesa = "unstable-mesa-64";
+    pkgsi686Linux.mesa = "unstable-mesa-32";
+    linux-firmware = "unstable-firmware";
+  };
+  graphics = import ./graphics.nix {
+    inherit pkgsGraphics;
+    config.boot.kernelPackages = pkgsGraphics.linuxPackages_latest;
+  };
+  firmwareOverrides = (builtins.head graphics.nixpkgs.overlays) { } { };
   disk = (import ./disko.nix { }).disko.devices.disk.main;
   partitions = disk.content.partitions;
   gc = import ../profiles/gc.nix {
@@ -50,7 +64,21 @@ assert partitions.swap.size == "48G";
 assert partitions.swap.content.type == "swap";
 assert partitions.swap.content.resumeDevice;
 assert host.services.power-profiles-daemon.enable;
-assert host.hardware.nvidia.open;
+assert builtins.elem ./graphics.nix host.imports;
+assert graphics.boot.kernelPackages == pkgsGraphics.linuxPackages_latest;
+assert graphics.hardware.graphics.enable;
+assert graphics.hardware.graphics.enable32Bit;
+assert graphics.hardware.graphics.package == pkgsGraphics.mesa;
+assert graphics.hardware.graphics.package32 == pkgsGraphics.pkgsi686Linux.mesa;
+assert graphics.hardware.nvidia.open;
+assert graphics.hardware.nvidia.modesetting.enable;
+assert graphics.services.xserver.videoDrivers == [ "nvidia" ];
+assert graphics.hardware.nvidia.package == graphics.boot.kernelPackages.nvidiaPackages.latest;
+assert !(graphics.hardware.nvidia ? prime);
+assert !(graphics.hardware.nvidia ? powerManagement);
+assert lib.attrNames firmwareOverrides == [ "linux-firmware" ];
+assert firmwareOverrides.linux-firmware == pkgsGraphics.linux-firmware;
+assert host.hardware.enableRedistributableFirmware;
 assert !((host.powerManagement or { }) ? cpuFreqGovernor);
 assert !(host.services ? thermald);
 assert !(host ? zramSwap);
@@ -94,6 +122,7 @@ assert
 assert !(builtins.elem ../../home/linux/modules/xremap home.imports);
 {
   lenovoDeclarations = true;
+  lenovoUnstableReleaseGraphicsDeclarations = true;
   noAcerHardwareOrExtraPrivileges = true;
   requestedBootstrapAutologinAndSudoDeclarations = true;
   noUnpreparedMinecraftInstance = true;

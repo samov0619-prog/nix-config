@@ -14,10 +14,17 @@ none of its configuration or other existing profiles changes in this step.
   [Lenovo-only Waybar extension](../../home/linux/laptop-next/waybar/README.md)
   names both destinations in the tooltip using the actual available profile list.
   Its algorithm/patch checks passed; the full binary/UI remain unbuilt and untested.
-- Open NVIDIA kernel modules for RTX 5060, not Acer's proprietary/legacy override.
-  This does not yet choose a driver branch, PRIME mode or PCI Bus IDs.
-  The [graphics source audit](../../docs/laptop-audit/graphics.md) found baseline
-  support in the locked kernel/Mesa/NVIDIA stack, not proof of live compatibility.
+- [Lenovo-only graphics module](graphics.nix): unstable `linuxPackages_latest`,
+  NVIDIA `latest` from that kernel's package set with open modules, Mesa 64/32-bit
+  and linux-firmware. No testing kernel, NVIDIA beta/bleeding_edge or manually
+  pinned version. An isolated unfree-enabled package import is passed only to
+  Lenovo; only its NixOS firmware input is overlaid, leaving other firmware and
+  existing hosts intact. The rest of NixOS/HM remains on its existing sources.
+  Current lock selects kernel **7.2.11**, NVIDIA **615.78.08**, Mesa **26.2.5** and
+  firmware **20260916**, not today's upstream head. Input updates plus later
+  NixOS activation advance the stack; there is no background updater. PRIME mode,
+  Bus IDs, GPU power policy and live compatibility remain unverified. See the
+  [graphics audit](../../docs/laptop-audit/graphics.md) for evidence and limits.
 - Existing workstation CLI/devtools (including shared Python/Node prerequisites
   for Mason), OpenCode, browsers, Blender and Minecraft applications. Global Go
   is preserved as in the current workstation composition; cleanup is separate.
@@ -82,19 +89,24 @@ Do not apply this HM profile on Acer: it manages the same user paths with Lenovo
 configuration. No switch is needed for the current machine. Do not install or run
 Disko from this draft.
 
-Source-only check (does not build NixOS or Home Manager):
+Source-only checks (do not build NixOS or Home Manager):
 
 ```fish
 nix eval --impure --json --offline --option allow-import-from-derivation false --file hosts/laptop-next/test-draft.nix
+nix eval --impure --json --offline --option allow-import-from-derivation false --file hosts/laptop-next/test-graphics.nix
 ```
 
-The check exercises real module declarations with fixture packages, not merged
-NixOS/HM configuration, hardware, graphics or UI integration. Real checks remain
+The first check exercises real module declarations with fixture packages. The
+second evaluates selected merged NixOS graphics attributes and open-module
+derivations, including one updated linux-firmware input, preserved other firmware
+and unchanged Acer/desktop firmware selection. Neither builds a driver, checks
+all configuration attributes/assertions or validates hardware/UI. Real checks remain
 in the [single Lenovo checklist](../../docs/laptop-audit/lenovo-checklist.md).
 Builds and activation are left to the user after the draft blockers are resolved;
 do not attempt either output as an installation-ready configuration now.
 
 For this draft, declaration fixtures, Nix syntax, formatter checks and source
-composition comparisons passed. Existing output module lists were preserved;
-only the Lenovo NixOS overlay and the new HM output were added in `flake.nix`.
-No full NixOS/HM evaluation, build, activation or live UI validation was run.
+composition comparisons passed. Existing outputs' module lists were preserved;
+Lenovo has its own HM output, NixOS overlay and isolated graphics package argument.
+No full configuration evaluation, build, activation or live UI validation was run;
+only the selected merged graphics attributes above were evaluated.

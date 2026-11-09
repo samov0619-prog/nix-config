@@ -102,6 +102,15 @@ local Waybar override for dynamic previous/current/next tooltip labels, sharing
 one cycle helper with clicks; stock Waybar has no such placeholders. See
 `home/linux/laptop-next/waybar/README.md` for checks and update obligations.
 Only the helper/patch/declarations are checked, not the full binary or live UI.
+Lenovo graphics now follows unstable release packages via
+`hosts/laptop-next/graphics.nix`: latest kernel, matching NVIDIA latest/open,
+Mesa 64/32-bit and linux-firmware. A separate unfree-enabled `pkgsGraphics` import
+is passed only to this NixOS output; a local overlay replaces only linux-firmware,
+preserving other firmware and existing hosts/HM package sets. No beta/testing,
+hardcoded version, lock update or automatic updater. PRIME/Bus IDs and GPU power
+policy remain pending. Declaration fixtures and selected merged NixOS attributes
+(including NVIDIA/open derivation evaluation, not builds) are checked; live
+graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
 
 ## Ключевые паттерны и gotchas
 

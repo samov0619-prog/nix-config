@@ -199,6 +199,11 @@
         laptop-next = mkNixos {
           system = systems.linux;
           overlays = [ self.overlays.amnezia-vpn ];
+          # Isolated graphics package set; NVIDIA needs unfree evaluation enabled.
+          extraSpecialArgs.pkgsGraphics = import nixpkgs-unstable {
+            system = systems.linux;
+            config.allowUnfree = true;
+          };
           modules = [
             ./hosts/profiles/time.nix
             disko.nixosModules.disko
