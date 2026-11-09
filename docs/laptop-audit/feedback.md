@@ -475,6 +475,44 @@ runtime-приёмка диктовки, clipboard или GPU.
   Полный daemon/package, живой D-Bus/браузер и UI не запускались; сборка, HM switch
   и рестарт службы оставлены пользователю. [Проверки и применение](../../pkgs/filemanager1-common/README.md).
 
+Пользователь затем сообщил «все сработало»: исправленный сценарий принят на Acer.
+Это пользовательская live-приёмка, не независимая UI-проверка агентом и не
+подтверждение desktop/Lenovo.
+
+## Tofi и открытие текстовых файлов: ограниченная проверка
+
+- На Acer/desktop/Lenovo задано `$menu = uwsm app -- $(tofi-drun)`;
+  shared Tofi использует `terminal = "kitty --"`. Эта команда также приведена
+  в [README pinned UWSM 0.26.4](https://github.com/Vladimir-csp/uwsm/blob/v0.26.4/README.md).
+  Но [Tofi 0.9.1 drun_print](https://github.com/philj56/tofi/blob/v0.9.1/src/drun.c)
+  печатает строку Exec, а не массив аргументов. Shell word splitting не разбирает
+  полученные кавычки: валидное `fixture-app --label "two words"` превращается
+  в два аргумента `"two` и `words"` вместо одного `two words`.
+- Изолированная shell-проверка выполнила нынешнюю команду с fake Tofi/UWSM;
+  ожидаемый argv подтверждён извлечённым tokenizer из pinned UWSM.
+  Простой `kitty -- nvim` передаётся корректно. При отмене вызывается
+  `uwsm app --` без команды, которую требует argparse UWSM; это не запуск
+  приложения. Среди store-backed desktop entries установленного HM-профиля
+  не найден Exec с проверенными символами кавычек/globbing. Ошибка сложных
+  аргументов воспроизведена на fixture, не на установленном приложении;
+  Tofi/UWSM пока не менялись. Весь desktop-entry contract этим не проверен.
+- Selected merged HM evaluation пяти профилей подтвердила `neovim-unwrapped`
+  и `EDITOR=nvim` везде; `text/plain = nvim.desktop`, Tofi и Kitty terminal
+  — только на трёх GUI-профилях. Установленный Neovim 0.12.3 содержит штатный
+  `nvim.desktop`: `Exec=nvim %F`, `Terminal=true`; desktop entry не отсутствует.
+- Текущий installed xdg-utils 1.2.1 в generic-пути `search_desktop_file`
+  не обрабатывает Terminal и запускает Exec напрямую. Текущая среда — Hyprland,
+  portal override `NIXOS_XDG_OPEN_USE_PORTAL` не задан. Извлечённые настоящие
+  функции installed `xdg-open`, копия пакетного `nvim.desktop` и fake nvim
+  подтвердили прямой вызов без терминала, сохранив имя fixture с пробелами.
+  Это отдельная проблема от запуска Neovim через Tofi: там терминал добавляет Tofi.
+- Рекомендация для согласования: отдельный скрытый XDG-handler с
+  `Terminal=false`, `Exec=kitty -- nvim %F` для `text/plain`; штатный пункт Neovim
+  в Tofi, внешний конфиг редактора, Mason и CLI остаются прежними.
+  Пока изменена только документация. Реальные Tofi, UWSM, Neovim, Kitty, D-Bus
+  и пользовательские файлы не запускались; браузерные/clipboard/private данные
+  не читались. Полная сборка и живая приёмка не выполнялись.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |
