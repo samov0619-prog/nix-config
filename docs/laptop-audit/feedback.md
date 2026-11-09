@@ -513,6 +513,37 @@ runtime-приёмка диктовки, clipboard или GPU.
   и пользовательские файлы не запускались; браузерные/clipboard/private данные
   не читались. Полная сборка и живая приёмка не выполнялись.
 
+## XDG-handler Neovim и границы запуска TUI
+
+- Пользователь согласовал отдельный handler `text/plain` → Kitty → Neovim.
+  `nvim-xdg.desktop` явно задаёт `kitty -- nvim -- %F`, `Terminal=false`,
+  `NoDisplay=true`: без второго терминала, дубликата в Tofi или изменения
+  штатного `nvim.desktop`. Второй `--` отделяет файлы от опций Neovim.
+  Изменение общее для Acer/desktop/Lenovo HM; Mac/server не затронуты.
+- Шесть isolated tests прошли на настоящем generated desktop text и извлечённых
+  installed xdg-open functions с fake Kitty/nvim. Контроль старого entry
+  воспроизводит вызов без терминала; новый сохраняет argv, UID/EUID, cwd
+  и синтетическую exported переменную, в том числе для сложных имён файлов.
+  Три mutation controls ожидаемо отвергли отсутствие Kitty, `Terminal=true`
+  и видимый дубликат handler.
+  Пять выбранных merged declarations подтвердили scope, hidden handler,
+  прежние Neovim package/EDITOR, Yazi и HTML association.
+- По дополнительному вопросу проверены соседние launch paths. Обычные
+  Neovim/Yazi shortcuts и user FileManager1 не содержат повышения прав.
+  `Super+Shift+E` явно запускает sudo-Yazi: это намеренный root-вход, где
+  дочерние процессы тоже могут получить root. Root PATH/HOME, GUI-доступ
+  и plugins/runtime не проверялись; shortcut и F1 не менялись.
+- Прямой `kitty -- nvim`/Yazi не запускает Fish и не загружает автоматически
+  интерактивный `local-env.fish` или project direnv. Это отличие наследования
+  окружения, не повышение прав. Не добавлены `sudo -E`, Fish-wrapper,
+  автоматический `.envrc` trust или изменение внешнего конфига Neovim/Mason.
+  Учебная задача про process environment, namespaces и контейнеры сохранена
+  отдельно после native todo consent.
+- Полный HM build/activation, реальные Kitty PTY/Neovim, sudo и live UI не
+  запускались. Tofi complex-argv риск остаётся без правок. [Контракты, объяснение
+  и ручная приёмка](tui-launchers.md). Пользователь применяет HM своего GUI-профиля;
+  NixOS rebuild и рестарт FileManager1 не нужны.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |

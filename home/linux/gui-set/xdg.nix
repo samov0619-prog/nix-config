@@ -50,11 +50,23 @@ in
       "x-scheme-handler/about" = [ "google-chrome.desktop" ];
       "x-scheme-handler/unknown" = [ "google-chrome.desktop" ];
 
-      "text/plain" = [ "nvim.desktop" ];
+      "text/plain" = [ "nvim-xdg.desktop" ];
 
       "x-scheme-handler/tg" = [ "google-chrome.desktop" ];
       "x-scheme-handler/tonsite" = [ "google-chrome.desktop" ];
     };
+  };
+
+  # xdg-open's generic launcher ignores Terminal=true. Own the terminal here
+  # without replacing Neovim's upstream entry or adding another menu item.
+  xdg.desktopEntries.nvim-xdg = {
+    name = "Neovim (Kitty)";
+    icon = "nvim";
+    noDisplay = true;
+    terminal = false;
+    exec = "kitty -- nvim -- %F";
+    type = "Application";
+    mimeType = [ "text/plain" ];
   };
 
   xdg.desktopEntries.yazi-xdg = {

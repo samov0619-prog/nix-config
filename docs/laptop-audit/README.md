@@ -29,6 +29,7 @@ Acer после backup/lifecycle fixes; это не проверка Minecraft r
 - [Скриншоты и clipboard](screenshots.md): Print → область → Swappy, корректная отмена и ручное сохранение/копирование.
 - [Диктовка](voice-dictate.md): уведомление/cleanup при ошибке Whisper и ввод через stdin без дополнительного Enter.
 - [FileManager1](../../pkgs/filemanager1-common/README.md): `file://localhost` и `file:///` открывают один локальный путь в Kitty/Yazi.
+- [Запуск TUI](tui-launchers.md): текстовый файл → Kitty → Neovim, отличия shell/project environment и явного sudo-Yazi.
 - [Карта запуска](startup.md): Minecraft, proxy и GUI; источники, зависимости и открытые риски.
 - [Питание и температуры](power.md): активная policy Acer, происхождение настроек и варианты Lenovo.
 - [Графика Lenovo](graphics.md): поддержка Panther Lake/RTX 5060 в locked stack и границы до живой проверки.
