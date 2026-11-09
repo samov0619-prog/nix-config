@@ -20,6 +20,7 @@ let
     freesmlauncher = "freesm";
     packwiz = "packwiz";
     jdk_headless = "jdk";
+    nomacs = "/fixture/stable-nomacs";
     waybar.overrideAttrs =
       f:
       f {
@@ -32,6 +33,7 @@ let
     pkgsUnstable.amnezia-vpn.version = "5.0.3.0";
   };
   home = import ../../home/linux/laptop-next/default.nix { inherit pkgs; };
+  viewer = import ../../home/linux/modules/nomacs/default.nix { inherit lib pkgs; };
   pkgsGraphics = {
     linuxPackages_latest = {
       kernel = "unstable-latest-kernel";
@@ -120,6 +122,32 @@ assert
     "jdk"
   ];
 assert !(builtins.elem ../../home/linux/modules/xremap home.imports);
+assert builtins.elem ../../home/linux/modules/nomacs home.imports;
+assert home.disabledModules == [ ../../home/linux/modules/swayimg ];
+assert viewer.home.packages == [ pkgs.nomacs ];
+assert
+  viewer.programs.yazi.settings.opener.nomacs == [
+    {
+      run = "/fixture/stable-nomacs/bin/nomacs %s";
+      orphan = true;
+      desc = "View and edit images with nomacs";
+      for = "linux";
+    }
+  ];
+assert
+  viewer.programs.yazi.settings.open.prepend_rules == [
+    {
+      mime = "image/*";
+      use = [
+        "nomacs"
+        "open"
+      ];
+    }
+  ];
+assert viewer.xdg.mimeApps.defaultApplications."image/png" == [ "org.nomacs.ImageLounge.desktop" ];
+assert viewer.xdg.mimeApps.defaultApplications."image/jpeg" == [ "org.nomacs.ImageLounge.desktop" ];
+assert !(viewer.xdg.mimeApps.defaultApplications ? "image/svg+xml");
+assert !(viewer.xdg ? configFile);
 {
   lenovoDeclarations = true;
   lenovoUnstableReleaseGraphicsDeclarations = true;
@@ -128,6 +156,7 @@ assert !(builtins.elem ../../home/linux/modules/xremap home.imports);
   noUnpreparedMinecraftInstance = true;
   installGuardPresent = true;
   lenovoWaybarOverridePreservesUpstreamHooks = true;
+  lenovoStableNomacsWithYaziAndMimeAssociations = true;
   unencryptedExt4And48GiBSwapDeclarations = true;
   zramDisabledAndWeeklyTenGenerationRetention = true;
 }

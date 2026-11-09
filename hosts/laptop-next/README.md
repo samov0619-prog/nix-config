@@ -28,6 +28,11 @@ none of its configuration or other existing profiles changes in this step.
 - Existing workstation CLI/devtools (including shared Python/Node prerequisites
   for Mason), OpenCode, browsers, Blender and Minecraft applications. Global Go
   is preserved as in the current workstation composition; cleanup is separate.
+- Lenovo replaces Swayimg with stable nomacs for Yazi and the image MIME types
+  advertised by nomacs. Existing Acer/desktop viewers and the Swappy screenshot
+  workflow stay unchanged. No custom UI, Qt workaround or user-settings file is
+  imposed; Paint loading, native Wayland/HiDPI and editing saved copies still need
+  live validation. Unstable nomacs is not selected because it is an upstream Beta.
 - The shared Node module selects `pkgs.nodejs_latest` unconditionally for every
   profile that imports it: Acer, desktop, Mac and Lenovo. It provides the global
   Node/npm CLI and Mason's prerequisite, not an LTS-only major; projects pin their
@@ -109,4 +114,6 @@ For this draft, declaration fixtures, Nix syntax, formatter checks and source
 composition comparisons passed. Existing outputs' module lists were preserved;
 Lenovo has its own HM output, NixOS overlay and isolated graphics package argument.
 No full configuration evaluation, build, activation or live UI validation was run;
-only the selected merged graphics attributes above were evaluated.
+only selected merged graphics and HM viewer attributes were evaluated. The viewer
+checks confirm stable nomacs/Yazi/MIME on Lenovo, unchanged Swayimg on Acer/desktop
+and preserved Swappy on all three.
