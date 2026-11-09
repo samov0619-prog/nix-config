@@ -21,9 +21,20 @@ none of its configuration or other existing profiles changes in this step.
 - Existing workstation CLI/devtools (including shared Python/Node prerequisites
   for Mason), OpenCode, browsers, Blender and Minecraft applications. Global Go
   is preserved as in the current workstation composition; cleanup is separate.
+- The shared Node module selects `pkgs.nodejs_latest` unconditionally for every
+  profile that imports it: Acer, desktop, Mac and Lenovo. It provides the global
+  Node/npm CLI and Mason's prerequisite, not an LTS-only major; projects pin their
+  own version through devShell/direnv when needed. No Lenovo-only selector or
+  second Node package is introduced; the lean server still does not import Node.
+  `latest` follows the locked stable input: currently **26.4.0**, not today's
+  upstream release. Updating the input and applying HM advances it; no background
+  updater, input update or project/Mason configuration change is introduced here.
 - Minecraft generic server module is imported, but instance is **unset**: no world,
   update service or backup watcher is activated. Heap/data/remote preflight remain
   unresolved; do not import the current app module merely to get the launcher.
+  User prefers Freesm's own client memory calculation, with manual adjustment if
+  needed. Keep the previously working server `20G` heap as the starting point for
+  later Lenovo tests, not an automatic reduction to 8G or a new process limit.
 - Voice dictation remains available with no Acer Vulkan device override. CPU is
   the provisional fallback, not a final Lenovo backend decision.
 - No xremap/uinput/input group, fixed battery name, Acer display coordinates,

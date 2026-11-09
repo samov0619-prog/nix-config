@@ -1,7 +1,8 @@
 # Источники пакетов: исключения из stable
 
-Срез **09.11.2026**, read-only исследование для подготовки Lenovo. Пакеты, inputs,
-`flake.lock` и существующие профили не изменены. Это не проверка сборки или runtime.
+Срез **09.11.2026**. Исходное read-only исследование исключений unstable не меняло
+пакеты/inputs. Позднейший общий переход на Node latest описан ниже; `flake.lock`
+не изменён, новая конфигурация не активирована. Это не проверка сборки или runtime.
 
 ## Сопоставленные снимки
 
@@ -79,8 +80,43 @@ Locked unstable **5.6** содержит LuaJIT и выбран текущим �
 - Blender: обычный `pkgs.blender`.
 
 Это не полный аудит транзитивных зависимостей или всех внешних source pins.
-Сравнение fresh Node LTS и дальнейшие аппаратные/storage/security решения остаются
-отдельными шагами; здесь не делается вывод об их готовности.
+Дальнейшие аппаратные/storage/security решения остаются отдельными шагами;
+здесь не делается вывод об их готовности.
+
+## Node.js latest: общий выбор
+
+Пользователь выбрал **`pkgs.nodejs_latest`** для глобальных CLI и prerequisites
+Mason на всех хостах, где Node уже подключён: Acer, desktop, Mac и Lenovo.
+Общий module выбирает его без host conditions; server остаётся без глобального
+Node. При необходимости проекты задают собственную версию через
+devShell/direnv. Это не перевод всей системы на unstable и не изменение Mason
+как менеджера редакторских инструментов.
+
+| Снимок                                                     | `nodejs` | `nodejs_26` / `nodejs_latest` |
+| ---------------------------------------------------------- | -------- | ----------------------------- |
+| Locked stable                                              | 24.16.0  | 26.4.0                        |
+| Locked unstable                                            | 24.21.0  | 26.12.0                       |
+| Свежий stable, revision из таблицы выше                    | 24.22.1  | 26.13.0                       |
+| Свежий unstable `4fe25e12eb9f4c744966dd3de5a05246cf098601` | 24.21.0  | 26.13.0                       |
+
+Locked values получены offline package evaluation; свежие — из фиксированных
+HTTP-исходников, без обновления inputs. Определения свежего unstable:
+[aliases](https://github.com/NixOS/nixpkgs/blob/4fe25e12eb9f4c744966dd3de5a05246cf098601/pkgs/top-level/all-packages.nix),
+[Node 26](https://github.com/NixOS/nixpkgs/blob/4fe25e12eb9f4c744966dd3de5a05246cf098601/pkgs/development/web/nodejs/v26.nix).
+
+`nodejs` — явный default alias nixpkgs, сейчас на 24, а не вычисляемая «новейшая
+LTS». `nodejs_latest` следует новейшему упакованному major; обычно это выпущенный
+релиз, не beta/RC, но будущий major может сначала быть Current, не LTS. Major
+upgrade способен затронуть API и native dependencies, не означая заведомо
+нестабильный runtime. По [Node release index](https://nodejs.org/dist/index.json)
+новейшая LTS на дату проверки — **26.13.0**, Lithium.
+
+Shared [Node module](../../home/core-set/node.nix) напрямую задаёт
+`home.packages = [ pkgs.nodejs_latest ];`, без package option, Lenovo override
+или второй ветки Node. Установок через npm/Mason, изменения проектных pins и
+автоматического updater нет. Все импортирующие module профили будут получать
+новые версии после обновления stable input и применения своего HM; сейчас выбор
+разрешается в **26.4.0** из неизменённого lock.
 
 ## Проверки и применение
 
@@ -89,6 +125,19 @@ Locked unstable **5.6** содержит LuaJIT и выбран текущим �
 Совместимость установленных приложений, UI и архивирование не испытывались.
 Builds, activation, update, облачные/VPN операции не запускались.
 
-Изменена только документация: **NixOS/Home Manager activation не нужна**.
-Следующий шаг — уточнение платформы Lenovo и поддержки thermald; решения о замене
-пакетов требуют отдельного согласования и не должны менять Acer автоматически.
+Исходный unstable-аудит был документальным и не требовал activation. Позднейший
+Node change применяется через Home Manager каждого импортирующего его профиля:
+`samov-laptop`, `samov-desktop`, `samov-mac`; Lenovo draft остаётся заблокирован
+до аппаратной проверки, его нельзя применять на Acer. Для текущего Acer после
+review: `home-manager switch --flake .#samov-laptop`, затем новый терминал и
+`node --version; npm --version`. Остальные профили применять отдельно на своих
+машинах. NixOS activation для выбора Node не нужна.
+
+Узкая проверка общего module с locked Linux/macOS package sets, без сборки:
+
+```fish
+nix eval --impure --json --offline --option allow-import-from-derivation false --file home/core-set/test-node.nix
+```
+
+Она проверяет одну ветку latest и отсутствие package option, но не полный HM
+build, выполнение Node/npm/Mason или совместимость проектов на целевой машине.

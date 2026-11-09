@@ -1,4 +1,4 @@
 { pkgs, ... }:
 {
-  home.packages = [ pkgs.nodejs ];
+  home.packages = [ pkgs.nodejs_latest ];
 }
