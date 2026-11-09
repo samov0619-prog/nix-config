@@ -644,6 +644,62 @@ live-приёмка udiskie после `780c6e3` этим сообщением �
   считается успешной; затем выполнена только узкая Acer evaluation без builds/IFD.
   В этом шаге изменена только документация; NixOS/HM activation не требуется.
 
+Последующее решение по медиаассоциациям: оставить штатный выбор, без явных
+audio/video MIME defaults и собственного полного перечня форматов. Пакетный
+`MimeType` описывает поддерживаемые форматы, но не задаёт предпочтение между
+несколькими приложениями. Если на Lenovo обнаружится реальное расхождение,
+закрепить нужные исключения точечно. Сами проигрыватели сохраняются.
+
+## Громкость и медиаклавиши: зависимости команд
+
+- Bounded source audit Acer/desktop/Lenovo подтвердил одинаковые восемь audio
+  bindings: volume up/down, sink mute, mic mute через wpctl; next/previous и
+  play-pause через playerctl. Проверка аргументов/количества не нашла дублей
+  внутри этой группы. Это не тест физических клавиш/повторов/remap/lock state.
+- `wpctl` доступен в текущем PATH Acer из NixOS system profile; существующий
+  volume-up задаёт шаг 5% с пределом 1 (100%), остальные audio команды сохранены.
+  Waybar использует pulseaudio module и открывает установленный pwvucontrol.
+  Громкость/устройства и реальные audio streams не опрашивались и не менялись.
+- Подтверждён missing dependency: текущий PATH Acer не содержит playerctl,
+  selected merged HM evaluation всех трёх GUI profiles также не содержит пакет.
+  Соответствующие hotkeys вызывают отсутствующую команду; это не означает,
+  что воспроизведение внутри самих приложений сломано.
+- Playerctl управляет приложениями через MPRIS, не через PipeWire volume API.
+  Все три GUI HM profiles задают MPV без scripts; в pinned HM/nixpkgs wrapper
+  MPRIS plugin автоматически не добавляется. Внешний mutable MPV config не читался,
+  поэтому отсутствие ручной интеграции вне Nix не утверждается.
+  Доступен штатный `mpvScripts.mpris` 1.2 (`mpris.so`, hoyon/mpv-mpris).
+- Предложение для согласования: установить playerctl в общих Linux GUI packages
+  и подключить штатный MPRIS plugin к MPV только на этих профилях, чтобы уже
+  заданные клавиши могли управлять и MPV. Не менять бинды, не добавлять playerctld,
+  focus-aware switching, новый daemon или MIME defaults. При нескольких плеерах
+  выбор остаётся за обычной политикой playerctl; runtime Audacious/browser MPRIS
+  и личные plugins/settings не обследовались.
+- Изменена только документация. Реальные wpctl/playerctl команды, player discovery,
+  D-Bus media metadata, приложения, звук, builds и activation не запускались.
+  NixOS/HM activation для этого шага не требуется; реализация ожидает согласия.
+
+## Реализация медиаклавиш
+
+- После объяснения цепочки клавиша → playerctl → MPRIS и сценария YouTube
+  на другом workspace пользователь согласовал обе правки. Общий Linux GUI set
+  теперь устанавливает playerctl и подключает `mpvScripts.mpris` к MPV.
+  Acer/desktop/Lenovo получают их вместе; Mac/server не меняются.
+- Бинды, wpctl/громкость и MIME defaults сохранены. Playerctld, новая служба,
+  focus/workspace-aware выбор и личные настройки плееров не добавлены.
+  При нескольких плеерах остаётся обычная policy playerctl; наличие браузерного
+  MPRIS и поддержка команд конкретным медиа требуют живой проверки.
+- Новый `test-media-declarations.nix` проверяет selected merged declarations,
+  MPRIS script и реальный рецепт MPV wrapper с `--script=…/mpris.so`, установку
+  этого MPV, прежние Audacious/pwvucontrol, отсутствие playerctld/медиа-defaults
+  и scope Mac/server. Общая evaluation пяти profiles превысила 25 секунд;
+  затем отдельные три-GUI и Mac/server evaluation прошли без builds/IFD.
+  Восемь прежних audio bindings каждого GUI host механически сверены.
+- Настоящие players, metadata, D-Bus media discovery, громкость, builds/activation
+  не запускались. Это не runtime-приёмка YouTube, MPV или физических клавиш.
+  [Применение и проверка](media-keys.md): пользователь применяет HM и переоткрывает
+  MPV; NixOS rebuild не нужен. Живая проверка с одним плеером ещё не выполнена.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |

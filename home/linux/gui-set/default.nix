@@ -25,11 +25,15 @@
     swappy
     pwvucontrol
     audacious
+    playerctl
     wl-clipboard
     freefilesync
     qbittorrent
     libnotify
   ];
+
+  # Existing media keys use playerctl/MPRIS; mpv needs this interface explicitly.
+  programs.mpv.scripts = [ pkgs.mpvScripts.mpris ];
 
   # EasyEffects adds PipeWire effects (e.g. EQ/noise reduction), not basic audio.
   # Disabled until a specific effect is needed and configured deliberately.
