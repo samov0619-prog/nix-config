@@ -483,6 +483,11 @@ flowchart TD
   **Kitty + Yazi**, не Alacritty; MIME associations отдельно выбирают приложения,
   а не постоянно запускают их ([XDG](../../home/linux/gui-set/xdg.nix#L42-L66)).
 - Mako: pinned HM регистрирует package D-Bus services, не local `exec-once`.
+  Последующая selected evaluation трёх GUI-профилей подтвердила registration;
+  отсутствие local HM unit не означает отсутствие package D-Bus activation.
+  Default timeout 60 секунд не отменяет timeout отправителя; штатная история
+  5 уведомлений не отключена, содержимое не читалось. Цвета не привязаны к F11.
+  [Границы проверки](feedback.md#уведомления-mako-ограниченная-проверка).
   Pass-secret-service: HM user service WantedBy/PartOf default и D-Bus registration;
   наличие регистрации не означает чтения/разблокировки password store в этом аудите.
 - Gpg-agent: pinned HM задаёт socket activation (`sockets.target`), не отдельный

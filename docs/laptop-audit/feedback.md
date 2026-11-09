@@ -429,6 +429,31 @@ Wayland/GTK и не подтверждение Lenovo/desktop.
   и параллельные нажатия не перерабатывались. Сборки и activation оставлены
   пользователю. [Проверки, ограничения и применение](voice-dictate.md).
 
+Пользователь сообщил об успешной сборке после `31734db`; activation этим не
+подтверждена. Живая диктовка на старом ноутбуке сейчас недоступна из-за микрофона;
+проверка явно отложена до Lenovo и оставлена в существующем checklist. Это не
+runtime-приёмка диктовки, clipboard или GPU.
+
+## Уведомления Mako: ограниченная проверка
+
+- Selected merged HM evaluation Acer/desktop/Lenovo подтвердила Mako 1.11.0,
+  `enable=true`, D-Bus registration и единственный setting
+  `default-timeout=60000`. Local HM `systemd.user.services.mako` отсутствует;
+  это не означает отсутствия запуска: pinned package регистрирует
+  `org.freedesktop.Notifications` с Exec mako. Дублирующего `exec-once` в трёх
+  raw Hyprland configs нет; ручные autostart/process overrides не проверялись.
+- По [pinned mako.5](https://github.com/emersion/mako/blob/v1.11.0/doc/mako.5.scd)
+  60 секунд — default, не принудительный timeout всех приложений:
+  `ignore-timeout` по умолчанию выключен. Штатные `max-history=5` и `history=1`
+  не переопределены; историю и содержимое уведомлений не читали.
+- Цвета Mako задаются его собственным config, не GTK/Qt appearance. Shared F11
+  не переключает Mako; отдельной интеграции не добавляли. Это визуальная policy,
+  не установленная ошибка доставки уведомлений.
+- Source/declaration-проход не выявил основания менять конфигурацию.
+  Живые доставка, D-Bus ownership, действия/таймауты и оформление не проверялись;
+  тестовые уведомления, service restart, builds и activation не выполнялись.
+  Изменена только документация, применять NixOS/HM для этого шага не нужно.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |
