@@ -21,6 +21,8 @@ stdenv.mkDerivation {
     hash = "sha256-FCmNqz8JaP6XUaJOoWw5Lfls3ThdY+Yv2kRdk8XIRic=";
   };
 
+  patches = [ ./localhost-uri.patch ];
+
   nativeBuildInputs = [
     meson
     ninja

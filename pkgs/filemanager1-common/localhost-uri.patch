@@ -1,0 +1,15 @@
+diff --git a/src/file_manager_dbus.c b/src/file_manager_dbus.c
+--- a/src/file_manager_dbus.c
++++ b/src/file_manager_dbus.c
+@@ -9,2 +9,3 @@
+ #include <string.h>
++#include <strings.h>
+ #include <sys/wait.h>
+@@ -45,2 +46,7 @@
+       path += strlen(prefix); // Remove "file://" prefix
++      // A localhost authority denotes this machine, just like an empty one.
++      // Keep the slash and leave percent decoding to the existing wrappers.
++      if (strncasecmp(path, "localhost/", strlen("localhost/")) == 0) {
++        path += strlen("localhost");
++      }
+     }
