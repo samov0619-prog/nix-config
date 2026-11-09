@@ -33,7 +33,9 @@ extra daemon, polling or custom application UI is needed.
 This is a default for applications that honor Qt's platform theme, not a promise
 to override every program. Explicit per-application widget styles, private CSS,
 Qt Quick controls, bundled/sandboxed Qt plugins and custom-rendered UIs may not
-follow it. GTK, browsers, Blender and other non-Qt UIs keep their existing policy.
+follow it. GTK is separate from this helper: F11 also selects native GTK3
+`Adwaita`/`Adwaita-dark` through dconf (see [GTK policy](../../../../docs/laptop-audit/gtk-theme.md)).
+Browsers, Blender and other custom-rendered UIs are not forced to use Qt styles.
 Only nomacs has a targeted application-preference migration.
 
 ## Preservation and activation
@@ -75,8 +77,12 @@ python3 home/linux/modules/qt-theme/test_apply.py
 nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/modules/qt-theme/test-declarations.nix
 ```
 
-The Python tests exercise the actual helper and actual F11 script with external
-desktop commands stubbed out. The Nix check evaluates selected merged attributes
+The 12 Python tests exercise the actual helper and actual F11 script with external
+desktop commands stubbed out. A separate case within that suite also runs real
+dconf on a private D-Bus with temporary settings (skipped when dconf or
+dbus-run-session is unavailable); it checks GTK/desktop writes without touching
+the live desktop or Bluetooth devices. This does not exercise GTK rendering or
+portal notifications. The Nix check evaluates selected merged attributes
 for all five HM profiles: shared Qt policy, stable nomacs 3.22.1, Yazi/MIME and
 preserved Swappy on the three GUI profiles; no added viewer/qtct on server/Mac.
 It does not realize packages or evaluate a complete activation closure.

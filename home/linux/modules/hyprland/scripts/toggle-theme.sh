@@ -17,20 +17,26 @@ case "$current" in
     prefer-dark)
         next='prefer-light'
         theme='light'
+        gtk_theme='Adwaita'
         ;;
     prefer-light)
         next='prefer-dark'
         theme='dark'
+        gtk_theme='Adwaita-dark'
         ;;
     *)
         # Default to dark if unset/unknown
         next='prefer-dark'
         theme='dark'
+        gtk_theme='Adwaita-dark'
         ;;
 esac
 
 # Apply GNOME theme
 dconf write /org/gnome/desktop/interface/color-scheme "'$next'"
+# GTK3 (including Blueman) follows gtk-theme, not just the newer color-scheme.
+# Its native Wayland settings/portal notifications update already open windows.
+dconf write /org/gnome/desktop/interface/gtk-theme "'$gtk_theme'"
 
 # Native qtct directory watchers update already running Qt applications.
 qt-theme-apply --mode "$theme"

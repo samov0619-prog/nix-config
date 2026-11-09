@@ -54,7 +54,7 @@ nix eval --impure --offline --json --option allow-import-from-derivation false -
 сохранность настроек/backup/mode, пропущенный default option, отсутствие первого
 конфига, malformed XML, symlink, неизвестный режим, второй запуск, process guard
 и отсутствие записи F11 в обе версии Ardour. Process guard проверен на synthetic
-`/proc`, не на реальном запущенном Ardour. Отдельно проходят 11 общих Qt/F11 тестов.
+`/proc`, не на реальном запущенном Ardour. Отдельно проходят 12 общих appearance/F11 тестов.
 Выборочная merged evaluation проверяет wrapper ровно в трёх GUI-профилях,
 исключение server/Mac и сохранение Audacious/pwvucontrol.
 

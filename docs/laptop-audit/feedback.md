@@ -281,6 +281,10 @@ Builds/activation/диски не запускались; заготовку н�
   профилях-потребителях: GCC/Make — во всех пяти HM outputs, остальные два — на
   Acer/desktop/Lenovo/Mac, без добавления на server. Это сохранение существующих
   CLI, не смена менеджера инструментов редактора: Mason остаётся единственным.
+- Bluetooth и Blueman пользователь явно сохраняет на Acer и Lenovo. Для Blueman
+  согласовано общее GTK3-переключение в F11: `Adwaita`/`Adwaita-dark` через dconf,
+  без отдельного app wrapper, службы или изменения Bluetooth-подключений.
+  [Причина, проверки и применение](gtk-theme.md). Live Blueman UI пока не проверен.
 
 ## Разобрать отдельно
 
@@ -429,9 +433,8 @@ whole-filesystem maintenance; отдельный subvolume не устраняе
 
 - Alacritty уже сохранён как запасной терминал вместе с theme workflow;
   повторного выбора Kitty-only не требуется.
-- Какие сценарии требуют Bluetooth? Пока не менять. Avahi/mDNS, аудиоприложения,
-  FreeFileSync и qBittorrent уже сохранены по явному решению пользователя
-  (см. последние подтверждения выше).
+- Bluetooth/Blueman, Avahi/mDNS, аудиоприложения, FreeFileSync и qBittorrent уже
+  сохранены по явному решению пользователя (см. последние подтверждения выше).
 - Для Lenovo выбраны отсутствие шифрования, начальный автологин и публичный
   bootstrap-пароль как на Acer, без Hyprlock; улучшение входа/fingerprint — на живой
   машине. Дополнительные trusted-users/input rights не переносить автоматически;

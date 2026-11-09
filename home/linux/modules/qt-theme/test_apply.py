@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import shlex
+import shutil
 import subprocess
 import sys
 
@@ -12,7 +13,7 @@ import apply as appearance
 
 class AppearanceTests(unittest.TestCase):
     def setUp(self):
-        self.directory = tempfile.TemporaryDirectory()
+        self.directory = tempfile.TemporaryDirectory(prefix="theme-test-", dir="/tmp/opencode")
         self.addCleanup(self.directory.cleanup)
         self.config = Path(self.directory.name)
 
@@ -125,15 +126,27 @@ class AppearanceTests(unittest.TestCase):
         ):
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
 
-    def test_actual_f11_script_updates_both_qt_versions(self):
+    def test_actual_f11_script_updates_gtk_and_both_qt_versions(self):
         commands = self.config / "bin"
         commands.mkdir()
         script = Path(__file__).resolve().parents[1] / "hyprland/scripts/toggle-theme.sh"
         helper = Path(appearance.__file__).resolve()
-        for current, expected in (("prefer-light", "Adwaita-Dark"), ("prefer-dark", "Adwaita")):
+        cases = (
+            ("'prefer-light'", "dark", "Adwaita-Dark", "Adwaita-dark"),
+            ("'prefer-dark'", "light", "Adwaita", "Adwaita"),
+            ("", "dark", "Adwaita-Dark", "Adwaita-dark"),
+            ("'default'", "dark", "Adwaita-Dark", "Adwaita-dark"),
+            ("'unexpected'", "dark", "Adwaita-Dark", "Adwaita-dark"),
+        )
+        for current, mode, expected, gtk_theme in cases:
             with self.subTest(current=current):
                 programs = {
-                    "dconf": f"case \"$1\" in read) printf \"'{current}'\\n\" ;; write) exit 0 ;; *) exit 1 ;; esac\n",
+                    "dconf": (
+                        'case "$1" in\n'
+                        'read) printf "%s\\n" "$F11_CURRENT_SCHEME" ;;\n'
+                        'write) printf "%s\\t%s\\n" "$2" "$3" >> "$F11_DCONF_LOG" ;;\n'
+                        '*) exit 1 ;;\nesac\n'
+                    ),
                     "qt-theme-apply": f"exec {shlex.quote(sys.executable)} {shlex.quote(str(helper))} \"$@\"\n",
                     "hyprctl": "exit 0\n",
                     "systemctl": "exit 99\n",
@@ -147,12 +160,72 @@ class AppearanceTests(unittest.TestCase):
                     "HOME": str(self.config),
                     "XDG_CONFIG_HOME": str(self.config),
                     "PATH": str(commands) + os.pathsep + os.environ["PATH"],
+                    "F11_CURRENT_SCHEME": current,
+                    "F11_DCONF_LOG": str(self.config / "dconf-writes"),
                 }
+                writes = self.config / "dconf-writes"
+                writes.write_text("")
                 subprocess.run(["sh", str(script)], env=env, check=True, capture_output=True)
+                self.assertEqual(writes.read_text().splitlines(), [
+                    f"/org/gnome/desktop/interface/color-scheme\t'prefer-{mode}'",
+                    f"/org/gnome/desktop/interface/gtk-theme\t'{gtk_theme}'",
+                ])
                 for version in ("qt5ct", "qt6ct"):
                     text = (self.config / version / f"{version}.conf").read_text()
                     self.assertIn(f"style={expected}\n", text)
                 self.assertFalse((self.config / "uwsm/env-toggle").exists())
+                self.assertEqual((self.config / "theme/current_theme").read_text(), mode)
+
+    @unittest.skipUnless(shutil.which("dconf") and shutil.which("dbus-run-session"),
+                         "Native dconf check requires installed dconf and dbus-run-session")
+    def test_actual_f11_with_real_dconf_on_a_private_bus(self):
+        commands = self.config / "bin"
+        commands.mkdir()
+        helper = Path(appearance.__file__).resolve()
+        for name, body in {
+            "qt-theme-apply": f"exec {shlex.quote(sys.executable)} {shlex.quote(str(helper))} \"$@\"",
+            "hyprctl": "exit 0",
+        }.items():
+            path = commands / name
+            path.write_text("#!/bin/sh\n" + body + "\n")
+            path.chmod(0o700)
+        script = Path(__file__).resolve().parents[1] / "hyprland/scripts/toggle-theme.sh"
+        scenario = '''
+import subprocess
+import sys
+
+def read(key):
+    return subprocess.check_output(["dconf", "read", key], text=True).strip()
+
+def write(key, value):
+    subprocess.run(["dconf", "write", key, value], check=True)
+
+base = "/org/gnome/desktop/interface/"
+write(base + "font-name", "'Fixture font 13'")
+for current, mode, gtk in (
+    ("'prefer-light'", "dark", "Adwaita-dark"),
+    ("'prefer-dark'", "light", "Adwaita"),
+    ("'default'", "dark", "Adwaita-dark"),
+):
+    write(base + "color-scheme", current)
+    subprocess.run(["sh", sys.argv[1]], check=True, capture_output=True)
+    assert read(base + "color-scheme") == "'prefer-" + mode + "'"
+    assert read(base + "gtk-theme") == "'" + gtk + "'"
+    assert read(base + "font-name") == "'Fixture font 13'"
+'''
+        result = subprocess.run(
+            ["dbus-run-session", "--", sys.executable, "-c", scenario, str(script)],
+            env=os.environ | {
+                "HOME": str(self.config),
+                "XDG_CONFIG_HOME": str(self.config),
+                "XDG_CACHE_HOME": str(self.config / "cache"),
+                "PATH": str(commands) + os.pathsep + os.environ["PATH"],
+            },
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == "__main__":

@@ -367,7 +367,13 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
 ### Alacritty + toggle-theme
 
 - Темы хранятся в `~/.config/alacritty/themes/{dark,light}.toml` как symlinks.
-- `toggle-theme.sh` (F11): меняет dconf GNOME color-scheme, вызывает native Qt appearance helper, меняет Alacritty symlink и уведомляет через hyprctl. Не пишет в Ardour UI config.
+- `toggle-theme.sh` (F11): меняет dconf GNOME color-scheme и GTK3 gtk-theme (`Adwaita`/`Adwaita-dark`), вызывает native Qt appearance helper, меняет Alacritty symlink и уведомляет через hyprctl. Не пишет в Ardour UI config.
+- Ordinary GTK3 apps such as Blueman follow the native GTK theme through the
+  Wayland settings/portal path, without a GTK_THEME override, extra service or
+  app wrapper. GTK and Qt dark names differ in case. F11 fixtures and real dconf
+  on a private bus are checked, not live Blueman rendering/portal notifications,
+  XWayland or arbitrary custom/sandboxed UIs. No activation dconf writes; the next
+  F11 synchronizes both keys. See `docs/laptop-audit/gtk-theme.md`.
 - `home/linux/modules/ardour` wraps unchanged stable Ardour on the three Linux GUI
   HM profiles. Desktop/CLI startup reads the same dconf mode and selects built-in
   `captain_light`/`dark` in an existing mutable ui_config, with one original backup.
