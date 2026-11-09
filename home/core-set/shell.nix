@@ -8,10 +8,16 @@
   programs.fish = {
     enable = true;
     interactiveShellInit = ''
-      if test -f ~/.config/llm-secrets/env
-        for line in (cat ~/.config/llm-secrets/env)
-          set -gx (string split "=" $line)
-        end
+      # Optional trusted Fish code, intentionally not managed by Nix/Home Manager.
+      # Manual setup (preserves existing content):
+      #   mkdir -p ~/.config/fish
+      #   touch ~/.config/fish/local-env.fish
+      #   chmod 600 ~/.config/fish/local-env.fish
+      # In ~/.config/fish/local-env.fish (permissions 600), add lines such as:
+      #   set -gx EXAMPLE_API_KEY 'replace-with-your-key'
+      # __fish_config_dir also respects a custom XDG_CONFIG_HOME.
+      if test -f "$__fish_config_dir/local-env.fish"
+        source "$__fish_config_dir/local-env.fish"
       end
     '';
   };

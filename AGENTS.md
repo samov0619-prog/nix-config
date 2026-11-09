@@ -417,6 +417,16 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
 - GUI: Super+key → Ctrl+key (copy/paste/cut/undo/redo).
 - Терминал: Super+C/V → Ctrl+Shift+C/V, остальной Ctrl не трогается.
 
+### Fish personal environment
+
+- `home/core-set/shell.nix` sources optional `$__fish_config_dir/local-env.fish`
+  in new interactive Fish sessions across HM profiles. Default location is
+  `~/.config/fish/local-env.fish`; custom XDG paths follow Fish itself.
+  This is trusted, manually maintained Fish code (`set -gx NAME 'value'`, mode 600),
+  NEVER HM-managed content. Do not create/overwrite it or read its secrets during
+  ordinary audits. The old `~/.config/llm-secrets/env` is no longer loaded and is
+  not automatically migrated/deleted. See `docs/laptop-audit/fish-local-env.md`.
+
 ### Neovim
 
 - Global Go is not imported by any HM profile. `home/core-set/go.nix` is retained
