@@ -612,6 +612,38 @@ runtime-приёмка диктовки, clipboard или GPU.
   [Проверки и приёмка](removable-media.md): пользователь применяет HM и перезапускает
   udiskie для перечитывания настроек; NixOS rebuild/рестарт FileManager1 не нужны.
 
+По следующему вопросу пользователя живая проверка накопителей не ставится
+блокером продолжения аудита: mount/unmount/Browse tray остаются до подходящего
+тестового носителя или Lenovo. Открытие временного каталога проверяет отдельную
+цепочку XDG → Kitty → Yazi, но не работу с накопителем. Activation и успешная
+live-приёмка udiskie после `780c6e3` этим сообщением не установлены.
+
+## MPV/Audacious: запуск и медиаассоциации
+
+- Source audit: общий GUI set включает MPV через HM, Linux GUI set устанавливает
+  Audacious. Сохранение обоих приложений уже согласовано; удаление или объединение
+  сценариев не предлагается. Выбранная merged HM evaluation Acer подтвердила
+  MPV enabled, пустые managed config/bindings/profiles/includes/scripts и отсутствие
+  явных audio/video MIME defaults. Pinned HM module при таких значениях не создаёт
+  mpv.conf/input.conf. Это не утверждение об отсутствии внешнего mutable config.
+- Read-only queries шести MIME types на Acer: MP4/MKV/WebM → `mpv.desktop`,
+  MP3 (`audio/mpeg`)/FLAC/OGG → `audacious.desktop`. Обработчики работают как GUI:
+  installed package entries задают `Terminal=false`, соответственно
+  `mpv --player-operation-mode=pseudo-gui -- %U` и `audacious %U`.
+- Две изолированные проверки использовали настоящие desktop entries и извлечённые
+  desktop-launch functions installed xdg-open с fake players. Сложное имя fixture
+  с пробелами/Unicode/кавычками/literal shell characters передаётся одним аргументом,
+  UID/EUID не меняются. Настоящие проигрыватели, звук, видео, сеть и GUI не запускались.
+- Подтверждённого дефекта media launch не найдено. Но текущий выбор defaults
+  не закреплён в конфигурации: fresh Lenovo не обязан повторить его автоматически.
+  Предложение для согласования — явно сохранить видео → MPV, музыку → Audacious
+  через конкретные MIME types, без wildcard-defaults и изменения личных настроек.
+- Mutable playlists/history/watch-later и содержимое медиафайлов не читались;
+  GPU decode, codecs, PipeWire и реальные playback controls не проверялись.
+  Расширенная evaluation пяти профилей не завершилась в лимит 25 секунд и не
+  считается успешной; затем выполнена только узкая Acer evaluation без builds/IFD.
+  В этом шаге изменена только документация; NixOS/HM activation не требуется.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |
