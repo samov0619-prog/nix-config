@@ -32,7 +32,8 @@ nomacs viewer below also apply to existing Linux GUI profiles.
   [graphics audit](../../docs/laptop-audit/graphics.md) for evidence and limits.
 - Existing workstation CLI/devtools (including shared Python/Node prerequisites
   for Mason), OpenCode, browsers, Blender and Minecraft applications. Global Go
-  is preserved as in the current workstation composition; cleanup is separate.
+  is omitted across all HM profiles; projects supply it through devenv/direnv.
+  The unimported `home/core-set/go.nix` module remains available for future opt-in.
 - The shared Linux GUI set replaces Swayimg with stable nomacs on Acer, desktop
   and Lenovo, for Yazi and the image MIME types advertised by nomacs. The Swappy
   screenshot workflow stays unchanged. Unstable nomacs is not selected because it

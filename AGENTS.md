@@ -419,6 +419,9 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
 
 ### Neovim
 
+- Global Go is not imported by any HM profile. `home/core-set/go.nix` is retained
+  for explicit future opt-in; project devenv/direnv supplies the toolchain when
+  needed, including for Go-based Mason tools. Python/Node prerequisites remain.
 - Сейчас ставится только `neovim-unwrapped` из nixpkgs без конфигурации.
 - Server хранит Neovim repo, Lazy/Mason и Tree-sitter parsers вручную вне Nix
   store. Home Manager намеренно не подключает `~/.config/nvim` через
