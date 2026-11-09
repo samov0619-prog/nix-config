@@ -6,6 +6,7 @@ upstream.overrideAttrs (old: {
     ./patches/model-variants.patch
     ./patches/session-attention.patch
     ./patches/question-location.patch
+    ./patches/theme-mode-cache.patch
   ];
   postPatch = (old.postPatch or "") + ''
     cp ${./plugins/model-routing/model-routing.ts} packages/schema/src/local-model-routing.ts

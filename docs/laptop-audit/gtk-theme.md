@@ -72,6 +72,12 @@ GTK3/Python runtime Blueman, изолированные settings, невидим
 merged evaluation проверяет объявление пакета только в трёх Linux GUI-профилях,
 сохраняя server/Mac и остальные Qt/nomacs declarations.
 
+Пользователь затем применил `a937df1` и подтвердил: «да, заработало». Это
+пользовательская приёмка Blueman на Acer, не независимая UI-проверка агентом и не
+доказательство для всех GTK-приложений или других хостов. OpenCode остался тёмным
+по отдельной причине: устаревший terminal-palette cache перекрывал определённый
+режим в TUI; см. [OpenCode](../../home/apps/opencode/README.md#автоматическая-светлаятёмная-тема).
+
 1. После review при необходимости собрать только свой HM output:
    `nix build .#homeConfigurations.samov-laptop.activationPackage`.
 2. Полностью закрыть Blueman и другие проверяемые GTK3-приложения, затем применить

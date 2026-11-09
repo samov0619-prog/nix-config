@@ -43,6 +43,45 @@ below document reproducibility, not authorization to execute them automatically.
 
 ## Reproducible checks
 
+### Terminal theme versus stale palette cache (2026-11-09)
+
+The user confirmed Blueman after the GTK alias fix, but both an existing and a
+new OpenCode TUI stayed dark in a light desktop. Read-only diagnostics found
+portal color-scheme 2 and Kitty background `#fafafa`, while TUI cell colors were
+dark Flexoki. CLI preferences were already `flexoki` / `system`; the saved
+`system-theme` palette still had the old dark terminal background `#2c2e34`.
+Only appearance fields/color codes were inspected, not terminal text or secrets.
+
+With explicit approval, an isolated installed-binary PTY reproduced the cause:
+without cached colors, native renderer mode, TUI mode and Flexoki tokens all
+follow light → dark → light. Seeding an opposite dark cache makes startup report
+renderer light / TUI dark. Repeating the same light notification does not repair
+the divergence; an actual dark → light cycle does. The test uses a private server,
+temporary HOME/config/state and synthetic terminal replies, without model prompts,
+personal credentials, real desktop writes or package acquisition.
+
+`patches/theme-mode-cache.patch` puts the freshly detected renderer mode before
+cached palette inference during startup, after explicit light/dark locks.
+
+```fish
+node --test home/apps/opencode/tests/test_theme_mode_cache.mjs
+python3 -B home/apps/opencode/tests/test_theme_mode_tui.py /path/to/built/opencode
+# Negative control only, with the old unpatched binary:
+python3 -B home/apps/opencode/tests/test_theme_mode_tui.py /path/to/old/opencode --expect-stale-cache-bug
+```
+
+All four policy tests pass: real patch application followed by executing the
+patched startup block with controlled dependencies, both stale-cache directions,
+explicit locks, unavailable-terminal fallback and existing fallback preservation.
+This is not full Solid/OpenTUI integration. The saved PTY test passed fresh-cache
+and stale-cache negative controls on the old installed binary; its normal regression
+mode intentionally fails there at renderer light / TUI dark. It checks real public
+theme/renderer state and Flexoki text tokens, subscription and unchanged preferences,
+not visible rendering in a real Kitty. **No fixed-binary build, fixed-binary PTY
+run or live post-fix acceptance has occurred.** Use the HM build/application steps
+in [README.md](README.md). This client-only patch needs reopening the TUI, not a
+shared-service restart. The independent corporate Mac archive is unchanged.
+
 ### Token-sharing quota fallback (2026-11-07)
 
 `chatgpt-token-sharing` has no confirmed source of subscription window percentages

@@ -156,7 +156,7 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
 - `home/apps/opencode/default.nix` — HM laptop/desktop на pinned OpenCode 2.1.4
   (отдельный flake input, не nixpkgs-unstable). `package.nix` добавляет
   `patches/session-routing.patch`, `patches/manual-model-routing.patch`, `patches/model-variants.patch`, `patches/session-attention.patch`,
-  `patches/question-location.patch` и Linux runtime libraries. V1-модуль/исследования —
+  `patches/question-location.patch`, `patches/theme-mode-cache.patch` и Linux runtime libraries. V1-модуль/исследования —
   `archive/v1`, не импортируются. README/BENCHMARK описывают текущий V2.
 - Исходники сгруппированы: `config/` (V2 settings и global rules), `plugins/`,
   `patches/` (включая общий session-attention helper), `scripts/`, `skills/`,
@@ -281,6 +281,15 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
   через настоящий runtime, не только plain-object unit fixture.
 - Auto compaction: soft input 244000 − buffer 32000 = 212000; output 128000,
   keep.tokens 15000. V2 не имеет прежнего `prune=false`; между шагами возможен overshoot.
+- Theme `mode = "system"` follows terminal appearance, not GTK; `name = "system"`
+  selects a terminal-derived palette, not an automatic-mode requirement. Keep the
+  user's Flexoki choice. `theme-mode-cache.patch` gives fresh renderer appearance
+  priority over saved system-theme colors, after explicit light/dark locks. Never
+  delete personal cache/preferences to mask this startup bug. Four actual-patch
+  policy tests pass; approved isolated installed-binary PTY reproduces the old
+  stale-cache bug and fresh-cache control. Fixed binary build/PTY/live acceptance
+  remain pending. Reopen TUI after applying this client-only patch; no service
+  restart required. See README/BENCHMARK and `tests/test_theme_mode_tui.py`.
 - `plugins/limits/` — local V2 hooks/RPC/TUI, без стороннего quota-плагина,
   отдельного LLM и idle network polling. OpenAI ChatGPT OAuth usage snapshot,
   общий per-account cache и event-driven active workers (не открытые вкладки).
@@ -380,6 +389,8 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
   name. Native GTK CSS-color fixtures reproduce this and verify the exact alias,
   not the built package/installed layout or live Blueman. After first adding the
   package, reopen GTK apps to discard a previously cached missing-theme fallback.
+  The user then confirmed Blueman works on Acer; this is user acceptance, not
+  independent agent UI verification or evidence for every GTK app/host.
 - `home/linux/modules/ardour` wraps unchanged stable Ardour on the three Linux GUI
   HM profiles. Desktop/CLI startup reads the same dconf mode and selects built-in
   `captain_light`/`dark` in an existing mutable ui_config, with one original backup.

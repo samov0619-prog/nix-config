@@ -5,7 +5,7 @@ flake input `github:anomalyco/opencode/v2.1.4` (rev `68bc26b7da1990ce10ffecfbc1e
 без обновления всего nixpkgs-unstable. Официальный LTS-канал не обнаружен.
 `package.nix` сохраняет upstream build и добавляет
 `patches/session-routing.patch`, `patches/manual-model-routing.patch`, `patches/model-variants.patch`, `patches/session-attention.patch`,
-`patches/question-location.patch`; Linux wrapper сохраняет runtime libraries для watcher
+`patches/question-location.patch`, `patches/theme-mode-cache.patch`; Linux wrapper сохраняет runtime libraries для watcher
 и native audio. V1-модуль и прежние исследования — в [archive/v1](archive/v1/README.md).
 
 ## Структура
@@ -31,6 +31,33 @@ opencode/
 Это структура **исходников**: пути в `~/.config/opencode`, имена команд,
 plugin IDs и storage не меняются. Пустой прежний `lib/` удалён; архив не устанавливается.
 Проверки и ограничения покрытия — в [BENCHMARK.md](BENCHMARK.md).
+
+## Автоматическая светлая/тёмная тема
+
+В mutable `~/.config/opencode/cli.json` `theme.name = "flexoki"` выбирает палитру,
+а `theme.mode = "system"` следует **терминалу**, не GTK. Имя `system` — другая,
+терминальная палитра; менять Flexoki ради переключения не нужно.
+
+`theme-mode-cache.patch` исправляет upstream 2.1.4: сохранённая палитра
+`system-theme` могла перекрыть свежий режим терминала даже у Flexoki. Приоритет:
+явный light/dark → свежий режим терминала → кеш → исходный fallback. Кеш и личный
+`cli.json` не удаляются и не переписываются; F11/Kitty не требуют новых helper-ов.
+Исправление входит в домашний binary, не переносится само в независимый Mac archive.
+
+Четыре policy-теста проходят на настоящем patched startup block. На установленном
+**старом** binary изолированный PTY воспроизвёл `rendererMode=light` при
+`themeMode=dark` со старым кешем; без кеша light/dark работает. Исправленный binary
+ещё не собран и не проверен в PTY/живом Kitty. После review:
+
+1. Собрать свой HM output: `nix build .#homeConfigurations.samov-laptop.activationPackage`.
+2. Проверить binary из собранного профиля:
+   `python3 -B home/apps/opencode/tests/test_theme_mode_tui.py ./result/home-path/bin/opencode`.
+3. Применить `home-manager switch --flake .#samov-laptop`, затем завершить работу
+   в текущем TUI и переоткрыть его. Для desktop использовать свой профиль;
+   Lenovo draft на Acer не применять. NixOS rebuild и restart service не нужны:
+   этот patch меняет только TUI. Одного `/reload` для замены binary недостаточно.
+4. В светлой системе новый TUI должен сразу стать светлым, а F11 переключать
+   Flexoki в обе стороны. Личные preferences и кеш остаются на месте.
 
 ## Модели и сессионные команды
 

@@ -1,0 +1,14 @@
+diff --git a/packages/tui/src/context/theme.tsx b/packages/tui/src/context/theme.tsx
+--- a/packages/tui/src/context/theme.tsx
++++ b/packages/tui/src/context/theme.tsx
+@@ -180,7 +180,9 @@
+       if (palette) setSystemTheme(generateSystem(palette, store.mode))
+     }
+     if (palette) {
+-      const mode = store.lock ?? terminalMode(palette) ?? store.mode
++      // A saved palette is only a fallback: startup already queried the terminal.
++      // Otherwise stale colors can pin any theme to yesterday's light/dark mode.
++      const mode = store.lock ?? renderer.themeMode ?? terminalMode(palette) ?? store.mode
+       if (store.mode !== mode) setStore("mode", mode)
+       applyPalette()
+     } else setSystemTheme(undefined)
