@@ -32,7 +32,16 @@ let
     pkgsUnstable.amnezia-vpn.version = "5.0.3.0";
   };
   home = import ../../home/linux/laptop-next/default.nix { inherit pkgs; };
+  disk = (import ./disko.nix { }).disko.devices.disk.main;
+  partitions = disk.content.partitions;
 in
+assert disk.device == "/dev/disk/by-id/REPLACE_ME";
+assert partitions.root.content.type == "filesystem";
+assert partitions.root.content.format == "ext4";
+assert partitions.root.content.mountpoint == "/";
+assert partitions.swap.size == "48G";
+assert partitions.swap.content.type == "swap";
+assert partitions.swap.content.resumeDevice;
 assert host.services.power-profiles-daemon.enable;
 assert host.hardware.nvidia.open;
 assert !((host.powerManagement or { }) ? cpuFreqGovernor);
@@ -68,4 +77,5 @@ assert !(builtins.elem ../../home/linux/modules/xremap home.imports);
   noUnpreparedMinecraftInstance = true;
   installGuardPresent = true;
   lenovoWaybarOverridePreservesUpstreamHooks = true;
+  unencryptedExt4And48GiBSwapDeclarations = true;
 }

@@ -30,7 +30,8 @@ none of its configuration or other existing profiles changes in this step.
 
 ## Still blocked, not installation instructions
 
-The user chose **no disk encryption** for Lenovo, including the 48 GiB swap.
+The user chose **ext4 with no disk encryption** for Lenovo, with a separate
+**48 GiB swap partition**, also unencrypted.
 This matches the existing scaffold; no partition operation has been performed.
 Later encryption remains possible, with backup/reinstallation as the predictable
 route, not a promised one-click conversion. Fingerprint login/`sudo` is a separate
@@ -39,10 +40,10 @@ remain unreviewed. No fingerprint authentication, autologin, passwordless `sudo`
 TPM unlock or Secure Boot configuration is enabled by this decision.
 
 The system has an explicit failing assertion until target hardware/PRIME settings,
-disk/filesystem, login/security and generation retention are reviewed.
+target disk, login/security and generation retention are reviewed.
 Remove it only after resolving those items. The disk is still `REPLACE_ME`;
-ext4 and weekly five-generation GC remain scaffold defaults, not approved choices.
-Swap partition capacity is agreed: **48 GiB**. The filesystem is still undecided.
+weekly five-generation GC remains a scaffold default, not an approved choice.
+Filesystem, encryption policy and swap size are settled, not permission to install.
 
 The user has no copied initial password or autologin. Do not apply this HM profile
 on Acer: it manages the same user paths with Lenovo's configuration. No switch is

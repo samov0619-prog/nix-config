@@ -7,6 +7,6 @@ layouts.mkEfiExt4Swap {
   device = "/dev/disk/by-id/REPLACE_ME";
   # Agreed for the 32 GiB Lenovo: 48 GiB, with early installed-system resume tests.
   # Capacity alone does not guarantee hibernation; unencrypted root/swap are agreed.
-  # Filesystem choice remains open; ext4 is still the scaffold default.
+  # ext4 is explicitly agreed for Lenovo; no Btrfs snapshot policy is needed.
   swapSize = "48G";
 }
