@@ -1,4 +1,9 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
   # Fixed upstream artifact: Whisper Small Q5_1 is multilingual and keeps
   # Russian dictation compact enough for responsive CPU transcription.
@@ -47,7 +52,11 @@ let
           exit 1
         fi
 
-        text="$(whisper-cli -m ${whisperSmallQ51} -f "$audio" -l ru${gpuFlag} -nt -np | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g; s/^ //; s/ $//')"
+        if ! text="$(whisper-cli -m ${whisperSmallQ51} -f "$audio" -l ru${gpuFlag} -nt -np | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g; s/^ //; s/ $//')"; then
+          rm -f "$audio"
+          notify-send "Voice dictate" "Transcription failed" -u critical
+          exit 1
+        fi
         rm -f "$audio"
 
         if [ -z "$text" ]; then
@@ -56,7 +65,7 @@ let
         fi
 
         printf '%s' "$text" | wl-copy
-        wtype "$text"
+        printf '%s' "$text" | wtype -
         notify-send "Voice dictate" "Transcribed and copied to clipboard"
       else
         rm -f "$pid_file" "$audio"

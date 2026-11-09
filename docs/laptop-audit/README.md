@@ -27,6 +27,7 @@ Acer после backup/lifecycle fixes; это не проверка Minecraft r
 - [Диск в Waybar](../../home/linux/modules/waybar/README.md): I/O busy, свободно/всего и скорости вместо `FREE` в Yazi на Linux GUI.
 - [Браузеры](browsers.md): stable Chrome, default-like Firefox и границы ручного переноса профилей/ключей.
 - [Скриншоты и clipboard](screenshots.md): Print → область → Swappy, корректная отмена и ручное сохранение/копирование.
+- [Диктовка](voice-dictate.md): уведомление/cleanup при ошибке Whisper и ввод через stdin без дополнительного Enter.
 - [Карта запуска](startup.md): Minecraft, proxy и GUI; источники, зависимости и открытые риски.
 - [Питание и температуры](power.md): активная policy Acer, происхождение настроек и варианты Lenovo.
 - [Графика Lenovo](graphics.md): поддержка Panther Lake/RTX 5060 в locked stack и границы до живой проверки.
