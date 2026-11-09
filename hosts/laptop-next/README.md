@@ -10,6 +10,10 @@ nomacs viewer below also apply to existing Linux GUI profiles.
 - NixOS/HM stateVersion 26.05; standalone HM stays separate from NixOS activation.
 - Hyprland/UWSM, familiar Dwindle controls, Russian/English layouts, three-finger
   workspace gesture, audio/Bluetooth/UDisks2 and the existing VPN clients.
+- Shared workstation [Avahi/mDNS](../../docs/laptop-audit/mdns.md) resolves LAN
+  devices such as the Zynthian Raspberry Pi via `*.local`, without publishing the
+  workstation's own services. Acer/desktop and both workstation drafts opt in;
+  VPS/installer do not. Actual Pi connectivity remains a live check.
 - PPD and a native Waybar profile icon: left click selects the next available
   profile, right click the previous. A
   [Lenovo-only Waybar extension](../../home/linux/laptop-next/waybar/README.md)

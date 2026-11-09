@@ -20,6 +20,7 @@ Acer после backup/lifecycle fixes; это не проверка Minecraft r
 - [Каталог компонентов](components.md): назначение, необходимость, происхождение и риски переноса.
 - [Замечания и решения](feedback.md): отдельный журнал пользовательского ревью и открытых вопросов.
 - [Пояс и часы](time.md): общая NixOS policy и отдельная ручная настройка Mac.
+- [Локальные устройства](mdns.md): общий Avahi/mDNS для workstation outputs и доступа к Zynthian Pi по `*.local`.
 - [Карта запуска](startup.md): Minecraft, proxy и GUI; источники, зависимости и открытые риски.
 - [Питание и температуры](power.md): активная policy Acer, происхождение настроек и варианты Lenovo.
 - [Графика Lenovo](graphics.md): поддержка Panther Lake/RTX 5060 в locked stack и границы до живой проверки.

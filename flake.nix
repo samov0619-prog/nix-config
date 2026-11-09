@@ -172,6 +172,7 @@
           overlays = [ self.overlays.amnezia-vpn ];
           modules = [
             ./hosts/profiles/time.nix
+            ./hosts/profiles/mdns.nix
             ./hosts/desktop
           ];
         };
@@ -181,6 +182,7 @@
           overlays = [ self.overlays.amnezia-vpn ];
           modules = [
             ./hosts/profiles/time.nix
+            ./hosts/profiles/mdns.nix
             ./hosts/laptop
           ];
         };
@@ -206,6 +208,7 @@
           };
           modules = [
             ./hosts/profiles/time.nix
+            ./hosts/profiles/mdns.nix
             disko.nixosModules.disko
             ./hosts/laptop-next
           ];
@@ -215,6 +218,7 @@
           system = systems.linux;
           modules = [
             ./hosts/profiles/time.nix
+            ./hosts/profiles/mdns.nix
             disko.nixosModules.disko
             ./hosts/desktop-next
           ];

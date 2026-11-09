@@ -68,12 +68,6 @@
   };
   systemd.services.NetworkManager-wait-online.enable = false;
 
-  services.avahi = {
-    enable = true;
-    nssmdns4 = true;
-    openFirewall = true;
-  };
-
   services.v2raya = {
     enable = true;
     cliPackage = pkgs.xray;

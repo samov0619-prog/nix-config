@@ -80,12 +80,6 @@
   services.blueman.enable = true;
   services.udisks2.enable = true;
   security.polkit.enable = true;
-  services.avahi = {
-    enable = true;
-    nssmdns4 = true;
-    openFirewall = true;
-  };
-
   services.v2raya = {
     enable = true;
     cliPackage = pkgs.xray;

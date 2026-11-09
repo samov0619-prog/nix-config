@@ -83,6 +83,12 @@ hosts/
 `flake.nix` is the source of truth for host composition: a feature exists on a
 host only when its module is listed in that host's `modules` array.
 
+Workstation mDNS lives in `hosts/profiles/mdns.nix`, explicitly imported by laptop,
+desktop and both `*-next` outputs, not server/installer. Avahi + IPv4 NSS resolve
+LAN devices such as the Zynthian Pi via `*.local`; UDP 5353 is open, own-service
+publishing is disabled. Selected merged declarations/composition are checked by
+`hosts/profiles/test-mdns.nix`; real Pi connectivity is not yet checked.
+
 Disko is imported directly by fresh `server`, `laptop-next`, and `desktop-next`
 targets. It runs only through an explicit Disko/nixos-anywhere command, never
 through `nixos-rebuild switch`. Current `laptop` and `desktop` intentionally do
