@@ -374,6 +374,12 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
   on a private bus are checked, not live Blueman rendering/portal notifications,
   XWayland or arbitrary custom/sandboxed UIs. No activation dconf writes; the next
   F11 synchronizes both keys. See `docs/laptop-audit/gtk-theme.md`.
+  The GUI set must install `gnome-themes-extra`: GTK3's built-in Adwaita dark
+  variant is not the named `Adwaita-dark` theme. Without the upstream alias GTK
+  silently falls back to light even when dconf/portal/settings report the dark
+  name. Native GTK CSS-color fixtures reproduce this and verify the exact alias,
+  not the built package/installed layout or live Blueman. After first adding the
+  package, reopen GTK apps to discard a previously cached missing-theme fallback.
 - `home/linux/modules/ardour` wraps unchanged stable Ardour on the three Linux GUI
   HM profiles. Desktop/CLI startup reads the same dconf mode and selects built-in
   `captain_light`/`dark` in an existing mutable ui_config, with one original backup.

@@ -35,6 +35,8 @@ to override every program. Explicit per-application widget styles, private CSS,
 Qt Quick controls, bundled/sandboxed Qt plugins and custom-rendered UIs may not
 follow it. GTK is separate from this helper: F11 also selects native GTK3
 `Adwaita`/`Adwaita-dark` through dconf (see [GTK policy](../../../../docs/laptop-audit/gtk-theme.md)).
+The Linux GUI set installs `gnome-themes-extra` for the named GTK3 dark alias;
+GTK's built-in dark variant alone does not provide that theme name.
 Browsers, Blender and other custom-rendered UIs are not forced to use Qt styles.
 Only nomacs has a targeted application-preference migration.
 
@@ -85,7 +87,15 @@ the live desktop or Bluetooth devices. This does not exercise GTK rendering or
 portal notifications. The Nix check evaluates selected merged attributes
 for all five HM profiles: shared Qt policy, stable nomacs 3.22.1, Yazi/MIME and
 preserved Swappy on the three GUI profiles; no added viewer/qtct on server/Mac.
+It also checks `gnome-themes-extra` on exactly the three GUI profiles.
 It does not realize packages or evaluate a complete activation closure.
+
+`python3 -B home/linux/modules/qt-theme/test_native_gtk.py` uses the already-installed
+Blueman GTK3/Python runtime, without starting Blueman or obtaining packages. It
+reproduces the light fallback when `Adwaita-dark` is missing, then installs the
+exact upstream alias as a temporary fixture and checks real GTK-resolved light/dark
+background colors and in-process theme changes. This is not a test of the built
+theme package, installed HM layout, portal events or visible Blueman window.
 
 `test_native.py` is a separate, explicitly authorized real nomacs/qt6ct test. It
 requires already-present package paths and ImageMagick; it obtains/builds nothing:

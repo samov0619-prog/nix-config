@@ -17,6 +17,9 @@
   ];
   home.packages = with pkgs; [
     rose-pine-hyprcursor
+    # GTK3's built-in dark variant needs this named Adwaita-dark alias.
+    # Without it gtk-theme=Adwaita-dark silently falls back to light Adwaita.
+    gnome-themes-extra
     grim
     slurp
     swappy

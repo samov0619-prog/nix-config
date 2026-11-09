@@ -14,6 +14,7 @@ let
     assert has "nomacs" == gui;
     assert has "qt5ct" == gui;
     assert has "qt6ct" == gui;
+    assert has "gnome-themes-extra" == gui;
     assert !(has "swayimg");
     assert !(config.xdg.configFile ? "swayimg/init.lua");
     assert
@@ -40,6 +41,7 @@ let
       );
     {
       sharedQtAppearance = gui;
+      gtkDarkThemeDeclared = gui;
       nomacsVersion =
         if gui then
           (lib.findFirst (p: (p.pname or "") == "nomacs") null config.home.packages).version
