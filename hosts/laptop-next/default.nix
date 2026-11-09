@@ -13,7 +13,7 @@
   assertions = [
     {
       assertion = false;
-      message = "Lenovo laptop-next is not install-ready: review hardware/PRIME IDs, disk/filesystem/encryption, login/security and GC policy before removing this guard.";
+      message = "Lenovo laptop-next is not install-ready: review hardware/PRIME IDs, disk/filesystem, login/security and GC policy before removing this guard.";
     }
   ];
 
