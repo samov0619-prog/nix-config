@@ -592,6 +592,26 @@ runtime-приёмка диктовки, clipboard или GPU.
   legacy mount menu не возвращён. В этом шаге изменена только документация,
   применять NixOS/HM не требуется; две конкретные настройки предложены для согласования.
 
+## Реализация меню udiskie и directory handler
+
+- После согласия пользователя корневой `settings.menu="nested"` заменён на
+  `settings.program_options.menu="smart"`. Для `inode/directory` явно выбран
+  прежний `yazi-xdg.desktop` (`kitty -- yazi %f`, без второго терминала).
+  Область — три Linux GUI HM-профиля, Mac/server не затронуты.
+- Шесть isolated tests прошли: настоящий installed Config распознаёт новое меню,
+  старый корневой setting игнорируется; настоящий `prompt.browser` с fake Popen
+  передаёт каталог в xdg-open целиком; настоящие desktop-launch functions
+  xdg-open и generated Yazi entry вызывают fake Kitty/Yazi с правильными argv,
+  UID/EUID/cwd, включая сложные имена каталогов. Выбранные merged declarations
+  пяти профилей подтвердили scope и прежние automount/notify/tray/Neovim/HTML.
+  Старые шесть Neovim tests тоже прошли.
+  Три mutation controls отвергли корневой menu, flat вместо smart и отсутствие Kitty.
+- Не добавлены polkit rules/agent, AppIndicator override, sudo, wrappers или MTP.
+  Архивное mount menu и настройки FileManager1 не менялись. Сборки, activation,
+  GTK/tray/PTY/runtime Yazi, настоящий YAML и операции с накопителями не запускались.
+  [Проверки и приёмка](removable-media.md): пользователь применяет HM и перезапускает
+  udiskie для перечитывания настроек; NixOS rebuild/рестарт FileManager1 не нужны.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |

@@ -51,6 +51,7 @@ in
       "x-scheme-handler/unknown" = [ "google-chrome.desktop" ];
 
       "text/plain" = [ "nvim-xdg.desktop" ];
+      "inode/directory" = [ "yazi-xdg.desktop" ];
 
       "x-scheme-handler/tg" = [ "google-chrome.desktop" ];
       "x-scheme-handler/tonsite" = [ "google-chrome.desktop" ];

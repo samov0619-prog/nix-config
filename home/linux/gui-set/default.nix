@@ -36,9 +36,7 @@
   # services.easyeffects.enable = true;
   services.udiskie = {
     enable = true;
-    settings = {
-      menu = "nested";
-    };
+    settings.program_options.menu = "smart";
   };
   services.mako = {
     enable = true;
