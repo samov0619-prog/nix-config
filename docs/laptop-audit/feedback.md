@@ -544,6 +544,54 @@ runtime-приёмка диктовки, clipboard или GPU.
   и ручная приёмка](tui-launchers.md). Пользователь применяет HM своего GUI-профиля;
   NixOS rebuild и рестарт FileManager1 не нужны.
 
+Пользователь затем подтвердил работу открытия текстовых файлов на Acer
+и согласовал продолжение аудита. Это пользовательская live-приёмка сценария,
+не независимая проверка агентом Kitty/Neovim, UID или project environment
+и не приёмка desktop/Lenovo.
+
+## Съёмные накопители: udiskie, UDisks2 и polkit
+
+- Read-only source/declaration audit трёх GUI HM-профилей подтвердил udiskie
+  2.6.2, automount/notifications включены, tray=`auto`, user service привязан
+  к graphical-session/tray targets. Mac/server udiskie не включают. Waybar
+  всех трёх GUI hosts содержит tray. Реальные службы/устройства не проверялись.
+- `services.udiskie.settings.menu = "nested"` записывает `menu` в корень YAML,
+  но installed `Config.program_options` читает только `program_options`.
+  Поэтому этот setting игнорируется, действует upstream `menu=flat`.
+  AST-extracted настоящий Config подтвердил это; in-memory контроль с
+  `program_options.menu` распознаётся. В udiskie 2.6.2 `nested` также принимается
+  как legacy alias `smart`; рекомендация — корректная секция с `menu="smart"`,
+  если сохраняем заявленное намерение иерархического меню. Пока конфиг не менялся.
+- Отсутствие HM `preferStatusNotifierItems`/CLI `--appindicator` не признано
+  ошибкой: installed udiskie при tray + Wayland сам включает appindicator,
+  если опция не задана; пакет включает GTK/libappindicator dependencies.
+  Фактическая регистрация значка и rendering на Wayland не проверялись.
+- Действие Browse по умолчанию использует `xdg-open`; AST-extracted настоящий
+  `prompt.browser` с fake Popen подтвердил один неизменный аргумент каталога
+  с пробелами/Unicode. Read-only `xdg-mime query default inode/directory`
+  на Acer вернул `kitty-open.desktop`, чей package entry задаёт `kitty +open %U`.
+  Installed Kitty 0.47.0 по умолчанию открывает shell с cwd каталога, не Yazi;
+  в текущем Kitty config directory `*actions*` files не найдены, runtime не запускался.
+  Общий `yazi-xdg.desktop` уже умеет `kitty -- yazi %f` и объявляет directory MIME,
+  но явного default association `inode/directory` в GUI module нет.
+  Предлагается согласовать его отдельно, не подменять это FileManager1:
+  «Show in folder» по D-Bus и «открыть каталог» через MIME — разные входы.
+- Выбранные NixOS declarations Acer/desktop/Lenovo: UDisks 2.11.1/polkit включены,
+  mountOnMedia=false (upstream ACL-controlled `/run/media/$USER`). На Acer merged
+  extra polkit rules относятся к NetworkManager/ModemManager, не blanket storage allow.
+  Installed UDisks default policy разрешает обычный filesystem-mount активной
+  локальной сессии, но system/other-seat mount требует admin authentication.
+  Это privileged backend с пользовательским клиентом, не запуск Yazi от root.
+- Отдельный authentication-agent не найден среди выбранных NixOS user service
+  names и system package names; это coverage gap, не доказательство отсутствия
+  runtime/ручного agent. HM/личный автозапуск и настоящие auth-dialogs полностью
+  не обследовались. Polkit daemon сам по себе не гарантирует окно ввода пароля;
+  правила и агенты не добавлялись без подтверждённой потребности.
+- Устройства, mount/unmount/eject/power-off, D-Bus storage requests, auth prompts,
+  сборки и activation не выполнялись. Android/MTP остаётся отложенным до Lenovo;
+  legacy mount menu не возвращён. В этом шаге изменена только документация,
+  применять NixOS/HM не требуется; две конкретные настройки предложены для согласования.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |
