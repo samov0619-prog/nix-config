@@ -11,6 +11,7 @@
     ../modules/hyprland
     ../modules/nomacs
     ../modules/qt-theme
+    ../modules/ardour
     ../modules/tofi
     ../modules/waybar
   ];
@@ -20,7 +21,6 @@
     slurp
     swappy
     pwvucontrol
-    ardour
     audacious
     wl-clipboard
     freefilesync

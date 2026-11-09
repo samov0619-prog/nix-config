@@ -4,8 +4,6 @@ set -eu
 # POSIX-compliant theme toggler
 readonly THEME_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/theme/current_theme"
 
-readonly ARDOUR_UI="${XDG_CONFIG_HOME:-$HOME/.config}/ardour8/ui_config"
-
 readonly ALACRITTY_THEME="${XDG_CONFIG_HOME:-$HOME/.config}/alacritty/current-theme.toml"
 readonly ALACRITTY_THEMES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/alacritty/themes"
 
@@ -47,11 +45,8 @@ if [ -d "$ALACRITTY_THEMES_DIR" ]; then
     # touch "$ALACRITTY_THEME"
 fi
 
-# Update Ardour config if exists
-if [ -f "$ARDOUR_UI" ]; then
-    sed -i.bak -E "s|(Option name=\"color-file\" value=\")[^\"]*(\")|\1${theme}\2|" "$ARDOUR_UI"
-    rm -f "${ARDOUR_UI}.bak"
-fi
+# Ardour reads the desktop mode through its launcher on the next startup.
+# Never edit ui_config while the application may be using/saving it.
 
 # Hyprland notification (if hyprctl available)
 if command -v hyprctl >/dev/null 2>&1; then

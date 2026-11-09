@@ -367,7 +367,14 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
 ### Alacritty + toggle-theme
 
 - Темы хранятся в `~/.config/alacritty/themes/{dark,light}.toml` как symlinks.
-- `toggle-theme.sh` (F11): меняет dconf GNOME color-scheme, Qt env, Alacritty symlink, Ardour UI, уведомляет через hyprctl.
+- `toggle-theme.sh` (F11): меняет dconf GNOME color-scheme, вызывает native Qt appearance helper, меняет Alacritty symlink и уведомляет через hyprctl. Не пишет в Ardour UI config.
+- `home/linux/modules/ardour` wraps unchanged stable Ardour on the three Linux GUI
+  HM profiles. Desktop/CLI startup reads the same dconf mode and selects built-in
+  `captain_light`/`dark` in an existing mutable ui_config, with one original backup.
+  No live hook/daemon, no activation edits; running instances and first-run setup
+  are left alone. Major comes from the package. Synthetic launcher/F11/process
+  fixtures and selected merged declarations are checked, not the full HM build,
+  installed desktop or real DAW UI. See the module README for limits/application.
 - `alacritty-preview` позволяет пролистать все темы из alacritty-theme.
 
 ### Hyprland
