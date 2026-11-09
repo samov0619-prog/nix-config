@@ -51,6 +51,7 @@ in
           | tofi --prompt-text="🔑 pass: " --fuzzy-match=true \
           | xargs -r -d '\n' pass show \
           | head -n1 \
+          | tr -d '\n' \
           | wtype -
         '')
       ];

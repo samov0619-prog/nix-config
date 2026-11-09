@@ -485,6 +485,13 @@ flowchart TD
 - Mako: pinned HM регистрирует package D-Bus services, не local `exec-once`.
   Pass-secret-service: HM user service WantedBy/PartOf default и D-Bus registration;
   наличие регистрации не означает чтения/разблокировки password store в этом аудите.
+- Gpg-agent: pinned HM задаёт socket activation (`sockets.target`), не отдельный
+  Hyprland autostart. Общая policy ограничивает кеш часом и запрещает внешний
+  pinentry cache; Linux GUI использует pinentry-qt. Выбранные merged HM-атрибуты
+  Acer подтверждают SSH support=false и отсутствие GNOME Keyring, но runtime
+  сокетов/кеша/расшифровки не проверялся. Tofi passmenu запускается вручную через
+  `Super+Shift+P`; по решению пользователя вводит первую строку **без Enter**.
+  Проверки и применение — в [журнале](feedback.md#gpgpass-и-ввод-пароля-через-tofi).
 - Terminal-layout watcher подписывается на Hyprland socket и переключает раскладку
   при фокусе терминала; [script](../../home/linux/modules/hyprland/scripts/terminal-layout-en.sh)
   использует `socat` из [core packages](../../home/core-set/packages.nix).
