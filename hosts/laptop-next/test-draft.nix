@@ -33,6 +33,10 @@ let
     pkgsUnstable.amnezia-vpn.version = "5.0.3.0";
   };
   home = import ../../home/linux/laptop-next/default.nix { inherit pkgs; };
+  sharedGui = import ../../home/linux/gui-set/default.nix {
+    inherit pkgs;
+    config.home.homeDirectory = "/fixture/home";
+  };
   viewer = import ../../home/linux/modules/nomacs/default.nix { inherit lib pkgs; };
   pkgsGraphics = {
     linuxPackages_latest = {
@@ -122,8 +126,12 @@ assert
     "jdk"
   ];
 assert !(builtins.elem ../../home/linux/modules/xremap home.imports);
-assert builtins.elem ../../home/linux/modules/nomacs home.imports;
-assert home.disabledModules == [ ../../home/linux/modules/swayimg ];
+assert builtins.elem ../../home/linux/gui-set home.imports;
+assert builtins.elem ../../home/linux/modules/nomacs sharedGui.imports;
+assert !(builtins.pathExists ../../home/linux/modules/swayimg/default.nix);
+assert !(builtins.pathExists ../../home/linux/modules/swayimg/swayimg.lua);
+assert !(sharedGui.qt ? style);
+assert !(home ? disabledModules);
 assert viewer.home.packages == [ pkgs.nomacs ];
 assert
   viewer.programs.yazi.settings.opener.nomacs == [
@@ -156,7 +164,7 @@ assert !(viewer.xdg ? configFile);
   noUnpreparedMinecraftInstance = true;
   installGuardPresent = true;
   lenovoWaybarOverridePreservesUpstreamHooks = true;
-  lenovoStableNomacsWithYaziAndMimeAssociations = true;
+  sharedLinuxGuiStableNomacsWithYaziAndMimeAssociations = true;
   unencryptedExt4And48GiBSwapDeclarations = true;
   zramDisabledAndWeeklyTenGenerationRetention = true;
 }

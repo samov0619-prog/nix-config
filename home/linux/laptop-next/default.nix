@@ -3,12 +3,8 @@
   imports = [
     ../core-set
     ../gui-set
-    ../modules/nomacs
     ../../modules/voice-dictate
   ];
-
-  # Replace the shared viewer only on Lenovo; Acer/desktop keep Swayimg.
-  disabledModules = [ ../modules/swayimg ];
 
   # Keep the agreed raw configuration workflow on fresh HM 26.05 as well.
   wayland.windowManager.hyprland.configType = "hyprlang";

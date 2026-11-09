@@ -43,7 +43,7 @@ flowchart TD
     LEAF --> XR[xremap → external HM module]
     LEAF --> VOICE[voice-dictate + Acer Vulkan override]
     LGUI --> INTEG[XDG, pinentry, FileManager1]
-    LGUI --> DESK[Hyprland, swayimg, Tofi, Waybar]
+    LGUI --> DESK[Hyprland, nomacs, Tofi, Waybar]
 ```
 
 Это схема групп, не граф каждого пакета. HM, импортированный через `mkNixos`, не
@@ -104,7 +104,7 @@ NixOS imports. Inline overlay module в `mkNixos` не отдельный лок
 |  30 | [home/linux/gui-set/security.nix](../../home/linux/gui-set/security.nix)                                       | Linux GUI                 | Qt pinentry для GPG agent                                          |
 |  31 | [home/linux/modules/filemanager1-common/default.nix](../../home/linux/modules/filemanager1-common/default.nix) | Linux GUI                 | FileManager1 module, Yazi/Kitty integration                        |
 |  32 | [home/linux/modules/hyprland/default.nix](../../home/linux/modules/hyprland/default.nix)                       | Linux GUI                 | Session integration, scripts, bell, local plugin                   |
-|  33 | [home/linux/modules/swayimg/default.nix](../../home/linux/modules/swayimg/default.nix)                         | Linux GUI                 | Unstable swayimg и Yazi opener                                     |
+|  33 | [home/linux/modules/nomacs/default.nix](../../home/linux/modules/nomacs/default.nix)                           | Linux GUI                 | Stable nomacs, Yazi opener и image MIME defaults                    |
 |  34 | [home/linux/modules/tofi/default.nix](../../home/linux/modules/tofi/default.nix)                               | Linux GUI                 | Включение Tofi и menus                                             |
 |  35 | [home/linux/modules/tofi/module.nix](../../home/linux/modules/tofi/module.nix)                                 | Tofi                      | Опции и реализации menu helpers                                    |
 |  36 | [home/linux/modules/waybar/default.nix](../../home/linux/modules/waybar/default.nix)                           | Linux GUI                 | Waybar, CSS и scripts                                              |
@@ -122,7 +122,7 @@ NixOS imports. Inline overlay module в `mkNixos` не отдельный лок
   [Amnezia](../../pkgs/amnezia-vpn/default.nix).
 - HM: stable nixpkgs + overlays
   [FileManager1](../../pkgs/filemanager1-common/default.nix) и Freesm.
-- `pkgsUnstable` передаётся отдельно: Yazi/plugin и swayimg выбирают его явно;
+- `pkgsUnstable` передаётся отдельно: Yazi/plugin выбирают его явно, nomacs — stable;
   это не перевод всего профиля на unstable.
 - Chrome поступает через `browser-previews`, OpenCode — отдельный pinned input.
 - [hypr-spaces](../../pkgs/hypr-spaces/default.nix),

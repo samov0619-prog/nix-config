@@ -1,8 +1,9 @@
 # Lenovo draft: laptop-next
 
 Temporary outputs: `nixosConfigurations.laptop-next` and
-`homeConfigurations.samov-laptop-next`. Acer still owns `laptop`/`samov-laptop`;
-none of its configuration or other existing profiles changes in this step.
+`homeConfigurations.samov-laptop-next`. Acer still owns `laptop`/`samov-laptop`.
+Lenovo-specific settings stay isolated; explicitly shared changes such as the
+nomacs viewer below also apply to existing Linux GUI profiles.
 
 ## Already represented in configuration
 
@@ -28,9 +29,9 @@ none of its configuration or other existing profiles changes in this step.
 - Existing workstation CLI/devtools (including shared Python/Node prerequisites
   for Mason), OpenCode, browsers, Blender and Minecraft applications. Global Go
   is preserved as in the current workstation composition; cleanup is separate.
-- Lenovo replaces Swayimg with stable nomacs for Yazi and the image MIME types
-  advertised by nomacs. Existing Acer/desktop viewers and the Swappy screenshot
-  workflow stay unchanged. No custom UI, Qt workaround or user-settings file is
+- The shared Linux GUI set replaces Swayimg with stable nomacs on Acer, desktop
+  and Lenovo, for Yazi and the image MIME types advertised by nomacs. The Swappy
+  screenshot workflow stays unchanged. No custom UI, Qt workaround or settings file is
   imposed; Paint loading, native Wayland/HiDPI and editing saved copies still need
   live validation. Unstable nomacs is not selected because it is an upstream Beta.
 - The shared Node module selects `pkgs.nodejs_latest` unconditionally for every
@@ -115,5 +116,5 @@ composition comparisons passed. Existing outputs' module lists were preserved;
 Lenovo has its own HM output, NixOS overlay and isolated graphics package argument.
 No full configuration evaluation, build, activation or live UI validation was run;
 only selected merged graphics and HM viewer attributes were evaluated. The viewer
-checks confirm stable nomacs/Yazi/MIME on Lenovo, unchanged Swayimg on Acer/desktop
-and preserved Swappy on all three.
+checks confirm stable nomacs/Yazi/MIME and preserved Swappy on Acer, desktop and
+Lenovo; server and Mac do not gain an image viewer.

@@ -32,7 +32,7 @@
     package = pkgsUnstable.yazi;
     # macOS: для язи просмотрщиком изображений использовать дефолтный
     # мак-просмотрщик (Quick Look через `open`). Linux-специфичный opener на
-    # swayimg подключается только в home/linux/modules/swayimg.
+    # nomacs подключается только в home/linux/modules/nomacs через Linux GUI.
     plugins = {
       compress = pkgsUnstable.yaziPlugins.compress.overrideAttrs (old: {
         postPatch = (old.postPatch or "") + ''

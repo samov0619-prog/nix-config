@@ -52,8 +52,14 @@ plugin к его API и проверить выделение одного/не�
 
 ## Swayimg: конкретная зависимость от нового формата конфигурации
 
+Исторический разбор: по последующему решению Swayimg заменён stable nomacs на всех
+Linux GUI hosts (Acer, desktop, Lenovo). Старый модуль/Lua удалены из рабочего дерева
+и доступны в Git history; выводы ниже описывают
+предыдущий workflow, а не текущий выбор просмотрщика.
+
 Модуль появился в `e31a9b0` (`linux/core-set: add swayimg image viewer for yazi`)
-сразу с unstable и [Lua-конфигурацией](../../home/linux/modules/swayimg/swayimg.lua).
+сразу с unstable и Lua-конфигурацией
+(`git show c38b1f8:home/linux/modules/swayimg/swayimg.lua`).
 Commit объясняет добавление просмотрщика, но отдельно выбор канала не обосновывает.
 
 Здесь есть проверяемая причина не переключать пакет вслепую:
