@@ -90,8 +90,12 @@ Separately authorized one-call tracing captured the exception. With a temporary
 upstream Kitty backport in that diagnostic terminal, the user confirmed live F11
 both ways; protocol-only observation confirmed real notifications and renderer/theme
 mode changes. All temporary Kitty replacements/tracing were restored and the
-opt-in TUI observer disabled. **The fixed Kitty package has not been built or
-activated.** See [Kitty checks/application](../../modules/kitty/README.md).
+opt-in TUI observer disabled. The user then chose to remove the local Kitty
+backport, overlay and its dedicated tests rather than maintain a temporary fix
+before migration. That package was never built/activated. Stock Kitty 0.47.0's
+live-switching limitation on Acer is accepted until an update; verify Kitty ≥0.47.1
+and F11 on Lenovo using the [existing checklist](../../../docs/laptop-audit/lenovo-checklist.md).
+The independent OpenCode 2.1.4 startup-cache fix and its regression tests remain.
 Use the HM build/application steps
 in [README.md](README.md). This client-only patch needs reopening the TUI, not a
 shared-service restart. The independent corporate Mac archive is unchanged.

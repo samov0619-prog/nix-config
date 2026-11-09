@@ -18,7 +18,6 @@ let
   '';
 in
 {
-  nixpkgs.overlays = [ (import ./overlay.nix) ];
   home.packages = [
     pkgs.kitty
     pkgs.nerd-fonts.noto
