@@ -13,6 +13,8 @@ NixOS и HM управляются раздельно: NixOS через `nixosCo
 - Хелперы: `pkgsFor`, `pkgsUnstableFor`, `mkHM`, `mkNixos`.
 - Overlays: `filemanager1-common` + `freesm` — только для desktop/laptop HM;
   локальный `amnezia-vpn` — только для NixOS desktop/laptop.
+- `blueman-polkit` overlay — только NixOS laptop/laptop-next: прежний stable
+  Blueman с Polkit build support и неизменёнными upstream actions/wheel rule.
 - `xremap-flake` передаётся в `extraSpecialArgs`.
 
 ### NixOS-хосты
@@ -416,6 +418,13 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
 
 ### Hyprland
 
+- Shared Linux GUI HM security enables native `services.hyprpolkitagent` on
+  Acer/desktop/Lenovo, tied to UWSM's graphical session; no extra exec-once.
+  Mac/server are unchanged. Blueman's Polkit build override is separate and
+  NixOS-only on the two laptops. Stock Blueman permits its four helper actions
+  to wheel without authentication; do not call this per-application isolation.
+  Fixture/declaration checks pass, not real builds/install layout or GUI/PAM.
+  See `docs/laptop-audit/polkit.md` for apply/acceptance and override cleanup.
 - Disk status in shared Waybar is `custom/disk` on Acer/desktop/Lenovo: home
   filesystem available/total GiB plus whole backing-disk I/O busy %, read/write
   MiB/s in tooltip. A Waybar-owned Python JSON stream reads statvfs/sysfs every 5s,

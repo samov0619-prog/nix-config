@@ -157,6 +157,11 @@
       };
 
       overlays = {
+        # Keep Blueman's own Polkit actions/rules; only enable missing build support.
+        blueman-polkit = final: prev: {
+          blueman = final.callPackage ./pkgs/blueman-polkit { upstream = prev.blueman; };
+        };
+
         amnezia-vpn = final: prev: {
           amnezia-vpn = final.callPackage ./pkgs/amnezia-vpn { };
         };
@@ -179,7 +184,10 @@
 
         laptop = mkNixos {
           system = systems.linux;
-          overlays = [ self.overlays.amnezia-vpn ];
+          overlays = [
+            self.overlays.amnezia-vpn
+            self.overlays.blueman-polkit
+          ];
           modules = [
             ./hosts/profiles/time.nix
             ./hosts/profiles/mdns.nix
@@ -200,7 +208,10 @@
 
         laptop-next = mkNixos {
           system = systems.linux;
-          overlays = [ self.overlays.amnezia-vpn ];
+          overlays = [
+            self.overlays.amnezia-vpn
+            self.overlays.blueman-polkit
+          ];
           # Isolated graphics package set; NVIDIA needs unfree evaluation enabled.
           extraSpecialArgs.pkgsGraphics = import nixpkgs-unstable {
             system = systems.linux;

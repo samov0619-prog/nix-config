@@ -781,6 +781,39 @@ pinned nixpkgs `pkgs/by-name/br/brightnessctl/package.nix` и выбранные
 2.4.6 desktop/D-Bus/systemd files, `Constants.py`, `AuthAgent.py`,
 `MechanismApplication.py` и `plugins/mechanism/Network.py`.
 
+## Штатный Polkit для Blueman и Hyprland
+
+- Пользователь согласовал штатную схему, без собственной разрешающей policy.
+  Проверка upstream 2.4.6 уточнила эффект: four actions имеют defaults
+  inactive=no, active=auth_admin_keep, но поставляемый `blueman.rules`
+  разрешает их wheel без пароля и без active/local condition. Это правило
+  сохранено. Для samov/wheel не обещается новый password prompt или изоляция
+  от программ с тем же UID; прежнее объяснение «любая локальная программа»
+  следует понимать как вопрос проверки вызывающего пользователя, не sandbox.
+- Overlay `blueman-polkit` включён только в NixOS laptop/laptop-next: в прежний
+  stable package добавлены build dependency Polkit и `--enable-polkit`, source
+  и version прежние. Module registrations system/D-Bus/systemd используют один
+  исправленный package. Desktop/server/installer/HM package sets без override.
+  Native installCheck проверяет POLKIT=True и сохранность upstream policy/rules;
+  результат реальной сборки ещё не проверен.
+- Shared Linux GUI HM security module включает штатный hyprpolkitagent:
+  WantedBy/PartOf/After graphical-session.target, без второго exec-once.
+  Область Acer/desktop/Lenovo, Mac/server не меняются. В репозитории прежде
+  не было явного агента; узкий process-name snapshot текущего пользователя
+  тоже не нашёл его, но это не полный аудит ручного autostart/runtime.
+- Девять verifier fixture tests прошли. Selected system declarations Acer,
+  Lenovo и двух desktop outputs, затем HM GUI и Mac/server прошли отдельными
+  bounded offline/noIFD evaluation. Более широкие baseline HM/system attempts
+  превысили 15/25 секунд; они не засчитываются. Тест HM учёл штатную нормализацию
+  ExecStart в список из одной команды. Новых groups/sudo/PAM/allow-all rules нет.
+- Ни build/installCheck реального нового пакета, ни activation, root helper,
+  D-Bus media/hardware calls, GUI/PAM prompts, подключения и периферия не запускались.
+  [Порядок](polkit.md): пользователь применяет NixOS ноутбука для package/policies,
+  HM для агента, начинает свежую графическую сессию и отдельно проверяет диалог.
+  Для desktop нужен только его HM. Живой запуск агента и installed policy остаются
+  непроверенными до пользовательской приёмки; прежняя runtime-граница Polkit
+  теперь закрыта декларацией, не заявлением об успешном живом authentication.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |
