@@ -54,7 +54,8 @@ Reviewer считает возможным завершить текущий о�
    подтвердила выбранные HM files/enable links и XDG autostart AmneziaVPN/Blueman,
    `Linger=no` и совпадение выбранных boot components. Это не весь runtime-аудит.
    [Разбор `gh`/pinentry](gh-keyring.md) установил timeout в source и живой provider,
-   но не воспроизвёл cold/warm authentication; конфигурация авторизации не менялась.
+   пользователь затем воспроизвёл cold failure до завершения pinentry и warm success
+   без повторного запроса. Агент authentication не запускал; конфигурация не менялась.
 3. **Установка Lenovo заблокирована:** hardware/PRIME inventory, целевой диск
    `REPLACE_ME`, окончательная graphics/power policy и согласованное переименование
    Acer → laptop-old / Lenovo → laptop остаются впереди. Failing assertion сохранён.
