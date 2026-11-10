@@ -501,6 +501,83 @@ flowchart TD
   при фокусе терминала; [script](../../home/linux/modules/hyprland/scripts/terminal-layout-en.sh)
   использует `socat` из [core packages](../../home/core-set/packages.nix).
 
+## Дополнительная installed-state сверка — 10.11.2026
+
+Это согласованное продолжение после bounded source-прохода, не повторная проверка
+принятых приложений. Репозиторий на момент чтения — `a689b81`; конфигурация не менялась.
+
+### Активные поколения и ручной enable
+
+- Восемь выбранных HM files совпадают с repo побайтно, а live links — с активным
+  HM generation: `hyprland.conf`, `terminal-layout-en.sh`, `toggle-theme.sh`,
+  Waybar `config.jsonc`, `check-nix-updates.sh`, `nix-updates-view.sh`, `gp.sh`,
+  `startup-time.sh`. Установленный `tofi-launch` ссылается на актуальный `launch.py`.
+  Это не сравнение всего closure и не независимая GUI-приёмка launcher.
+- `/run/current-system` и `/run/booted-system` различаются, но targets kernel,
+  initrd, kernel-modules, firmware и bytes kernel-params/nixos-version совпадают;
+  running kernel — `6.18.38`. Разные поколения сами по себе не доказывают нужду
+  в reboot; остальные различия этих system closures не исследованы.
+- `loginctl show-user samov` сообщает `Linger=no`, `State=active`.
+  Это snapshot, не эксперимент logout/reboot. User manager не ограничен временем
+  жизни одного терминала; выключенный linger не останавливает его при закрытии Kitty.
+- Все 12 `.wants`-ссылок в `~/.config/systemd/user` ведут к соответствующим files
+  активного HM generation. В этой выборке нет отдельного расхождения ручного enable:
+
+| Target                     | Wants                                                                |
+| -------------------------- | -------------------------------------------------------------------- |
+| `default.target`           | backup `.path`, `pass-secret-service.service`                        |
+| `graphical-session.target` | FileManager1, hyprpaper, hyprpolkitagent, onionbell, udiskie, xremap |
+| `minecraft.target`         | packwiz-serve, minecraft-packwiz-update, minecraft-server            |
+| `sockets.target`           | gpg-agent.socket                                                     |
+
+`minecraft.target` сейчас inactive/dead, без WantedBy/RequiredBy. Статус `enabled`
+его трёх services не означает startup при login: install links направлены в этот
+отдельный target. Настоящий Minecraft/backup lifecycle повторно не запускался.
+
+Dependency links дополнительно перечислены во всех существующих каталогах из
+`systemd-analyze --user unit-paths`, включая runtime/generator/package paths.
+`/etc/systemd/user` добавляет NixOS activation, tmpfiles setup/clean timer,
+D-Bus/PipeWire/speech-dispatcher sockets и WirePlumber при PipeWire.
+В `list-timers --all` виден один user timer — `systemd-tmpfiles-clean.timer`;
+это не перечень system timers. OBEX имеет D-Bus alias `dbus-org.bluez.obex.service`,
+а не обнаруженный login `.wants`; сейчас running. Speech Dispatcher socket
+listening, сам service inactive: доступный socket не равен работающему speech daemon.
+Socket не подключали, Bluetooth transfer/звук не вызывали.
+
+Installed xremap unit — `WantedBy/After/PartOf=graphical-session.target`,
+`Restart=always`, `Type=simple`, сейчас running; запускает `xremap-0.15.9` с
+store-owned YAML. Это подтверждение unit wiring, не независимый тест remaps,
+evdev permissions или полного external module provenance.
+
+### XDG autostart: фактические search paths
+
+Проверены только XDG-поля окружения agent/user manager, не весь environment:
+config search paths и `XDG_CURRENT_DESKTOP=Hyprland` совпадают. Каталоги autostart
+перечислены в `XDG_CONFIG_HOME` и каждом `XDG_CONFIG_DIRS`, а не только `/etc/xdg`.
+Обнаружены ровно два desktop entries в этих путях:
+
+- `~/.config/autostart/AmneziaVPN.desktop`: unmanaged entry, `Exec=AmneziaVPN`.
+  Генератор разрешил binary в `/run/current-system/sw/bin/AmneziaVPN`.
+  Не HM-managed: при миграции переносить отдельно, если нужен тот же GUI autostart.
+  Запись не содержит указания подключить конкретный профиль; настройки и состояние
+  VPN-соединений не читались и не менялись.
+- `/run/current-system/sw/etc/xdg/autostart/blueman.desktop`:
+  package entry с `Exec=blueman-applet`; это не недостающий HM service.
+
+В `generator.late` есть соответствующие
+`app-AmneziaVPN@autostart.service` и `app-blueman@autostart.service`, обе running,
+с `Restart=no`, `ExitType=cgroup`, `PartOf=graphical-session.target`.
+UWSM runtime drop-in дополнительно связывает их с `xdg-desktop-autostart.target`,
+выбирает `app-graphical.slice` и session environment file (содержимое не читалось).
+Этот target active. Наличие generator files, process state и package entry
+подтверждает выбранный механизм, но не готовность tray UI/подключений.
+
+**Границы:** не выполнялись restart/logout/login, boot-time tracing, полный аудит
+system units, всех D-Bus activators, shell hooks или transient app scopes.
+Секреты, личные профили и журналы приложений не читались. Отдельно подтверждён
+provider Secret Service и разобран timeout [GitHub CLI/pinentry](gh-keyring.md).
+Документация не требует NixOS/HM activation.
+
 ## Upstream provenance и границы покрытия
 
 Проверены локальные исходники выше и **pinned** upstream modules, а не документация
@@ -515,10 +592,12 @@ flowchart TD
   `pass-secret-service.nix:52–75`; также `modules/wayland.nix:10`,
   `modules/dbus.nix:13–35`, `modules/programs/waybar.nix:222–244,346–367`.
 
-Остались: прочие user/system units и sockets, xremap external module, portals/audio,
-XDG autostart desktop files, реальные login/environment/order, ручной enable/lingering,
-активные поколения, сетевые профили и приложения. Ни полного effective-host
-evaluation/build, ни старта/остановки, ни boot-time измерений в этом шаге нет.
+Исторический остаток этого source-шага включал прочие units/sockets, xremap,
+portals/audio, XDG autostart, login/environment/order, ручной enable/lingering,
+активные поколения и приложения. Более поздние границы — в разделе installed-state
+выше, [Polkit](polkit.md), [portals](portals.md), [журнале](feedback.md) и
+[итогах](closing.md); этот старый список не является новым заданием повторить всё.
+Полного effective-host evaluation/build, lifecycle или boot-time измерений здесь нет.
 
 Выполнены форматирование Prettier 3.9.5, проверка локальных ссылок/границ строк,
 whitespace и узких sensitive-patterns. Изолированная evaluation настоящего
@@ -527,7 +606,7 @@ Minecraft module подтвердила inactive default, target/service hooks, 
 строками, systemd options приняты в attribute sink: это проверка деклараций,
 не полноценная HM evaluation, unit lifecycle или backup integration test.
 
-**Применение:** документация, NixOS/HM switch не требуется. Для следующего малого
-шага сначала решить lifecycle/autostart Minecraft и смысл backup, затем отдельно
-править generic module/README и проверять на изолированных данных. Рабочий сервер
-или настоящий backup remote для эксперимента не использовать.
+**Применение:** документация, NixOS/HM switch не требуется. Lifecycle/autostart
+Minecraft и backup policy уже разобраны выше; не переоткрывать их без нового
+основания. Следующие границы согласовывать по [итогам](closing.md), не использовать
+рабочий сервер или настоящий backup remote для эксперимента.

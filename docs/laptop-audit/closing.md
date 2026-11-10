@@ -50,6 +50,11 @@ Reviewer считает возможным завершить текущий о�
    Они не закрыты выборочными source-проверками; private/secret state намеренно
    не исследовался. Дальнейшую глубину этой работы согласовывать отдельно,
    а не продлевать текущий проход бесконечным повторением принятых решений.
+   Последующая [installed-state сверка](startup.md#дополнительная-installed-state-сверка--10112026)
+   подтвердила выбранные HM files/enable links и XDG autostart AmneziaVPN/Blueman,
+   `Linger=no` и совпадение выбранных boot components. Это не весь runtime-аудит.
+   [Разбор `gh`/pinentry](gh-keyring.md) установил timeout в source и живой provider,
+   но не воспроизвёл cold/warm authentication; конфигурация авторизации не менялась.
 3. **Установка Lenovo заблокирована:** hardware/PRIME inventory, целевой диск
    `REPLACE_ME`, окончательная graphics/power policy и согласованное переименование
    Acer → laptop-old / Lenovo → laptop остаются впереди. Failing assertion сохранён.

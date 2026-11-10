@@ -39,6 +39,7 @@ Acer после backup/lifecycle fixes; это не проверка Minecraft r
 - [Polkit](polkit.md): штатная поддержка Blueman и графический агент Hyprland, без собственной разрешающей policy.
 - [Desktop portals](portals.md): штатный маршрут Hyprland/GTK и границы проверки chooser/screen sharing.
 - [Карта запуска](startup.md): Minecraft, proxy и GUI; источники, зависимости и открытые риски.
+- [GitHub CLI/pinentry](gh-keyring.md): трёхсекундный keyring timeout, живой pass-secret-service provider и границы диагноза.
 - [Питание и температуры](power.md): активная policy Acer, происхождение настроек и варианты Lenovo.
 - [Графика Lenovo](graphics.md): поддержка Panther Lake/RTX 5060 в locked stack и границы до живой проверки.
 - [Источники пакетов](package-sources.md): история исключений unstable и сравнение со свежим stable.
