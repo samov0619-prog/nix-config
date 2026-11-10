@@ -157,9 +157,9 @@ assert sys.argv[1:] in (['poweroff'], ['reboot'])
 
     def test_gpu_helper_with_fake_single_gpu_and_failure(self):
         linux = MODULE.parent.parent
-        for profile in ("laptop", "desktop"):
+        for profile in ("laptop-old", "desktop"):
             self.assertIn("gp.sh", (linux / profile / "waybar-config.jsonc").read_text())
-        self.assertNotIn("gp.sh", (linux / "laptop-next/waybar-config.jsonc").read_text())
+        self.assertNotIn("gp.sh", (linux / "laptop/waybar-config.jsonc").read_text())
         self.fake("nvidia-smi", """
 import os, sys
 print('12, 345')

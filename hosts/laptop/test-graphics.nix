@@ -1,5 +1,5 @@
 # Selected merged NixOS attributes, without builds, IFD or live GPU checks.
-# nix eval --impure --json --offline --option allow-import-from-derivation false --file hosts/laptop-next/test-graphics.nix
+# nix eval --impure --json --offline --option allow-import-from-derivation false --file hosts/laptop/test-graphics.nix
 let
   flake = builtins.getFlake (toString ../..);
   lib = flake.inputs.nixpkgs.lib;
@@ -12,14 +12,14 @@ let
     inherit system;
     config.allowUnfree = true;
   };
-  target = flake.nixosConfigurations.laptop-next;
+  target = flake.nixosConfigurations.laptop;
   cfg = target.config;
   # The option's apply function turns this list into a compressed buildEnv.
   # Inspect merged definitions before apply, without realizing that environment.
   firmwareInputs = lib.concatLists target.options.hardware.firmware.definitions;
   linuxFirmware = lib.filter (p: (p.pname or "") == "linux-firmware") firmwareInputs;
   firmwarePaths = map (p: p.drvPath) firmwareInputs;
-  existingFirmware = lib.genAttrs [ "laptop" "desktop" ] (
+  existingFirmware = lib.genAttrs [ "laptop-old" "desktop" ] (
     host:
     let
       package = flake.nixosConfigurations.${host}.pkgs.linux-firmware;
@@ -36,10 +36,27 @@ assert
   cfg.hardware.nvidia.package.version == unstable.linuxPackages_latest.nvidiaPackages.latest.version;
 assert cfg.hardware.nvidia.package.open.drvPath != "";
 assert cfg.hardware.nvidia.open;
-assert !cfg.hardware.nvidia.prime.offload.enable;
+assert cfg.hardware.nvidia.prime.offload.enable;
+assert cfg.hardware.nvidia.prime.offload.enableOffloadCmd;
+assert cfg.hardware.nvidia.prime.intelBusId == "PCI:0:2:0";
+assert cfg.hardware.nvidia.prime.nvidiaBusId == "PCI:2:0:0";
 assert !cfg.hardware.nvidia.prime.sync.enable;
 assert !cfg.hardware.nvidia.prime.reverseSync.enable;
 assert !cfg.hardware.nvidia.powerManagement.enable;
+assert !cfg.hardware.nvidia.powerManagement.finegrained;
+assert lib.all
+  (
+    name:
+    !(builtins.hasAttr name cfg.environment.variables)
+    && !(builtins.hasAttr name cfg.environment.sessionVariables)
+  )
+  [
+    "__NV_PRIME_RENDER_OFFLOAD"
+    "__NV_PRIME_RENDER_OFFLOAD_PROVIDER"
+    "__GLX_VENDOR_LIBRARY_NAME"
+    "__VK_LAYER_NV_optimus"
+    "DRI_PRIME"
+  ];
 assert cfg.hardware.graphics.enable32Bit;
 assert cfg.hardware.graphics.package.drvPath == unstable.mesa.drvPath;
 assert cfg.hardware.graphics.package32.drvPath == unstable.pkgsi686Linux.mesa.drvPath;
@@ -57,5 +74,6 @@ assert lib.any (a: lib.hasInfix "not install-ready" a.message && !a.assertion) c
   inherit existingFirmware;
   selectedMergedGraphicsAttributes = true;
   openModuleDerivationEvaluates = true;
+  primeOffloadWithExplicitCommandAndNoGlobalGpuSelection = true;
   installGuardPresent = true;
 }

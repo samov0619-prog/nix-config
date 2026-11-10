@@ -9,9 +9,9 @@ builtins.mapAttrs (
   let
     config = home.config;
     gui = builtins.elem name [
-      "samov-laptop"
+      "samov-laptop-old"
       "samov-desktop"
-      "samov-laptop-next"
+      "samov-laptop"
     ];
     packages = map lib.getName config.home.packages;
     mpv = config.programs.mpv;

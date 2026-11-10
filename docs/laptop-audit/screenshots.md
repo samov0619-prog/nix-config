@@ -58,7 +58,7 @@ Selected merged declarations проверяют helper только на трё�
 Сборки и activation агентом не выполнялись.
 
 1. После ревью применить свой профиль: на Acer
-   `home-manager switch --flake .#samov-laptop`, на desktop — `.#samov-desktop`.
+   `home-manager switch --flake .#samov-laptop-old`, на desktop — `.#samov-desktop`.
    Lenovo draft на Acer не применять. NixOS rebuild не нужен.
 2. Выполнить `hyprctl reload`. Нажать Print, затем Esc: Swappy не должен открыться.
 3. Снова Print, выделить безопасную тестовую область: Swappy должен открыться.

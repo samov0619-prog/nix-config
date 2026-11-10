@@ -1,7 +1,7 @@
 # Shared Qt appearance
 
-Imported by the Linux GUI set on Acer (`samov-laptop`), desktop and the Lenovo
-draft (`samov-laptop-next`). Server and Mac do not import it. No NixOS change,
+Imported by the Linux GUI set on Acer (`samov-laptop-old`), desktop and the Lenovo
+draft (`samov-laptop`). Server and Mac do not import it. No NixOS change,
 extra daemon, polling or custom application UI is needed.
 
 ## Policy and mechanism
@@ -56,7 +56,7 @@ nomacs, which could otherwise overwrite the migrated keys from its cached settin
 After personal review, on Acer:
 
 1. Close nomacs and other Qt applications.
-2. Apply `home-manager switch --flake .#samov-laptop` (desktop uses
+2. Apply `home-manager switch --flake .#samov-laptop-old` (desktop uses
    `.#samov-desktop`). Do not apply the Lenovo draft to Acer.
 3. Log out and back into Hyprland, reopening terminals. Activation alone cannot
    replace environment variables in existing Kitty/Yazi/launcher processes.

@@ -58,10 +58,10 @@ overlay и специальные тесты удалены без примен�
 независимо от версии Kitty и сохраняется.
 Правка Python-теста сама по себе не требует пересборки OpenCode. После review:
 
-1. Собрать свой HM output: `nix build .#homeConfigurations.samov-laptop.activationPackage`.
+1. Собрать свой HM output: `nix build .#homeConfigurations.samov-laptop-old.activationPackage`.
 2. Проверить binary из собранного профиля:
    `python3 -B home/apps/opencode/tests/test_theme_mode_tui.py ./result/home-path/bin/opencode`.
-3. Применить `home-manager switch --flake .#samov-laptop`, затем завершить работу
+3. Применить `home-manager switch --flake .#samov-laptop-old`, затем завершить работу
    в текущем TUI и переоткрыть его. Для desktop использовать свой профиль;
    Lenovo draft на Acer не применять. NixOS rebuild и restart service не нужны:
    этот patch меняет только TUI. Одного `/reload` для замены binary недостаточно.
@@ -735,13 +735,13 @@ Native clipboard-service PNG/text support не заменяет этот termina
 
 1. Проверить diff и собрать Home Manager без activation:
    ```fish
-   nix build --no-link .#homeConfigurations.samov-laptop.activationPackage
+   nix build --no-link .#homeConfigurations.samov-laptop-old.activationPackage
    ```
    Для desktop — `samov-desktop`. Пока новые файлы не отслеживаются Git,
    использовать `path:.#…` вместо `.#…`.
 2. Применить **только Home Manager** для нужного хоста:
    ```fish
-   home-manager switch --flake .#samov-laptop
+   home-manager switch --flake .#samov-laptop-old
    ```
    Для этих изменений NixOS switch не требуется.
 3. После изменений config/local plugins достаточно автоматической перезагрузки

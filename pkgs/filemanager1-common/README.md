@@ -17,7 +17,7 @@ D-Bus activation, source pin and dependencies are unchanged.
 ## Checks
 
 ```fish
-set fm_source (nix eval --raw .#homeConfigurations.samov-laptop.config.services.filemanager1-common.package.src.outPath)
+set fm_source (nix eval --raw .#homeConfigurations.samov-laptop-old.config.services.filemanager1-common.package.src.outPath)
 python3 -B pkgs/filemanager1-common/test_localhost_uri.py --source "$fm_source"
 nix eval --impure --offline --json --option allow-import-from-derivation false --file pkgs/filemanager1-common/test-declarations.nix
 ```
@@ -46,7 +46,7 @@ is specific to the current pin and must be reviewed alongside an upstream fix.
 ## Apply and accept
 
 1. After review, the user applies Home Manager: on Acer,
-   `home-manager switch --flake .#samov-laptop`; desktop uses `.#samov-desktop`.
+   `home-manager switch --flake .#samov-laptop-old`; desktop uses `.#samov-desktop`.
    Do not apply the Lenovo draft on Acer. No NixOS rebuild is needed.
 2. Ensure the daemon uses the new executable:
    `systemctl --user restart filemanager1-dbus.service`.

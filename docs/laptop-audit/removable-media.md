@@ -29,7 +29,7 @@ Android/MTP остаётся отдельной отложенной задач�
 ```fish
 set declarations (mktemp /tmp/opencode/removable-declarations.XXXXXX.json)
 nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/gui-set/test-xdg-declarations.nix > "$declarations"
-set udiskie_package (nix eval --offline --raw .#homeConfigurations.samov-laptop.config.services.udiskie.package.outPath)
+set udiskie_package (nix eval --offline --raw .#homeConfigurations.samov-laptop-old.config.services.udiskie.package.outPath)
 python3 -B home/linux/gui-set/test_removable_launch.py --declarations "$declarations" --udiskie-package "$udiskie_package"
 ```
 
@@ -58,7 +58,7 @@ polkit dialogs не используются. Полные builds и installed l
 
 ## Применение и приёмка
 
-1. Пользователь применяет HM: на Acer `home-manager switch --flake .#samov-laptop`;
+1. Пользователь применяет HM: на Acer `home-manager switch --flake .#samov-laptop-old`;
    desktop — `.#samov-desktop`. Lenovo draft на Acer не применять.
    NixOS rebuild и рестарт FileManager1 не нужны.
 2. Для перечитывания меню выполнить `systemctl --user restart udiskie.service`.

@@ -132,7 +132,7 @@ missing dependency errors, сохранение UID/EUID/cwd и синтетич
 ```fish
 # Use an existing GLib library; this does not build or open a menu.
 python3 -B home/linux/modules/tofi/test_launch.py --glib /path/to/libglib-2.0.so.0
-nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/modules/tofi/test-declarations.nix --apply 'profiles: profiles.samov-laptop'
+nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/modules/tofi/test-declarations.nix --apply 'profiles: profiles.samov-laptop-old'
 ```
 
 Выбранные merged declarations Acer проверены: ровно один launcher, точный wrapper
@@ -149,7 +149,7 @@ Ruff/Prettier отсутствуют; Python/Markdown не форматиров�
 
 ```fish
 set desktop_file (mktemp /tmp/opencode/nvim-xdg.XXXXXX.desktop)
-nix eval --impure --offline --raw --option allow-import-from-derivation false --file home/linux/gui-set/test-xdg-declarations.nix --apply 'profiles: profiles.samov-laptop.desktopText' > "$desktop_file"
+nix eval --impure --offline --raw --option allow-import-from-derivation false --file home/linux/gui-set/test-xdg-declarations.nix --apply 'profiles: profiles.samov-laptop-old.desktopText' > "$desktop_file"
 python3 -B home/linux/gui-set/test_xdg_text.py --desktop-file "$desktop_file"
 ```
 
@@ -175,7 +175,7 @@ Fake Kitty только проверяет/передаёт argv; это **не*
 
 ## Применение и живая приёмка
 
-1. Пользователь применяет HM: на Acer `home-manager switch --flake .#samov-laptop`;
+1. Пользователь применяет HM: на Acer `home-manager switch --flake .#samov-laptop-old`;
    desktop использует `.#samov-desktop`. Lenovo draft на Acer не применять.
    Затем `hyprctl reload`, чтобы raw config использовал новый `tofi-launch`.
    NixOS rebuild и рестарт FileManager1 не нужны.

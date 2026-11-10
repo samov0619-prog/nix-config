@@ -5,7 +5,7 @@
 - NixOS Acer/Lenovo: overlay `blueman-polkit` добавляет Polkit в build inputs
   существующего stable Blueman и передаёт `--enable-polkit`. Версия, source,
   интерфейсы D-Bus и штатные policy/rules не заменяются. Overlay в `flake.nix`
-  подключён только к `laptop`/`laptop-next`; desktop/server/installer и HM package
+  подключён только к `laptop-old`/`laptop`; desktop/server/installer и HM package
   sets его не получают. Обычный desktop по-прежнему без Bluetooth/Blueman.
 - Linux GUI HM Acer/desktop/Lenovo: native `services.hyprpolkitagent.enable=true`.
   Штатный HM module запускает агент через user service, привязанный к
@@ -75,10 +75,10 @@ Upstream устанавливает четыре actions: `org.blueman.network.s
 
 ```fish
 python3 -B pkgs/blueman-polkit/test_verify.py
-for host in laptop lenovo desktop desktopTemplate
+for host in laptop-old laptop desktop desktopTemplate
     nix eval --impure --offline --json --option allow-import-from-derivation false --expr "(import ./pkgs/blueman-polkit/test-declarations.nix).$host"
 end
-for profile in samov-laptop samov-desktop samov-laptop-next samov-mac samov-server
+for profile in samov-laptop-old samov-desktop samov-laptop samov-mac samov-server
     nix eval --impure --offline --json --option allow-import-from-derivation false --expr "(import ./home/linux/gui-set/test-polkit-declarations.nix).$profile"
 end
 ```
@@ -96,8 +96,8 @@ streams не читались/не менялись.
    Она не применяет систему или HM и агентом не запускалась.
    Lenovo draft на Acer не применять.
 2. Завершить Bluetooth-передачи и применить NixOS:
-   `sudo nixos-rebuild switch --flake .#laptop`. Это обновит Blueman/policies.
-   Затем `home-manager switch --flake .#samov-laptop` добавит user agent.
+   `sudo nixos-rebuild switch --flake .#laptop-old`. Это обновит Blueman/policies.
+   Затем `home-manager switch --flake .#samov-laptop-old` добавит user agent.
    Desktop получает только HM-изменение: `home-manager switch --flake .#samov-desktop`.
 3. Сохранив работу, выйти и войти в графическую сессию: это даст свежий
    Blueman applet и проверит штатный запуск агента. Затем

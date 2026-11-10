@@ -15,7 +15,7 @@ let
         cat <<'EOF'
       Usage: nix-flake-update-verify --hosts HOST (--input INPUT | --no-update) [--server-settings DIR]
 
-      Hosts: laptop, desktop, server, server-installer, mac, all
+      Hosts: laptop, laptop-old, desktop, server, server-installer, mac, all
       Inputs: nixpkgs, nixpkgs-unstable, home-manager, browser-previews,
               disko, freesm, nix-gc-env, xremap-flake, all
 
@@ -66,7 +66,7 @@ let
 
       case "$(uname -s)" in
         Linux)
-          supported_hosts="laptop desktop server server-installer"
+          supported_hosts="laptop laptop-old desktop server server-installer"
           ;;
         Darwin)
           supported_hosts="mac"
@@ -161,7 +161,7 @@ let
 
       for target_host in $hosts; do
         case "$target_host" in
-          laptop | desktop | server)
+          laptop | laptop-old | desktop | server)
             build_target "$target_host" nixos ".#nixosConfigurations.$target_host.config.system.build.toplevel"
             build_target "$target_host" home-manager ".#homeConfigurations.samov-$target_host.activationPackage"
             ;;
@@ -184,7 +184,7 @@ in
 
   home.file.".config/fish/completions/nix-flake-update-verify.fish".text = ''
     complete -c nix-flake-update-verify -f
-    complete -c nix-flake-update-verify -l hosts -r -a 'laptop desktop server server-installer mac all' -d 'Host to verify'
+    complete -c nix-flake-update-verify -l hosts -r -a 'laptop laptop-old desktop server server-installer mac all' -d 'Host to verify'
     complete -c nix-flake-update-verify -l input -r -a 'nixpkgs nixpkgs-unstable home-manager browser-previews disko freesm nix-gc-env xremap-flake all' -d 'Root input to update'
     complete -c nix-flake-update-verify -l no-update -d 'Build the existing lock file'
     complete -c nix-flake-update-verify -l server-settings -r -a '(__fish_complete_directories)' -d 'External server settings directory'

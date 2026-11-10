@@ -57,7 +57,7 @@ entry или activation migration. Содержимое хранится вру�
 2. Проверить синтаксис локально: `fish --no-config -n ~/.config/fish/local-env.fish`.
    Не отправлять содержимое или диагностику со значениями ключей в чат.
 3. После review применить HM нужного хоста: на Acer
-   `home-manager switch --flake .#samov-laptop`, на desktop/Mac — соответствующий
+   `home-manager switch --flake .#samov-laptop-old`, на desktop/Mac — соответствующий
    профиль на своей машине; server HM — на VPS по SSH. Lenovo draft на Acer не применять.
    NixOS rebuild не нужен. Сам личный файл не переносится между машинами через Nix.
 4. Открыть новый Fish. Для проверки наличия ключа без печати значения:

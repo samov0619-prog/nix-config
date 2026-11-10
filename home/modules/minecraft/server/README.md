@@ -120,14 +120,14 @@ guard полностью не защищает. Drive trash занимает к�
    нужен только для разделения сборки и применения:
 
    ```bash
-   nix build --no-link .#homeConfigurations.samov-laptop.activationPackage
+   nix build --no-link .#homeConfigurations.samov-laptop-old.activationPackage
    ```
 
 3. До первого реального upload отдельно проверить source, настроенный remote,
    свободную квоту и восстановление на изолированных данных. Старое облако само
    не восстановится: `sync` не скачивает мир. На Acer в последней диагностике
    source и rclone remote отсутствовали; не создавать пустой source ради проверки.
-4. После личного review применить `home-manager switch --flake .#samov-laptop`
+4. После личного review применить `home-manager switch --flake .#samov-laptop-old`
    (на desktop — `samov-desktop`). NixOS rebuild не нужен. Watcher автоматический:
    при появлении завершённого набора он может начать реальный sync.
 5. Смотреть журнал и причину пропуска/ошибки:

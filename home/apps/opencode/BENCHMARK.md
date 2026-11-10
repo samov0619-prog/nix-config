@@ -223,12 +223,12 @@ python3 home/apps/opencode/tests/test_v2_runtime.py $binary --mac
 python3 home/apps/opencode/tests/test_attention_tui.py $binary
 env OPENCODE_TEST_BINARY=$binary python3 home/linux/modules/hyprland/tests/test_context_tui.py ContextTui.test_opencode_real_tui_plugin
 # Also test the deployed Nix store layout (not just copied source files):
-set generation (nix build --offline --no-link --print-out-paths path:.#homeConfigurations.samov-laptop.activationPackage)
+set generation (nix build --offline --no-link --print-out-paths path:.#homeConfigurations.samov-laptop-old.activationPackage)
 env OPENCODE_TEST_BINARY=$binary OPENCODE_TEST_HM_GENERATION=$generation python3 home/linux/modules/hyprland/tests/test_context_tui.py ContextTui.test_opencode_real_tui_plugin
 env OPENCODE_TEST_HM_GENERATION=$generation python3 home/apps/opencode/tests/test_v2_runtime.py $binary
 env OPENCODE_TEST_HM_GENERATION=$generation python3 home/apps/opencode/tests/test_attention_tui.py $binary
 # Fast targeted check of the HM-built urgency package without building every home package:
-set urgency (nix build --no-link --print-out-paths --impure --expr '(builtins.getFlake ("path:" + builtins.toString ./.)).homeConfigurations.samov-laptop.config.xdg.configFile."opencode/plugins/quiet-urgency".source')
+set urgency (nix build --no-link --print-out-paths --impure --expr '(builtins.getFlake ("path:" + builtins.toString ./.)).homeConfigurations.samov-laptop-old.config.xdg.configFile."opencode/plugins/quiet-urgency".source')
 env OPENCODE_TEST_QUIET_URGENCY_PLUGIN=$urgency node --test home/apps/opencode/tests/test_session_attention.mjs
 env OPENCODE_TEST_BINARY=$binary OPENCODE_TEST_QUIET_URGENCY_PLUGIN=$urgency python3 home/linux/modules/hyprland/tests/test_context_tui.py ContextTui.test_opencode_real_tui_plugin
 ```

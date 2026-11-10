@@ -1,5 +1,5 @@
 # ── stateVersion policy ───────────────────────────────────────────────
-# stateVersion is per-host. Existing desktop/laptop/mac retain 25.11 via
+# stateVersion is per-host. Existing desktop/laptop-old/mac retain 25.11 via
 # the mkDefault in home/users/samov/default.nix. Fresh server imports
 # home/users/samov/state-26.05.nix and declares system.stateVersion = "26.05".
 #
@@ -182,7 +182,7 @@
           ];
         };
 
-        laptop = mkNixos {
+        laptop-old = mkNixos {
           system = systems.linux;
           overlays = [
             self.overlays.amnezia-vpn
@@ -191,7 +191,7 @@
           modules = [
             ./hosts/profiles/time.nix
             ./hosts/profiles/mdns.nix
-            ./hosts/laptop
+            ./hosts/laptop-old
           ];
         };
 
@@ -206,7 +206,7 @@
 
         server-installer = mkServerInstaller;
 
-        laptop-next = mkNixos {
+        laptop = mkNixos {
           system = systems.linux;
           overlays = [
             self.overlays.amnezia-vpn
@@ -221,7 +221,7 @@
             ./hosts/profiles/time.nix
             ./hosts/profiles/mdns.nix
             disko.nixosModules.disko
-            ./hosts/laptop-next
+            ./hosts/laptop
           ];
         };
 
@@ -268,7 +268,7 @@
           ];
         };
 
-        samov-laptop = mkHM {
+        samov-laptop-old = mkHM {
           pkgs = pkgsFor systems.linux [
             self.overlays.filemanager1-common
             freesm.overlays.default
@@ -295,11 +295,11 @@
             ./home/apps/minecraft
             ./home/apps/creative.nix
 
-            ./home/linux/laptop
+            ./home/linux/laptop-old
           ];
         };
 
-        samov-laptop-next = mkHM {
+        samov-laptop = mkHM {
           pkgs = pkgsFor systems.linux [
             self.overlays.filemanager1-common
             freesm.overlays.default
@@ -321,7 +321,7 @@
             ./home/modules/minecraft/server
             # Instance/heap and backup preflight remain separate decisions.
             ./home/apps/creative.nix
-            ./home/linux/laptop-next
+            ./home/linux/laptop
           ];
         };
 

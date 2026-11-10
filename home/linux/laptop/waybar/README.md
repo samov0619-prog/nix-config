@@ -1,6 +1,6 @@
 # Lenovo-only Waybar power-profile tooltip
 
-`../default.nix` selects this override only for `samov-laptop-next`. No global
+`../default.nix` selects this override only for Lenovo's `samov-laptop`. No global
 overlay, shared Waybar module, Acer or other existing profile is changed.
 
 The patch targets pinned Waybar **0.15.0**. It adds tooltip substitutions:
@@ -34,14 +34,14 @@ the full Waybar module or exercise GTK, D-Bus permissions or the live tooltip.
 Reproduce the small unit test from the repository root:
 
 ```fish
-c++ -std=c++17 -Wall -Wextra -Werror -pedantic home/linux/laptop-next/waybar/test-cycle.cpp -o /tmp/opencode/lenovo-waybar-cycle-test
+c++ -std=c++17 -Wall -Wextra -Werror -pedantic home/linux/laptop/waybar/test-cycle.cpp -o /tmp/opencode/lenovo-waybar-cycle-test
 /tmp/opencode/lenovo-waybar-cycle-test
 ```
 
 Optional package-only build, from the repository root, **for the user to run**:
 
 ```fish
-nix build --impure --no-link --expr 'let f = builtins.getFlake (toString ./.); in import ./home/linux/laptop-next/waybar/package.nix { waybar = f.inputs.nixpkgs.legacyPackages.x86_64-linux.waybar; }'
+nix build --impure --no-link --expr 'let f = builtins.getFlake (toString ./.); in import ./home/linux/laptop/waybar/package.nix { waybar = f.inputs.nixpkgs.legacyPackages.x86_64-linux.waybar; }'
 ```
 
 After the Lenovo draft blockers are resolved and its NixOS/HM configurations are

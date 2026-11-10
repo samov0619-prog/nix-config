@@ -64,8 +64,8 @@ nix eval --impure --offline --json --option allow-import-from-derivation false -
 и Ardour не открывал.
 
 1. После review собрать только нужный HM output, например на Acer:
-   `nix build .#homeConfigurations.samov-laptop.activationPackage`.
-2. Применить `home-manager switch --flake .#samov-laptop` (на desktop — свой
+   `nix build .#homeConfigurations.samov-laptop-old.activationPackage`.
+2. Применить `home-manager switch --flake .#samov-laptop-old` (на desktop — свой
    профиль). Lenovo draft на Acer не применять. NixOS rebuild не нужен.
 3. Полностью закрыть Ardour, выбрать светлый режим через F11, открыть из меню:
    ожидается светлая палитра. Закрыть, выбрать тёмный, запустить `ardour9`:

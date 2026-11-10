@@ -258,7 +258,7 @@ entry; HTTP readiness ограничена по времени; после ус�
 
 ## Proxy: основной Amnezia и резервный v2rayA
 
-Источники: [host](../../hosts/laptop/default.nix#L64-L95),
+Источники: [host](../../hosts/laptop-old/default.nix#L64-L95),
 [Linux HM packages](../../home/linux/core-set/default.nix),
 [Fish](../../home/core-set/shell.nix),
 [локальный Amnezia package](../../pkgs/amnezia-vpn/default.nix#L148-L175).
@@ -315,7 +315,7 @@ forwardproxy, клиенту нужен Naive-совместимый backend. Э
 и не обещание поддержки Naive старым pinned Throne.
 
 Применение — только HM, не NixOS rebuild: на Acer
-`home-manager switch --flake .#samov-laptop`, затем новый терминал/Fish shell;
+`home-manager switch --flake .#samov-laptop-old`, затем новый терминал/Fish shell;
 уже загруженная функция в старом shell может сохраниться. Удаление helper общее для
 laptop/desktop/server/mac HM; CLI удалён из Linux workstation module laptop/desktop.
 Остальные профили получают изменения при своей HM activation (server — на VPS по SSH,
@@ -394,7 +394,7 @@ FUSE setup (по умолчанию включён, с security wrappers), не 
 [общий workflow-пункт](lenovo-checklist.md), не в отдельный конкурирующий список.
 
 Применение этого cleanup — HM laptop/desktop (`home-manager switch --flake
-.#samov-laptop` или `.#samov-desktop`), затем новое Fish shell: старые aliases могут
+.#samov-laptop-old` или `.#samov-desktop`), затем новое Fish shell: старые aliases могут
 оставаться загруженными. NixOS rebuild не нужен; server/mac эти модули не импортируют.
 Документация и архив не требуют отдельной activation. Телефон/диски не монтировались,
 ADB server не запускался; реальный MTP/udiskie остаётся ручной проверкой.
@@ -432,7 +432,7 @@ import module сами эту проблему не устраняют. Не к�
 
 Go, direnv и внешние Neovim/Lazy/Mason files не менялись. Direnv project-switching
 сохранён в agent-todo, не реализуется сейчас. Применение структуры — HM нужного
-профиля (Acer: `home-manager switch --flake .#samov-laptop`); server без изменений,
+профиля (Acer: `home-manager switch --flake .#samov-laptop-old`); server без изменений,
 NixOS rebuild не нужен. Документация activation не требует. Сборка/activation нового
 diff и реальные Mason/LSP на Lenovo этим не проверены.
 Узкие offline checks сравнивают фактические module lists из flake через HM stub и
@@ -458,9 +458,9 @@ flowchart TD
     Default["User default.target"] --> Secret["pass-secret-service; также D-Bus registration"]
 ```
 
-Источники: [system login/UWSM](../../hosts/laptop/default.nix#L166-L203),
+Источники: [system login/UWSM](../../hosts/laptop-old/default.nix#L166-L203),
 [HM Hyprland](../../home/linux/modules/hyprland/default.nix#L89-L141),
-[raw autostart](../../home/linux/laptop/hyprland.conf#L34-L51),
+[raw autostart](../../home/linux/laptop-old/hyprland.conf#L34-L51),
 [GUI imports/services](../../home/linux/gui-set/default.nix),
 [FileManager1](../../home/linux/modules/filemanager1-common/default.nix#L109-L139),
 [Waybar](../../home/linux/modules/waybar/default.nix#L1-L5).

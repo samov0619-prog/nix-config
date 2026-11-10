@@ -116,7 +116,7 @@ class ScreenshotTests(unittest.TestCase):
 
     def test_all_bindings_and_help_use_the_shared_workflow(self):
         linux = ROOT.parents[1]
-        for host in ("laptop", "desktop", "laptop-next"):
+        for host in ("laptop-old", "desktop", "laptop"):
             config = (linux / host / "hyprland.conf").read_text()
             bindings = re.findall(r"^bind = , PRINT, exec, (.+)$", config, re.M)
             self.assertEqual(bindings, ["hypr-screenshot-region"])

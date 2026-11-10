@@ -163,7 +163,7 @@ class LauncherTests(unittest.TestCase):
 
     def test_three_gui_profiles_use_the_shared_launcher(self):
         linux = ROOT.parent.parent
-        for profile in ("laptop", "desktop", "laptop-next"):
+        for profile in ("laptop-old", "desktop", "laptop"):
             with self.subTest(profile=profile):
                 config = (linux / profile / "hyprland.conf").read_text()
                 self.assertIn("$menu = tofi-launch\n", config)

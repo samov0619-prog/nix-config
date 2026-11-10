@@ -25,7 +25,7 @@ class RemovableLaunchTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.profiles = json.loads(DECLARATIONS.read_text())
-        cls.profile = cls.profiles["samov-laptop"]
+        cls.profile = cls.profiles["samov-laptop-old"]
         sources = list(UDISKIE_PACKAGE.glob("lib/python*/site-packages/udiskie"))
         if len(sources) != 1:
             raise AssertionError("Expected one installed udiskie source directory")
@@ -63,7 +63,7 @@ class RemovableLaunchTests(unittest.TestCase):
         self.assertEqual(self.Config({"menu": "nested"}).program_options, {})
 
     def test_gui_profiles_share_the_entry_and_settings(self):
-        for name in ("samov-laptop", "samov-desktop", "samov-laptop-next"):
+        for name in ("samov-laptop-old", "samov-desktop", "samov-laptop"):
             with self.subTest(profile=name):
                 self.assertEqual(self.profiles[name]["directoryDesktopText"],
                                  self.profile["directoryDesktopText"])

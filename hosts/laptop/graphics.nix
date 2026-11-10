@@ -18,7 +18,17 @@
     open = true; # Blackwell requires NVIDIA's open kernel modules, not Nouveau.
     modesetting.enable = true;
     package = config.boot.kernelPackages.nvidiaPackages.latest;
-    # PRIME/Bus IDs and power-management policy still need target inventory.
+    # Live PCI scan: Intel drives the active built-in panel; NVIDIA is opt-in.
+    prime = {
+      intelBusId = "PCI:0:2:0";
+      nvidiaBusId = "PCI:2:0:0";
+      offload = {
+        enable = true;
+        enableOffloadCmd = true;
+      };
+    };
+    # RTD3 and suspend/hibernate policy still need review with the final driver.
+    # Do not force Steam or global session variables onto NVIDIA.
   };
 
   # Replace the existing firmware input, rather than adding a conflicting second

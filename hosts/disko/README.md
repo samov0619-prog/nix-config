@@ -52,15 +52,25 @@ ISO workflow.
 ## Local Laptop Or Desktop
 
 Boot a NixOS installer USB on the target machine. No IP address and no SSH are
-needed: run these commands locally in the installer after replacing every
-`REPLACE_ME` in the target Disko module.
+required, though the user may operate the live system over SSH. Lenovo now uses
+`laptop`; Acer is `laptop-old` and does not import Disko. Run from the reviewed
+repository checkout, not from the Acer profile. First complete the
+[Lenovo checklist](../../docs/laptop-audit/lenovo-checklist.md), update/review the
+inputs and resolve the install guard. Recheck the target disk against model,
+capacity and mounts immediately before the explicitly approved destructive step.
+The configured Lenovo path is a live-observed PCI topology path, not a disk serial.
 
-```bash
-sudo nix run github:nix-community/disko -- \
-  --mode destroy,format,mount ./hosts/laptop-next/disko.nix
-sudo nixos-install --flake .#laptop-next
+The commands below are **not ready to run while the Lenovo guard remains**.
+`--inputs-from .` resolves `disko` from this checkout's updated lock instead of
+selecting an independent upstream revision; `--no-write-lock-file` prevents a
+silent lock change during this installation step.
+
+```fish
+sudo nix --extra-experimental-features "nix-command flakes" run --inputs-from . --no-write-lock-file disko -- \
+  --mode destroy,format,mount ./hosts/laptop/disko.nix
+sudo nixos-install --flake .#laptop
 ```
 
 For a future desktop, complete `hosts/desktop-next/disko.nix` first and replace
-`laptop-next` with `desktop-next`. `destroy,format,mount` erases the selected
+`laptop` with `desktop-next`. `destroy,format,mount` erases the selected
 disk completely.

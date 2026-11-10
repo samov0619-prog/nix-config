@@ -96,6 +96,20 @@ if sys.argv[1] == 'build':
         self.assertEqual(len(self.calls()), 2)
         self.assertTrue(all("--override-input" not in call for call in self.calls()))
 
+    def test_laptop_old_selects_acer_outputs_without_server_settings(self):
+        result = self.verify("--hosts", "laptop-old", "--no-update")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.calls(), [
+            ["build", "--no-link", ".#nixosConfigurations.laptop-old.config.system.build.toplevel"],
+            ["build", "--no-link", ".#homeConfigurations.samov-laptop-old.activationPackage"],
+        ])
+
+    def test_removed_laptop_next_is_rejected_before_build_or_update(self):
+        result = self.verify("--hosts", "laptop-next", "--input", "all")
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn("phase=arguments", result.stderr)
+        self.assertEqual(self.calls(), [])
+
     def test_server_override_is_not_used_for_lock_update_or_home_manager(self):
         self.settings(self.default)
         result = self.verify("--hosts", "server", "--input", "nixpkgs")

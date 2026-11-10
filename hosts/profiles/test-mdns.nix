@@ -16,9 +16,9 @@ let
     }
   );
   workstations = [
-    "laptop"
+    "laptop-old"
     "desktop"
-    "laptop-next"
+    "laptop"
     "desktop-next"
   ];
   check =

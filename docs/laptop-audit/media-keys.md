@@ -34,7 +34,7 @@ playerctld и явных audio/video defaults, отсутствие добавл
 двумя отдельными evaluation — три GUI profiles и Mac/server:
 
 ```fish
-nix eval --impure --offline --json --option allow-import-from-derivation false --expr 'let c = import ./home/linux/gui-set/test-media-declarations.nix; in { desktop = c.samov-desktop; laptop = c.samov-laptop; lenovo = c.samov-laptop-next; }'
+nix eval --impure --offline --json --option allow-import-from-derivation false --expr 'let c = import ./home/linux/gui-set/test-media-declarations.nix; in { desktop = c.samov-desktop; acer = c.samov-laptop-old; lenovo = c.samov-laptop; }'
 nix eval --impure --offline --json --option allow-import-from-derivation false --expr 'let c = import ./home/linux/gui-set/test-media-declarations.nix; in { mac = c.samov-mac; server = c.samov-server; }'
 ```
 
@@ -46,7 +46,7 @@ Audacious/MPV не проверены. Агент не запускал media/vo
 
 ## Применение и живая приёмка
 
-1. Пользователь применяет HM: Acer — `home-manager switch --flake .#samov-laptop`,
+1. Пользователь применяет HM: Acer — `home-manager switch --flake .#samov-laptop-old`,
    desktop — `home-manager switch --flake .#samov-desktop`.
    Lenovo draft на Acer не применять. NixOS rebuild/новые службы не нужны.
 2. Проверить `command -v playerctl`; закрыть и заново открыть MPV, если он работал

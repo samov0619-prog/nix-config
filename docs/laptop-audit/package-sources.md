@@ -133,9 +133,9 @@ Builds, activation, update, облачные/VPN операции не запу�
 
 Исходный unstable-аудит был документальным и не требовал activation. Позднейший
 Node change применяется через Home Manager каждого импортирующего его профиля:
-`samov-laptop`, `samov-desktop`, `samov-mac`; Lenovo draft остаётся заблокирован
+`samov-laptop-old`, `samov-desktop`, `samov-mac`; Lenovo draft остаётся заблокирован
 до аппаратной проверки, его нельзя применять на Acer. Для текущего Acer после
-review: `home-manager switch --flake .#samov-laptop`, затем новый терминал и
+review: `home-manager switch --flake .#samov-laptop-old`, затем новый терминал и
 `node --version; npm --version`. Остальные профили применять отдельно на своих
 машинах. NixOS activation для выбора Node не нужна.
 

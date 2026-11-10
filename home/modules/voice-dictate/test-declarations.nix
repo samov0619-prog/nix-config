@@ -26,7 +26,7 @@ let
     };
 in
 lib.mapAttrs check {
-  samov-laptop = {
+  samov-laptop-old = {
     gui = true;
     vulkan = true;
     device = 1;
@@ -36,7 +36,7 @@ lib.mapAttrs check {
     vulkan = false;
     device = 0;
   };
-  samov-laptop-next = {
+  samov-laptop = {
     gui = true;
     vulkan = false;
     device = 0;

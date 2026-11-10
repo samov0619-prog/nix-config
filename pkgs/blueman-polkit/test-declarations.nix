@@ -42,8 +42,8 @@ let
     };
 in
 {
+  laptop-old = check "laptop-old" true;
   laptop = check "laptop" true;
-  lenovo = check "laptop-next" true;
   desktop = check "desktop" false;
   desktopTemplate = check "desktop-next" false;
 }

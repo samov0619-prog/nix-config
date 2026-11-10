@@ -79,9 +79,9 @@ merged evaluation проверяет объявление пакета толь�
 режим в TUI; см. [OpenCode](../../home/apps/opencode/README.md#автоматическая-светлаятёмная-тема).
 
 1. После review при необходимости собрать только свой HM output:
-   `nix build .#homeConfigurations.samov-laptop.activationPackage`.
+   `nix build .#homeConfigurations.samov-laptop-old.activationPackage`.
 2. Полностью закрыть Blueman и другие проверяемые GTK3-приложения, затем применить
-   `home-manager switch --flake .#samov-laptop` (на desktop — свой
+   `home-manager switch --flake .#samov-laptop-old` (на desktop — свой
    профиль; Lenovo draft на Acer не применять). NixOS rebuild не нужен.
    Для этой первой установки перезапуск приложения нужен: GTK мог закешировать
    светлый fallback под именем ещё не установленной тёмной темы.

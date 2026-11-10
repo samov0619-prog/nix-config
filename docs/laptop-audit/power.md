@@ -7,7 +7,7 @@
 
 ## Что установлено для Acer
 
-- В [host config](../../hosts/laptop/default.nix) явно заданы governor `performance`
+- В [host config](../../hosts/laptop-old/default.nix) явно заданы governor `performance`
   и `services.thermald.enable = true`. Обе строки появились в `f7de937`
   (`create laptop host`); отдельного обоснования в этом изменении нет.
 - Read-only runtime: Intel Core i5-6200U, `intel_pstate` в active mode,
@@ -81,7 +81,7 @@ SSH через BIOS или предварительная настройка Win
 - Не добавлять undervolt, ручные fan curves, отключение turbo и автоматические
   scripts AC/battery до базовой проверки. Ручной UI Waybar подготовлен отдельно;
   автоматическое переключение профилей AC/battery не согласовано и не реализовано.
-- В [Lenovo draft](../../hosts/laptop-next/default.nix) PPD включён; Acer host
+- В [Lenovo draft](../../hosts/laptop/default.nix) PPD включён; Acer host
   не импортируется. Thermald ещё не выбран. Реальные температура, throttling, CPU/GPU idle и
   батарея проверяются в существующем коротком checklist, а не новым списком.
 
@@ -96,5 +96,5 @@ SSH через BIOS или предварительная настройка Win
 
 Это не полный NixOS evaluation/build и не подтверждение совместимости Lenovo.
 Первый audit-шаг менял только документацию; затем создана отдельная заготовка
-Lenovo с PPD и Waybar, без применения. [Блокеры](../../hosts/laptop-next/README.md)
+Lenovo с PPD и Waybar, без применения. [Блокеры](../../hosts/laptop/README.md)
 не сняты: не запускать установку/activation. Acer оставлен без изменений.

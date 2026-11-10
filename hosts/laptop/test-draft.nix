@@ -1,5 +1,5 @@
 # Lightweight declaration fixtures, not a complete NixOS/HM evaluation.
-# nix eval --impure --json --offline --file hosts/laptop-next/test-draft.nix
+# nix eval --impure --json --offline --file hosts/laptop/test-draft.nix
 let
   root = ../..;
   flake = builtins.getFlake (toString root);
@@ -32,7 +32,12 @@ let
     inherit lib pkgs;
     pkgsUnstable.amnezia-vpn.version = "5.0.3.0";
   };
-  home = import ../../home/linux/laptop-next/default.nix { inherit pkgs; };
+  hardware = import ./hardware-configuration.nix {
+    inherit lib;
+    modulesPath = "/fixture/nixos/modules";
+    config.hardware.enableRedistributableFirmware = host.hardware.enableRedistributableFirmware;
+  };
+  home = import ../../home/linux/laptop/default.nix { inherit pkgs; };
   sharedGui = import ../../home/linux/gui-set/default.nix {
     inherit pkgs;
     config.home.homeDirectory = "/fixture/home";
@@ -62,7 +67,8 @@ let
     };
   };
 in
-assert disk.device == "/dev/disk/by-id/REPLACE_ME";
+assert disk.device == "/dev/disk/by-path/pci-0000:01:00.0-nvme-1";
+assert host.networking.hostName == "laptop";
 assert partitions.root.content.type == "filesystem";
 assert partitions.root.content.format == "ext4";
 assert partitions.root.content.mountpoint == "/";
@@ -71,6 +77,26 @@ assert partitions.swap.content.type == "swap";
 assert partitions.swap.content.resumeDevice;
 assert host.services.power-profiles-daemon.enable;
 assert builtins.elem ./graphics.nix host.imports;
+assert builtins.elem ./hardware-configuration.nix host.imports;
+assert hardware.imports == [ "/fixture/nixos/modules/installer/scan/not-detected.nix" ];
+assert
+  hardware.boot.initrd.availableKernelModules == [
+    "xhci_pci"
+    "thunderbolt"
+    "nvme"
+    "usb_storage"
+    "sd_mod"
+    "sdhci_pci"
+  ];
+assert hardware.boot.initrd.kernelModules == [ ];
+assert hardware.boot.kernelModules == [ "kvm-intel" ];
+assert hardware.boot.extraModulePackages == [ ];
+assert hardware.nixpkgs.hostPlatform.content == "x86_64-linux";
+assert hardware.hardware.cpu.intel.npu.enable;
+assert hardware.hardware.cpu.intel.updateMicrocode.content;
+assert !(hardware ? fileSystems);
+assert !(hardware ? swapDevices);
+assert !(hardware.boot ? resumeDevice);
 assert graphics.boot.kernelPackages == pkgsGraphics.linuxPackages_latest;
 assert graphics.hardware.graphics.enable;
 assert graphics.hardware.graphics.enable32Bit;
@@ -80,8 +106,16 @@ assert graphics.hardware.nvidia.open;
 assert graphics.hardware.nvidia.modesetting.enable;
 assert graphics.services.xserver.videoDrivers == [ "nvidia" ];
 assert graphics.hardware.nvidia.package == graphics.boot.kernelPackages.nvidiaPackages.latest;
-assert !(graphics.hardware.nvidia ? prime);
+assert graphics.hardware.nvidia.prime.intelBusId == "PCI:0:2:0";
+assert graphics.hardware.nvidia.prime.nvidiaBusId == "PCI:2:0:0";
+assert graphics.hardware.nvidia.prime.offload.enable;
+assert graphics.hardware.nvidia.prime.offload.enableOffloadCmd;
+assert !(graphics.hardware.nvidia.prime ? sync);
+assert !(graphics.hardware.nvidia.prime ? reverseSync);
 assert !(graphics.hardware.nvidia ? powerManagement);
+assert !(graphics ? environment);
+assert host.programs.steam.enable;
+assert !(host.programs.steam ? package);
 assert lib.attrNames firmwareOverrides == [ "linux-firmware" ];
 assert firmwareOverrides.linux-firmware == pkgsGraphics.linux-firmware;
 assert host.hardware.enableRedistributableFirmware;
@@ -113,7 +147,7 @@ assert home.wayland.windowManager.hyprland.configType == "hyprlang";
 assert
   home.programs.waybar.package.patches == [
     "upstream.patch"
-    ../../home/linux/laptop-next/waybar/power-profile-tooltip.patch
+    ../../home/linux/laptop/waybar/power-profile-tooltip.patch
   ];
 assert lib.hasPrefix "upstream-hook\n" home.programs.waybar.package.postPatch;
 assert lib.hasInfix "power-profile-cycle.hpp" home.programs.waybar.package.postPatch;
@@ -159,6 +193,8 @@ assert !(viewer.xdg.mimeApps.defaultApplications ? "image/svg+xml");
 assert !(viewer.xdg ? configFile);
 {
   lenovoDeclarations = true;
+  lenovoLiveHardwareScanWithoutStorageDeclarations = true;
+  lenovoPrimeOffloadIsOptInWithoutSteamOverride = true;
   lenovoUnstableReleaseGraphicsDeclarations = true;
   noAcerHardwareOrExtraPrivileges = true;
   requestedBootstrapAutologinAndSudoDeclarations = true;

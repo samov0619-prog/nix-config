@@ -47,7 +47,7 @@ Vulkan/CPU, Nix-built wrapper, Bluetooth, clipboard или ввод в целе�
 
 ## Применение и ручная приёмка
 
-1. После ревью на Acer: `home-manager switch --flake .#samov-laptop`.
+1. После ревью на Acer: `home-manager switch --flake .#samov-laptop-old`.
    На desktop использовать свой `.#samov-desktop`; Lenovo draft на Acer не применять.
    NixOS rebuild, service restart и Hyprland reload для этой правки не нужны.
 2. В безопасном тестовом текстовом поле выполнить обычную диктовку двумя нажатиями

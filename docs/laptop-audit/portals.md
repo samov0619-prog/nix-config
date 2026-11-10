@@ -48,7 +48,7 @@ registration. Это не сообщение «Polkit agent не зарегис�
 настройки можно повторно посмотреть из корня репозитория, Fish:
 
 ```fish
-for host in laptop desktop laptop-next
+for host in laptop-old desktop laptop
     nix eval --offline --json --option allow-import-from-derivation false \
         ".#nixosConfigurations.$host.config.xdg.portal" \
         --apply 'p: { inherit (p) enable config; extraPortals = map (v: v.pname or v.name) p.extraPortals; configPackages = map (v: v.pname or v.name) p.configPackages; wlr = p.wlr.enable; }'

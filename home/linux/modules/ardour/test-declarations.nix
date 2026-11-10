@@ -19,9 +19,9 @@ builtins.mapAttrs (
     packages = map lib.getName home.config.home.packages;
     wrappers = builtins.filter (p: lib.getName p == "ardour-system-theme") home.config.home.packages;
     gui = builtins.elem name [
-      "samov-laptop"
+      "samov-laptop-old"
       "samov-desktop"
-      "samov-laptop-next"
+      "samov-laptop"
     ];
   in
   assert builtins.length wrappers == (if gui then 1 else 0);

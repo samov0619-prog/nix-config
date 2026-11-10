@@ -2,56 +2,103 @@
 
 [Каталог аудита](README.md) · [Решения](feedback.md)
 
-Все пункты пока **не проверены**. Подготовительный раздел выполняется до установки;
-остальные — после согласования конфигурации и базовой установки. Это не разрешение
+Живые проверки установленной системы пока **не выполнены**. Подготовительный раздел
+выполняется до установки; остальные — после согласования конфигурации и базовой установки. Это не разрешение
 на установку/разметку сейчас. Сон и гибернацию
 проверить **до переноса основных данных**. Minecraft запускать только на новом ПК,
 не на Acer ради аудита. Успешный switch и fixtures не закрывают эти пункты.
 
 ## До установки: согласованный порядок на 10.11.2026
 
-Lenovo сейчас с Windows, первоначальная настройка не пройдена. Проходить Windows
-setup ради read-only inventory не требуется. Пользователь выбирает полный update
+Пользователь уже загрузил Lenovo в live NixOS с официальной stable 26.05 Minimal
+x86_64 USB. Windows Home сохранять не требуется; внутренний SSD ещё не размечен.
+Проходить Windows setup ради read-only inventory не требуется. Пользователь выбирает полный update
 всех inputs перед установкой, а не сохранение старого Acer snapshot; на Acer
 обновления откладывались из-за места. Базовые storage/login/GC решения сохраняются.
 
-1. **Подготовить Live USB на Acer.** Пользователь хочет купить USB 3.x ради скорости;
-   USB 2.0 также пригоден. USB 3.0 / 3.1 Gen 1 / 3.2 Gen 1 — 5 Гбит/с,
-   этого достаточно; Gen 2 (10 Гбит/с) специально искать не нужно. Важнее реальная
-   скорость записи флешки, а порт USB 2.0 ограничит скорость даже нового накопителя.
-   Рекомендуется от 8 ГБ, при покупке удобно 16–32 ГБ. Выбор ISO пока открыт:
-   пользователь склоняется к minimal ради консоли и лёгкости, без KDE/GNOME.
-   Minimal достаточно для CLI inventory/install; graphical — необязательный вариант
-   для Wi-Fi/browser/terminal. Ручная установка возможна в обоих, desktop live-среды
-   не выбирает desktop установленной системы.
-   Текущий unstable graphical ISO занимает около 3.7 GiB (minimal — 1.6 GiB);
-   размер файла и свободное место на Acer перепроверить перед скачиванием.
-   Для нового железа предложен свежий nixos-unstable x86_64:
-   [minimal ISO](https://channels.nixos.org/nixos-unstable/latest-nixos-minimal-x86_64-linux.iso)
-   / [SHA-256](https://channels.nixos.org/nixos-unstable/latest-nixos-minimal-x86_64-linux.iso.sha256),
-   либо [graphical ISO](https://channels.nixos.org/nixos-unstable/latest-nixos-graphical-x86_64-linux.iso)
-   / [SHA-256](https://channels.nixos.org/nixos-unstable/latest-nixos-graphical-x86_64-linux.iso.sha256).
-   Проверять hash для того же build. Live channel не меняет inputs или stateVersion будущей системы.
-   Перед записью сверить конкретную USB-флешку по размеру/model/transport и согласовать
-   удаление её данных; не подставлять неизвестный `/dev/sdX` в команду записи.
-   Образ пока не скачивался и не записывался; наличие подходящей флешки не подтверждено.
-2. **Загрузить Lenovo с USB в UEFI, только live session.** Графический установщик
-   не запускать, внутренний SSD не размечать и не монтировать на запись.
-   Не менять MUX, TPM или storage-controller mode ради inventory. Если Secure Boot
-   блокирует образ, остановиться и отдельно согласовать firmware change с учётом
-   возможного Windows device encryption/BitLocker и recovery key; незавершённый
-   Windows setup сам по себе не доказывает отсутствие шифрования или нужных данных.
+Устанавливается сразу полный подготовленный Lenovo NixOS config, затем отдельным
+действием полный standalone HM, не промежуточная минимальная ОС. Это не включает
+преждевременный запуск Minecraft server/backup: их preflight остаётся ниже.
+Разметка выбрана через Disko и для ноутбука: он заменяет ручные partition/format/mount
+шаги manual, не `nixos-install`. Полный update обновляет и Disko; review и запуск
+используют одну и ту же обновлённую ревизию из `flake.lock`, не старый snapshot
+и не отдельный непроверенный upstream/latest. Обычный rebuild не переразмечает диск.
+
+1. **Live USB подготовлен.** На маленькую Generic Flash Disk 14.5 GiB напрямую,
+   без Ventoy, после размонтирования записан
+   `nixos-minimal-26.05.13936.ac588ef1c914-x86_64-linux.iso`:
+   1746124800 bytes, 162.52 s, 10.7 MB/s, без ошибок `dd`.
+   Проверка SHA-256/readback не сообщена. Kingston с данными не очищался;
+   отдельный постоянный live+DATA образ отложен. Live channel не выбирает inputs
+   или stateVersion установленной системы; unstable ISO заранее не требуется.
+2. **Live session запущена по сообщению пользователя.** После Secure Boot block
+   согласовано отключить только Secure Boot, без удаления ключей, очистки TPM,
+   смены storage mode или прошивки BIOS. Сохранение Windows не требуется;
+   отсутствие BitLocker/Secure Boot keys независимо не подтверждено.
+   По выводу пользователя подтверждены live-ядро `7.3.3` и UEFI
+   (`/sys/firmware/efi` существует). Wi-Fi подключён, пользователь вошёл с Acer
+   по SSH в live `nixos`; `curl -I https://cache.nixos.org` вернул HTTP/2 200.
+   Это доступ к endpoint, не проверка скачивания closures. Memtest запускался,
+   но завершённый проход не сообщён: не считать RAM проверенной.
+   Внутренний SSD не размечать и не монтировать на запись. Настроить сеть через
+   `nmtui` при необходимости; проверить доступ к Nix binary cache без публикации
+   Wi-Fi паролей. Не менять MUX, TPM или storage-controller mode ради inventory.
 3. **Снять read-only hardware inventory.** Версия live ISO/ядра, UEFI, CPU/RAM,
    диски/разделы/mountpoints и стабильный путь выбранного SSD, PCI GPU/Bus IDs/driver,
    DRM connectors встроенного и нужных внешних экранов, доступные firmware/MUX modes.
    Записать наблюдения без private files, сетевых паролей и серийных номеров в docs.
    Команды выбирать после загрузки live; это не стресс-тест и не проверка NVIDIA
    offload/resume. Не считать live USB filesystems готовым hardware config установленной системы.
-4. **Завершить конфигурацию и передачу имён.** Выбрать PRIME/GPU power policy по
-   реальному железу и нужным экранам, добавить недостающую hardware/boot основу,
-   заменить Disko `REPLACE_ME` только после проверки SSD. Согласованно передать
-   `laptop`/`samov-laptop` Lenovo, Acer → `laptop-old`, обновив связанные references.
-   Install assertion снимать только после review этих блокеров, не ради обхода ошибки build.
+   Получен `lsblk`: USB Generic Flash Disk 14.5 GiB — `/dev/sda`, ISO на `/iso`;
+   внутренний NVMe UMIS UPJYJ1TBMNV1Q 953.9 GiB — `/dev/nvme0n1`, без показанных
+   mountpoints. Разделы: 450 MiB vfat, 16 MiB без определённой ФС, 500 GiB и
+   451.5 GiB с сигнатурами BitLocker, 2 GiB ntfs. Сигнатуры не устанавливают
+   состояние ключей/защиты; Windows сохранять не требуется.
+   `/dev/disk/by-path/pci-0000:01:00.0-nvme-1` указывает на этот SSD; это путь
+   по PCI topology, не identity накопителя. Перед разметкой снова сверить target;
+   Disko теперь использует этот путь; перед стиранием повторно проверить SSD.
+   Разрешения на стирание этим выводом не дано.
+   DMI: `21VJ`, `ThinkBook 16 G8+ IPD`.
+   Live inventory: Core Ultra 7 356H, family 6/model 204 (`0xcc`), 16 CPU,
+   microcode `0x115`; `free -h`: 30 GiB RAM, swap отсутствует в live.
+   Intel Panther Lake `[8086:b0a0]` на `00:02.0` использует `xe` (DRM card0);
+   NVIDIA RTX 5060 Mobile `[10de:2d59]` на `02:00.0` использует `nouveau`
+   (DRM card1), не выбранный для установки NVIDIA open driver.
+   PRIME IDs соответствуют `PCI:0:2:0` и `PCI:2:0:0`. Пользователь выбрал
+   PRIME offload: Intel для desktop, NVIDIA по явному запуску выбранных приложений.
+   **Весь Steam на NVIDIA не переводить**; GPU selection не задавать глобально.
+   В `graphics.nix` включены offload и штатная команда `nvidia-offload` с этими IDs.
+   Для выбранной игры можно один раз задать в Steam Launch Options
+   `nvidia-offload %command%`; это ручное состояние Steam, не HM-managed config.
+   Декларативные per-app launchers возможны позже для явно выбранных приложений,
+   сейчас обёртки для Steam/Blender или других apps автоматически не добавляются.
+   RTD3 и suspend/hibernate settings ещё требуют отдельного review финального
+   драйвера; offload сам по себе не доказывает засыпание NVIDIA.
+   DRM: Intel `card0-eDP-1` — connected, DP-1…4 — disconnected;
+   NVIDIA `card1-eDP-2` и `card1-HDMI-A-1` — disconnected. Пользователь подтвердил,
+   что подключён только встроенный экран: в текущем режиме активная панель на Intel.
+   Переключение MUX и внешний экран не проверены; эти данные не доказывают работу
+   HDMI/USB-C с установленным NVIDIA driver.
+   Wi-Fi использует `iwlwifi`, Bluetooth — `btintel_pcie`, Ethernet — `e1000e`,
+   audio — `sof-audio-pci-intel-ptl`, SSD — `nvme`. Наличие drivers не доказывает
+   работу Bluetooth/audio и прочих устройств. В live нет `rg`: следующие команды
+   для пользователя должны обходиться базовыми утилитами без установки пакетов.
+   `nixos-generate-config --show-hardware-config --no-filesystems` выдал import
+   `installer/scan/not-detected.nix`, initrd available modules `xhci_pci`,
+   `thunderbolt`, `nvme`, `usb_storage`, `sd_mod`, `sdhci_pci`; kernel module
+   `kvm-intel`; platform `x86_64-linux`, Intel NPU enable и default microcode update.
+   Initrd kernelModules/extraModulePackages пусты. Scan без storage включён в
+   `hosts/laptop/hardware-configuration.nix`; NPU option существует в locked
+   nixpkgs. Declaration fixtures проверяют import/modules/platform/NPU и отсутствие
+   live filesystems. Это не полный merged evaluation/build или реальная проверка NPU.
+4. **Завершить конфигурацию и передачу имён.** Hardware scan и PRIME offload заданы;
+   GPU power/resume review ещё впереди. Проверенный путь SSD внесён в Disko.
+   В исходниках переданы `laptop`/`samov-laptop` Lenovo, Acer →
+   `laptop-old`/`samov-laptop-old`: каталоги, outputs, hostname, helpers, completions,
+   tests и текущие команды документации. Исторические записи не переписываются.
+   [Границы и проверка rename](host-renaming.md); live Acer не активировался.
+   Install assertion сохранён до полного input update и финального review,
+   не снимать его ради обхода ошибки build.
 5. **Пользователь выполняет `nix flake update`**, сохранив прежний tracked lock как
    исходную точку в Git. Не удалять lock: полный update достаточно явно обновляет
    зависимости согласно `flake.nix`. Команда не собирает и не активирует систему,
@@ -68,10 +115,41 @@ setup ради read-only inventory не требуется. Пользовате
    host matrix по умолчанию не собирать. Builds, Disko, install и activation остаются
    отдельными действиями пользователя. После update прежние fixtures/acceptance
    сохраняют историческую ценность, но не гарантируют совместимость новых packages.
-7. **Установка и первые живые проверки.** Только после review/build и явного решения
-   о содержимом целевого SSD пользователь выполняет разметку/установку. Затем пройти
-   раздел ниже: сначала загрузка, графика, устройства и suspend/hibernate, потом
-   перенос основных данных. Успешная сборка не заменяет эти проверки.
+   **Доставка через Git выбрана для практики**, не копированием checkout по SSH.
+   После review сохранить согласованные изменения и lock локальными коммитами;
+   push выполняет пользователь. В live Lenovo проверить наличие Git, при отсутствии
+   дать временный Git через Nix shell; clone делать из настоящего GitHub URL,
+   не Acer-specific SSH alias `github.com-samov0619`. Способ доступа зависит от
+   видимости repo; не копировать private keys Acer в live. Сверить HEAD и чистоту
+   install checkout, перенести его на целевой диск после mounts для сохранения
+   после reboot. До этого live checkout не переживёт перезагрузку.
+   Git author identity и аутентификация — отдельные вещи; clone не требует
+   `user.name`/`user.email`. Shared HM включает Git/editor/merge style, но не
+   identity: согласовать имя/email для Lenovo, не записывать реальные credentials
+   в Nix. Повторно проверить личную настройку после перехода с live `nixos` на `samov`.
+7. **Установка по официальному manual с существующим flake.** Следовать
+   [Manual Installation, NixOS 26.05](https://nixos.org/manual/nixos/stable/#sec-installation-manual):
+   сеть → разметка/форматирование → mounts → конфигурация → `nixos-install` → reboot.
+   Его `/dev/sda`, swap 8 GB и systemd-boot — примеры, не замена согласованным
+   ext4, swap 48 GiB и GRUB EFI. До destructive stage ещё нужны hardware/disk
+   review, готовые конечные outputs и отдельное явное согласие на стирание
+   проверенного SSD. Для разметки использовать проверенную декларацию Disko из
+   обновлённого lock; ручной partition/format/mount второй раз не выполнять.
+   Сверить `/mnt`, `/mnt/boot` и swap; получить hardware configuration на целевых
+   mounts. При Disko повторный scan можно вывести командой
+   `sudo nixos-generate-config --root /mnt --show-hardware-config --no-filesystems`:
+   только hardware output, без перезаписи существующего flake и без повторной
+   генерации управляемых Disko файловых систем. Нужные initrd/platform modules включить в flake, не копировать live
+   filesystems и не дублировать storage declarations Disko с конфликтующими UUID.
+   Сгенерированный пример `configuration.nix` не заменяет существующий flake.
+   Перед install перепроверить конечную композицию с реальными hardware settings;
+   команда `nixos-install --flake` должна указывать именно reviewed checkout и
+   конечный output после передачи имён, не нынешний заблокированный draft.
+   Проверить способ входа и пароль перед reboot, затем загрузку без USB.
+   Standalone Home Manager применять отдельно. Сначала графика, устройства и
+   suspend/hibernate, потом перенос основных данных. Успешная сборка не заменяет
+   эти проверки. Команды на Lenovo выполняет пользователь по SSH с Acer;
+   инструменты агента пока работают на Acer, собственный доступ агента не настроен.
 
 ## Сначала, до переноса данных
 

@@ -6,7 +6,7 @@
 по локальному имени. Avahi сохраняется; настройка вынесена в общий
 [hosts/profiles/mdns.nix](../../hosts/profiles/mdns.nix).
 
-Flake явно подключает его к `laptop`, `desktop`, `laptop-next`, `desktop-next`.
+Flake явно подключает его к `laptop-old`, `desktop`, `laptop`, `desktop-next`.
 Для Acer и Lenovo это сохранение прежнего поведения; для обоих desktop outputs —
 добавление. VPS и installer не импортируют модуль, Home Manager и Mac не меняются.
 

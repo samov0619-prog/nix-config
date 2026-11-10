@@ -16,7 +16,7 @@ Server и installer сохраняют штатные настройки NixOS, 
 - `services.timesyncd.enable = true`;
 - `services.automatic-timezoned.enable = false`.
 
-Flake явно включает policy только в `modules` laptop, desktop, laptop-next и
+Flake явно включает policy только в `modules` laptop-old, desktop, laptop и
 desktop-next. Её нет в общем `mkNixos`, server и server-installer.
 NTP server defaults/DHCP discovery и RTC policy не меняются.
 Не отключаем все location services: меняется только выбор timezone.

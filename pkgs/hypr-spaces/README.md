@@ -107,7 +107,7 @@ After changing this plugin, activate the applicable Home Manager profile and
 reload Hyprland:
 
 ```sh
-home-manager switch --flake .#samov-laptop
+home-manager switch --flake .#samov-laptop-old
 # or: home-manager switch --flake .#samov-desktop
 hyprctl reload
 ```

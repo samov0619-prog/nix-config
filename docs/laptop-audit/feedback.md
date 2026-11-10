@@ -6,6 +6,11 @@
 Неоспоренную пометку агента не считаем выбором между вариантами: открытые решения
 уточняем отдельно, небольшими порциями.
 
+Исторические команды и имена ниже сохранены на момент соответствующего шага.
+После передачи имён Acer использует `laptop-old`/`samov-laptop-old`, Lenovo —
+`laptop`/`samov-laptop`; прежний `laptop-next` удалён. Не применять историческую
+команду Acer с нынешним Lenovo output. [Текущее именование](host-renaming.md).
+
 ## Последние выполненные шаги
 
 - Пользователь согласовал **свежую релизную графику из unstable только для Lenovo**:
@@ -210,10 +215,10 @@
 Отдельно согласованы общий Node latest, nomacs/Qt appearance на Linux GUI и
 Avahi/mDNS на четырёх Linux workstation outputs. PPD со штатным значком
 Waybar выбран; tooltip с названиями соседних профилей реализован отдельным
-[Lenovo-only patch](../../home/linux/laptop-next/waybar/README.md), без polling.
+[Lenovo-only patch](../../home/linux/laptop/waybar/README.md), без polling.
 Алгоритм/применимость patch проверены, полный Waybar binary/UI ещё не проверены.
 Thermald остаётся открытым вопросом поддержки/пользы для конкретного Lenovo.
-[Состав и оставшиеся блокеры заготовки](../../hosts/laptop-next/README.md).
+[Состав и оставшиеся блокеры заготовки](../../hosts/laptop/README.md).
 Builds/activation/диски не запускались; заготовку нельзя применять на Acer.
 
 | Тема              | Решение и область                                                                                                                                                                                                 | Состояние                                                                                             |

@@ -5,7 +5,9 @@
 Карта исходного среза `a2d1767`: после ревью imports Aider закомментированы
 на laptop/desktop, поэтому локальных HM module files для Acer стало 37, а не 38.
 Остальные изменения/решения — в [журнале ревью](feedback.md). Таблица ниже сохраняет
-исходный состав, не является свежей оценкой установленного профиля.
+исходный состав, не является свежей оценкой установленного профиля. Имена в графе
+и таблице исторические; после передачи имён Acer — `laptop-old`/`samov-laptop-old`,
+а ссылки ведут на перемещённые исходники Acer.
 
 Отдельным структурным шагом `git-filter-repo` вынесен в
 `home/core-set/devtools/git-maintenance.nix`, подключённый явно рядом с
@@ -65,8 +67,8 @@ flowchart TD
 | Модуль                                                       | Кто подключает               | Назначение / граница                                                     |
 | ------------------------------------------------------------ | ---------------------------- | ------------------------------------------------------------------------ |
 | [hosts/profiles/gc.nix](../../hosts/profiles/gc.nix)         | `flake.nix → mkNixos`        | Очистка HM/user profiles перед store GC, `nix-gc-run`                    |
-| [hosts/laptop/default.nix](../../hosts/laptop/default.nix)   | `flake.nix → laptop.modules` | Пока монолит: оборудование, сеть, desktop, учётная запись и обслуживание |
-| [hosts/laptop/hardware.nix](../../hosts/laptop/hardware.nix) | `hosts/laptop/default.nix`   | Storage/initrd, CPU microcode и platform; аппаратные данные Acer         |
+| [hosts/laptop/default.nix](../../hosts/laptop-old/default.nix)   | `flake.nix → laptop.modules` | Пока монолит: оборудование, сеть, desktop, учётная запись и обслуживание |
+| [hosts/laptop/hardware.nix](../../hosts/laptop-old/hardware.nix) | `hosts/laptop/default.nix`   | Storage/initrd, CPU microcode и platform; аппаратные данные Acer         |
 
 Внешние module imports: `home-manager.nixosModules.home-manager`,
 `nix-gc-env.nixosModules.default` через `mkNixos`,
@@ -107,7 +109,7 @@ NixOS imports. Inline overlay module в `mkNixos` не отдельный лок
 |  23 | [home/modules/minecraft/server/default.nix](../../home/modules/minecraft/server/default.nix)                   | Flake                     | Generic server implementation; без instance по умолчанию неактивен |
 |  24 | [home/apps/minecraft/default.nix](../../home/apps/minecraft/default.nix)                                       | Flake                     | Launcher, Packwiz, JDK, instance и memory policy                   |
 |  25 | [home/apps/creative.nix](../../home/apps/creative.nix)                                                         | Flake                     | Blender                                                            |
-|  26 | [home/linux/laptop/default.nix](../../home/linux/laptop/default.nix)                                           | Flake                     | Linux imports, raw host configs, Vulkan device override            |
+|  26 | [home/linux/laptop/default.nix](../../home/linux/laptop-old/default.nix)                                           | Flake                     | Linux imports, raw host configs, Vulkan device override            |
 |  27 | [home/linux/core-set/default.nix](../../home/linux/core-set/default.nix)                                       | Laptop leaf               | Xray, Android tools, adbfs, btop                                   |
 |  28 | [home/linux/gui-set/default.nix](../../home/linux/gui-set/default.nix)                                         | Laptop leaf               | Linux desktop imports/apps/services, Qt                            |
 |  29 | [home/linux/gui-set/xdg.nix](../../home/linux/gui-set/xdg.nix)                                                 | Linux GUI                 | MIME defaults и Yazi desktop entry                                 |

@@ -71,8 +71,8 @@ ZIP/RAR через другие backend binaries, все форматы и пр�
 ## Применение и ручная приёмка
 
 1. Проверить diff. Минимальная сборка только plugin, агентом не запускалась:
-   `nix build --no-link .#homeConfigurations.samov-laptop.config.programs.yazi.plugins.compress.package`.
-2. На Acer выполнить `home-manager switch --flake .#samov-laptop`;
+   `nix build --no-link .#homeConfigurations.samov-laptop-old.config.programs.yazi.plugins.compress.package`.
+2. На Acer выполнить `home-manager switch --flake .#samov-laptop-old`;
    NixOS rebuild не нужен. На остальных машинах — их HM profile; Lenovo draft
    на Acer не применять. Корпоративный Mac вручную этим не обновляется.
 3. Полностью закрыть и заново открыть Yazi. В отдельной папке с несекретным

@@ -161,7 +161,7 @@ class DiskStatusTests(unittest.TestCase):
     def test_all_gui_configs_have_a_continuous_worker(self):
         linux = ROOT.parents[1]
         # Preserve quoted strings while removing JSONC comments/trailing commas.
-        for host in ("laptop", "desktop", "laptop-next"):
+        for host in ("laptop-old", "desktop", "laptop"):
             text = (linux / host / "waybar-config.jsonc").read_text()
             text = re.sub(
                 r'"(?:\\.|[^"\\])*"|//[^\n]*|/\*[\s\S]*?\*/',

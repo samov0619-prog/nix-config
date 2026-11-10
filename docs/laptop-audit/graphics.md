@@ -27,7 +27,7 @@ snapshot переключение только на `latest` не меняет �
 ## Согласовано: свежие релизные пакеты только для Lenovo
 
 Пользователь выбрал ядро, NVIDIA, Mesa 64/32-bit и firmware из unstable, остальные
-источники системы остаются прежними. [Модуль](../../hosts/laptop-next/graphics.nix)
+источники системы остаются прежними. [Модуль](../../hosts/laptop/graphics.nix)
 выбирает `linuxPackages_latest` и `config.boot.kernelPackages.nvidiaPackages.latest`:
 драйвер собирается для выбранного ядра, а не для default kernel другой ветки.
 Для Mesa явно выбраны обе архитектуры из одного snapshot, включая Steam support.
@@ -109,32 +109,38 @@ NixOS пакеты следуют выбранным aliases. Это **не** ф
 добавлять параллельно старые suspend/resume services вслепую. RTD3/finegrained,
 Dynamic Boost и работоспособность hibernate также не следуют из версии драйвера.
 
-## Что ещё нужно решить на самом Lenovo
+## Выбранный PRIME offload и оставшиеся проверки Lenovo
 
-Предварительная рекомендация, **не выбранная policy**: если разводка дисплеев
-позволяет, рабочий стол на Intel, NVIDIA по требованию для тяжёлых приложений.
-Это даёт возможность выключать dGPU в idle, но результат зависит от подключённых
-экранов, клиентов GPU и firmware. Постоянный desktop на NVIDIA — другой компромисс
-по питанию и копированию кадров; выбирать его за пользователя пока рано.
+Пользователь выбрал PRIME render offload: рабочий стол на Intel, NVIDIA по
+требованию для выбранных приложений. **Весь Steam на NVIDIA не переводить**.
+Live inventory подтвердил Intel `00:02.0` (`xe`) и NVIDIA `02:00.0` (`nouveau`);
+единственный connected connector — Intel `card0-eDP-1`, пользователь использует
+только встроенный экран. В `graphics.nix` заданы IDs `PCI:0:2:0`/`PCI:2:0:0`,
+offload и штатная команда `nvidia-offload`, без глобальных GPU variables или
+изменения Steam package. Для отдельной игры Launch Options
+`nvidia-offload %command%` задаются один раз в Steam; это не декларативное управление
+per-game preferences. Автоматические per-app обёртки пока не добавляются.
 
-Следующий аппаратный шаг — отдельно согласованный read-only Live USB inventory:
-PCI devices/Bus IDs/драйверы, DRM connectors для встроенного и нужных внешних
-экранов, доступные firmware/MUX режимы. Не переключать MUX/BIOS ради инвентаризации,
-не монтировать SSD на запись и не запускать установку. Затем выбрать режим и
-проверить его уже с согласованным NVIDIA stack на установленной системе.
+Offload даёт возможность не использовать NVIDIA для обычного desktop, но не
+доказывает RTD3 или экономию: результат зависит от драйвера, подключённых экранов,
+клиентов GPU и firmware. RTD3/finegrained и suspend/hibernate policy пока не менялись.
+MUX не переключали; внешний экран и порты с NVIDIA driver остаются непроверенными.
 
 Declaration fixtures проверяют выбор aliases/архитектур, только одну firmware
-подмену и отсутствие PRIME/power-management изменений. Отдельный
-[test-graphics.nix](../../hosts/laptop-next/test-graphics.nix) проверяет выбранные
+подмену, PRIME IDs/offload command и отсутствие Steam/global GPU overrides;
+power-management settings пока не меняются. Отдельный
+[test-graphics.nix](../../hosts/laptop/test-graphics.nix) проверяет выбранные
 merged NixOS attributes, соответствие package paths unstable snapshot, evaluation
 NVIDIA/open derivations, один linux-firmware input при сохранении SOF/regdb и
 неизменённые Acer/desktop firmware. Это не полная evaluation всех attributes или
 assertions, не реализация derivations и не проверка сборки firmware environment.
 
-Ни Live USB inventory, ни полный NixOS build, итоговый kernel config, загрузка
-firmware, Wayland/offload/RTD3, suspend/hibernate или внешние порты не проверены.
+Live USB inventory получен от пользователя. Полный NixOS build, итоговый kernel
+config, загрузка firmware установленной системы, Wayland/offload/RTD3 с NVIDIA,
+suspend/hibernate или внешние порты не проверены.
 Тесты остаются в [едином checklist](lenovo-checklist.md), новых acceptance-списков
-нет. **Сейчас ничего не применять:** install guard и disk placeholder сохранены.
+нет. **Сейчас ничего не применять:** install guard сохранён; вместо disk placeholder
+задан наблюдавшийся путь SSD, который нужно повторно сверить перед стиранием.
 Graphics change в будущем требует NixOS activation только Lenovo, после аппаратной
 проверки и разрешения блокеров; не применять его профиль на Acer. HM switch не
 обновляет ядро и системные graphics drivers. Документация activation не требует.

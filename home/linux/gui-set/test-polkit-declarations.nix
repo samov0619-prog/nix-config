@@ -7,9 +7,9 @@ builtins.mapAttrs (
   let
     config = home.config;
     gui = builtins.elem name [
-      "samov-laptop"
+      "samov-laptop-old"
       "samov-desktop"
-      "samov-laptop-next"
+      "samov-laptop"
     ];
     agent = config.services.hyprpolkitagent;
     unit = config.systemd.user.services.hyprpolkitagent or null;

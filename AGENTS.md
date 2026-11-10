@@ -11,15 +11,15 @@ NixOS и HM управляются раздельно: NixOS через `nixosCo
 - Каналы: `nixpkgs` + `home-manager` = 26.05; `nixpkgs-unstable` передаётся через `specialArgs`.
 - Системы: `x86_64-linux`, `aarch64-darwin`.
 - Хелперы: `pkgsFor`, `pkgsUnstableFor`, `mkHM`, `mkNixos`.
-- Overlays: `filemanager1-common` + `freesm` — только для desktop/laptop HM;
-  локальный `amnezia-vpn` — только для NixOS desktop/laptop.
-- `blueman-polkit` overlay — только NixOS laptop/laptop-next: прежний stable
+- Overlays: `filemanager1-common` + `freesm` — только для desktop/laptop-old/laptop HM;
+  локальный `amnezia-vpn` — только для NixOS desktop/laptop-old/laptop.
+- `blueman-polkit` overlay — только NixOS laptop-old/laptop: прежний stable
   Blueman с Polkit build support и неизменёнными upstream actions/wheel rule.
 - `xremap-flake` передаётся в `extraSpecialArgs`.
 
 ### NixOS-хосты
 
-|              | laptop                                             | desktop                         | server                                 |
+|              | laptop-old (Acer)                                   | desktop                         | server                                 |
 | ------------ | -------------------------------------------------- | ------------------------------- | -------------------------------------- |
 | CPU          | Intel                                              | AMD                             | VPS                                    |
 | GPU          | Intel iGPU + NVIDIA PRIME                          | NVIDIA only                     | —                                      |
@@ -31,15 +31,22 @@ NixOS и HM управляются раздельно: NixOS через `nixosCo
 
 ### Home Manager-конфигурации
 
-|                  | samov-laptop                | samov-desktop               | samov-server     | samov-mac        |
+|                  | samov-laptop-old            | samov-desktop               | samov-server     | samov-mac        |
 | ---------------- | --------------------------- | --------------------------- | ---------------- | ---------------- |
 | База             | users + core-set            | users + core-set            | users + core-set | users + core-set |
 | GUI              | gui-set                     | gui-set                     | —                | —                |
 | Apps             | minecraft + creative        | minecraft + creative        | —                | —                |
 | Minecraft module | server + instance           | server + instance           | server only      | —                |
-| Leaf             | linux/laptop                | linux/desktop               | linux/server     | —                |
+| Leaf             | linux/laptop-old            | linux/desktop               | linux/server     | —                |
 | Overlays         | filemanager1-common, freesm | filemanager1-common, freesm | нет              | нет              |
 | Архитектура      | x86_64-linux                | x86_64-linux                | x86_64-linux     | aarch64-darwin   |
+
+Lenovo owns `laptop`/`samov-laptop` with stateVersion 26.05, its separate hardware
+scan, PRIME offload, Disko ext4/48 GiB swap and PPD; details and install guard below.
+Its HM leaf is `home/linux/laptop`, with the same GUI overlays but no Minecraft
+instance activation. Old `*-next` laptop outputs are removed, not compatibility
+aliases: never apply Lenovo's `laptop` profile on Acer. Source renaming does not
+change the currently running Acer until the user applies `laptop-old`.
 
 ### Модульная структура HM
 
@@ -60,7 +67,8 @@ home/
     ├── gui-set/                 # Hyprland ecosystem, audio, screenshots, file manager
     ├── modules/                 # Hyprland, Waybar, tofi, xremap, FileManager1
     ├── desktop/                 # desktop leaf and raw host overrides
-    ├── laptop/                  # laptop leaf and raw host overrides
+    ├── laptop-old/              # Acer leaf and preserved raw host overrides
+    ├── laptop/                  # Lenovo leaf and raw host overrides
     └── server/                  # server CLI, Mason prerequisites, server Neovim config
 
 hosts/server/
@@ -75,9 +83,9 @@ hosts/server/
 
 hosts/
 ├── disko/                        # reusable GPT/EFI/ext4/(swap) layouts and docs
-├── laptop/                       # current laptop + legacy swapfile/resume config
+├── laptop-old/                   # Acer + legacy swapfile/resume config
 ├── desktop/                      # current desktop + existing storage config
-├── laptop-next/                  # fresh 26.05 laptop target with Disko swap partition
+├── laptop/                       # Lenovo 26.05 target with Disko swap partition
 ├── desktop-next/                 # EFI Disko template; verify hardware before use
 └── server/                       # fresh 26.05 VPS target with Disko
 ```
@@ -85,21 +93,23 @@ hosts/
 `flake.nix` is the source of truth for host composition: a feature exists on a
 host only when its module is listed in that host's `modules` array.
 
-Workstation mDNS lives in `hosts/profiles/mdns.nix`, explicitly imported by laptop,
-desktop and both `*-next` outputs, not server/installer. Avahi + IPv4 NSS resolve
+Workstation mDNS lives in `hosts/profiles/mdns.nix`, explicitly imported by laptop-old,
+laptop, desktop and desktop-next, not server/installer. Avahi + IPv4 NSS resolve
 LAN devices such as the Zynthian Pi via `*.local`; UDP 5353 is open, own-service
 publishing is disabled. Selected merged declarations/composition are checked by
 `hosts/profiles/test-mdns.nix`; real Pi connectivity is not yet checked.
 
-Disko is imported directly by fresh `server`, `laptop-next`, and `desktop-next`
+Disko is imported directly by fresh `server`, `laptop`, and `desktop-next`
 targets. It runs only through an explicit Disko/nixos-anywhere command, never
-through `nixos-rebuild switch`. Current `laptop` and `desktop` intentionally do
+through `nixos-rebuild switch`. Existing `laptop-old` and `desktop` intentionally do
 not import Disko.
 
-Lenovo draft: `laptop-next` now has a separate `samov-laptop-next` HM output and
-`home/linux/laptop-next` leaf. Existing profiles are unchanged. The NixOS draft
-deliberately fails an assertion pending hardware/PRIME and target disk;
-see `hosts/laptop-next/README.md`. Agreed: plain ext4 + 48 GiB swap,
+Lenovo target: `laptop` has a separate `samov-laptop` HM output and
+`home/linux/laptop` leaf. Acer moved to `laptop-old` with its hardware/settings
+preserved except hostname. The NixOS target deliberately fails an assertion
+pending the full input update, GPU power/resume and final installation review;
+see `hosts/laptop/README.md`. Disko selects the live-observed UMIS NVMe topology
+path; recheck disk identity before destructive use. Agreed: plain ext4 + 48 GiB swap,
 no zram initially (commented opt-in with evidence-based conditions), weekly GC
 keeping 10 NixOS + 10 HM generations. Initial login matches Acer: one tty1 autologin
 per boot, the same public bootstrap password and password-authenticated sudo,
@@ -108,15 +118,18 @@ trusted-users privileges are copied. Do not apply the Lenovo HM
 profile on Acer. Native PPD/Waybar switching is Lenovo-only. The leaf selects a
 local Waybar override for dynamic previous/current/next tooltip labels, sharing
 one cycle helper with clicks; stock Waybar has no such placeholders. See
-`home/linux/laptop-next/waybar/README.md` for checks and update obligations.
+`home/linux/laptop/waybar/README.md` for checks and update obligations.
 Only the helper/patch/declarations are checked, not the full binary or live UI.
 Lenovo graphics now follows unstable release packages via
-`hosts/laptop-next/graphics.nix`: latest kernel, matching NVIDIA latest/open,
+`hosts/laptop/graphics.nix`: latest kernel, matching NVIDIA latest/open,
 Mesa 64/32-bit and linux-firmware. A separate unfree-enabled `pkgsGraphics` import
 is passed only to this NixOS output; a local overlay replaces only linux-firmware,
 preserving other firmware and existing hosts/HM package sets. No beta/testing,
-hardcoded version, lock update or automatic updater. PRIME/Bus IDs and GPU power
-policy remain pending. Declaration fixtures and selected merged NixOS attributes
+hardcoded version, lock update or automatic updater. User-provided live scan is
+imported without filesystem declarations. PRIME offload is selected, with Intel
+`PCI:0:2:0`, NVIDIA `PCI:2:0:0` and `nvidia-offload`; never force the whole Steam
+client or global GPU variables onto NVIDIA. RTD3 and suspend/hibernate policy
+remain pending. Declaration fixtures and selected merged NixOS attributes
 (including NVIDIA/open derivation evaluation, not builds) are checked; live
 graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
 
@@ -124,7 +137,7 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
 
 ### stateVersion
 
-- Базовый `home.stateVersion` задан как `lib.mkDefault "25.11"` в `home/users/samov/default.nix`; legacy desktop/laptop/mac сохраняют это значение.
+- Базовый `home.stateVersion` задан как `lib.mkDefault "25.11"` в `home/users/samov/default.nix`; legacy desktop/laptop-old/mac сохраняют это значение.
 - Fresh server использует `system.stateVersion = "26.05"` и явно импортирует `home/users/samov/state-26.05.nix` через `flake.nix`.
 - Для нового fresh host повторить ту же схему: system state в `hosts/<host>/default.nix`, Home Manager state module в его `modules` array.
 - Когда все хосты перейдут на 26.05, удалить `state-26.05.nix`, заменить common `mkDefault` на `"26.05"` и убрать ненужные version-gated compatibility branches.
@@ -473,7 +486,7 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
 - `home/modules/minecraft/server/default.nix` — пользовательский systemd модуль: Packwiz serve → update → Fabric, плюс backup path/service.
 - `minecraft.server = null` по умолчанию: import generic-модуля сам по себе ничего не запускает.
 - `home/apps/minecraft/default.nix` задаёт instance с путями `/home/samov/Projects/minecraft/`, памятью `20G`, FreesmLauncher, Packwiz и JDK.
-- Desktop/laptop импортируют оба модуля в `flake.nix`; server импортирует только generic-модуль.
+- Desktop/laptop-old импортируют оба модуля в `flake.nix`; server и Lenovo laptop импортируют только generic-модуль, Lenovo leaf отдельно сохраняет клиентские приложения.
 - Чтобы включить идентичный Minecraft stack на server, добавить `./home/apps/minecraft` в `samov-server.modules` в `flake.nix`.
 
 ### filemanager1-common
@@ -482,7 +495,7 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
 - `home/linux/modules/filemanager1-common/` — HM-модуль с options: fileManager, wrapperScript, terminalCommand.
 - По умолчанию: Yazi через Alacritty.
 
-### xremap (laptop only)
+### xremap (laptop-old/Acer only)
 
 - Модификаторы:物理 Super → Alt,物理 Alt → Super, Menu → Alt.
 - GUI: Super+key → Ctrl+key (copy/paste/cut/undo/redo).
@@ -537,19 +550,19 @@ nix-gc.service`; штатный `nix-gc.timer` вызывает этот же se
   очищает system/legacy profiles, `samov-profile-gc` очищает XDG Home Manager и
   modern user Nix profile от имени `samov`, затем `nix-gc.service` очищает store.
 - Home Manager generations сохраняются по host policy: server `+2` daily,
-  laptop `+3` weekly, desktop `+5` weekly. Это обеспечивает rollback именно
+  laptop-old `+3` weekly, laptop `+10` weekly, desktop `+5` weekly. Это обеспечивает rollback именно
   конфигурации Home Manager.
-- Короткий retention текущего laptop (Acer): три поколения NixOS и три HM,
+- Короткий retention текущего laptop-old (Acer): три поколения NixOS и три HM,
   weekly GC — вынужденный компромисс из-за недостатка места на SSD, не общая
   рекомендация. После переименования в laptop-old эта причина сохраняется.
-  Для Lenovo (`laptop-next`) согласованы 10 поколений NixOS и 10 HM, weekly GC через
+  Для Lenovo (`laptop`) согласованы 10 поколений NixOS и 10 HM, weekly GC через
   общий service. Запас места оценить после updates; не переносить агрессивную
   политику Acer автоматически.
 - Modern `nix profile` сохраняет только current generation через `nix profile
 wipe-history`: Nix не предоставляет API "keep N", а его history откатывает
   bootstrap CLI, не Home Manager configuration. Не применять `nix-env` к modern
   `nix profile`: эти форматы несовместимы.
-- Текущий `~/.nix-profile` на laptop содержит рабочий `home-manager`; не удалять
+- Текущий `~/.nix-profile` на Acer laptop-old содержит рабочий `home-manager`; не удалять
   сам current user profile. Проверка 2026-09: очистка 33 старых `nix profile`
   generations и последующий store GC освободили около 14 GiB, а повторный GC
   удалил 0 paths.
@@ -580,7 +593,7 @@ wipe-history`: Nix не предоставляет API "keep N", а его histo
   dump без общего лимита 8 KiB и исправляют dangling `qPrintable` в маршрутах.
   `checkPhase` запускает socket fixtures и ASan/UBSan на реальном
   `buildAllowedIp`; ручная проверка обоих режимов описана в README пакета.
-- Overlay подключён только к NixOS desktop/laptop в `flake.nix`; оба хоста
+- Overlay подключён только к NixOS desktop/laptop-old/laptop в `flake.nix`; эти хосты
   используют `pkgs.amnezia-vpn`, а daemon PATH содержит `iptables`,
   `ip6tables` и `gawk`.
 - При обновлении `nixpkgs-unstable` NixOS warning появляется только если его
@@ -595,9 +608,9 @@ wipe-history`: Nix не предоставляет API "keep N", а его histo
 
 - `disko` pinned as a flake input; shared layouts live in `hosts/disko/layouts.nix`.
 - Remote VPS install uses verified `--store-paths` for nixos-anywhere from another machine in provider rescue mode; obtain both closures with the external settings override per `SERVER_AI_INSTRUCTIONS.md`. Keep both GC-root links via `--out-link` under `~/.local/state/nix-config/deploy/server/` until successful installation, not `--no-link` results that GC may remove.
-- `root@<vps-ip>` is SSH syntax for the remote rescue host. A local laptop/desktop install needs no IP: boot a NixOS installer USB, run Disko locally, then `nixos-install --flake .#laptop-next`.
+- `root@<vps-ip>` is SSH syntax for the remote rescue host. A local laptop/desktop install needs no IP: boot a NixOS installer USB, run the reviewed locked Disko locally, then `nixos-install --flake .#laptop` after its guard is resolved.
 - Before any destructive install, replace every `REPLACE_ME` after checking `lsblk`; future desktop must also confirm BIOS vs EFI with `efibootmgr -v`.
-- Current laptop retains `/swapfile` plus `resume_offset`; `laptop-next` uses a swap partition with `resumeDevice = true`, so the two schemes never coexist on one host.
+- Acer laptop-old retains `/swapfile` plus `resume_offset`; Lenovo laptop uses a swap partition with `resumeDevice = true`, so the two schemes never coexist on one host.
 
 ## Форматирование этого репозитория
 
@@ -642,23 +655,24 @@ Neovim раньше не выбирал Prettier без config/dependency; `.pre
 Backup OpenCode-сессий для этой операции не нужен: update и build не меняют
 установленный OpenCode или его storage.
 
-На laptop обновить один input и проверить только laptop outputs:
+На Acer обновить один input и проверить только laptop-old outputs:
 
 ```bash
-nix-flake-update-verify --hosts laptop --input nixpkgs
+nix-flake-update-verify --hosts laptop-old --input nixpkgs
 ```
 
 - Inputs: `nixpkgs`, `nixpkgs-unstable`, `home-manager`, `browser-previews`,
   `disko`, `freesm`, `nix-gc-env`, `xremap-flake`; `all` доступен только
   явно через `--input all`.
-- Hosts: `laptop`, `desktop`, `server`, `server-installer`, `mac`; `--hosts
+- Hosts: `laptop`, `laptop-old`, `desktop`, `server`, `server-installer`, `mac`; `--hosts
 all` проверяет все hosts, поддерживаемые текущей платформой: Linux hosts на
   Linux и `mac` на macOS.
-- Linux hosts `laptop`, `desktop` и `server` строят свои NixOS и Home Manager
+- Linux hosts `laptop`, `laptop-old`, `desktop` и `server` строят свои NixOS и Home Manager
   outputs; `server-installer` строит только NixOS ISO output; `mac` строит
   только свой Home Manager output на macOS.
-- `laptop-next` и `desktop-next` намеренно не поддерживаются: это
-  непроверенные шаблоны будущего оборудования.
+- `desktop-next` намеренно не поддерживается: это непроверенный шаблон будущего
+  оборудования. Старое имя `laptop-next` удалено; `laptop` — Lenovo и пока имеет
+  install guard. Не запускать `--hosts all` ради миграции одного ноутбука.
 
 После переноса одного и того же `flake.lock` на другую машину проверить её
 host без изменения lock-файла:
@@ -720,7 +734,7 @@ FAILED: phase=build; input=nixpkgs; host=laptop; output=home-manager; exit=1
 
 ```bash
 # NixOS
-sudo nixos-rebuild switch --flake .#laptop
+sudo nixos-rebuild switch --flake .#laptop-old
 sudo nixos-rebuild switch --flake .#desktop
 sudo nixos-rebuild switch --flake .#server --override-input server-settings "path:$HOME/.config/nix-config/server"
 
@@ -733,18 +747,19 @@ nix build --override-input server-settings "path:$HOME/.config/nix-config/server
 nix run github:nix-community/nixos-anywhere -- --store-paths "$disko_script" "$nixos_system" --phases disko,install,reboot root@<vps-ip>
 
 # Home Manager
-home-manager switch --flake .#samov-laptop
+home-manager switch --flake .#samov-laptop-old
 home-manager switch --flake .#samov-desktop
 home-manager switch --flake .#samov-server
 
 # Проверка
 nix flake check --override-input server-settings "path:$HOME/.config/nix-config/server"
-nix eval .#nixosConfigurations.laptop.config.system.build.toplevel --no-build 2>&1 | head
+nix eval .#nixosConfigurations.laptop-old.config.system.build.toplevel --no-build 2>&1 | head
 ```
 
 ## Текущее состояние хостов
 
-- **laptop**: текущий Acer с Intel/NVIDIA, ext4, GRUB EFI, Hibernate/zram; точная модель здесь не зафиксирована. Перед установкой Lenovo переименовать в laptop-old, имя laptop передать Lenovo. Снимок stable inputs требует актуализации; короткий GC-retention обусловлен нехваткой места на SSD Acer.
+- **laptop-old**: текущий Acer с Intel/NVIDIA, ext4, GRUB EFI, Hibernate/zram; точная модель здесь не зафиксирована. Исходники/outputs/hostname переименованы, live activation не выполнялась. Снимок stable inputs требует актуализации; короткий GC-retention обусловлен нехваткой места на SSD Acer.
+- **laptop**: Lenovo ThinkBook 16 G8+ IPD (21VJ), Core Ultra 7 356H + RTX 5060 Mobile. Live inventory получен, аппаратный scan/PRIME offload и путь UMIS 1 TB SSD заданы. Полный input update и финальный GPU power/resume/install review ещё впереди; install guard сохранён. NixOS/HM не установлены.
 - **desktop**: старше laptop. AMD + NVIDIA, два монитора (DVI 1680x1050 + HDMI 3840x2160@3x). Нет Bluetooth/uinput/xremap/hibernate.
 - **server**: модульный VPS stack без Docker, Disko и generic virtio hardware modules. Preflight пишет внешний settings input по данным rescue environment; в Git остаётся только пример.
 - **mac**: только standalone HM (users + core-set). Без nix-darwin, без GUI, без проверки совместимости Linux-пакетов.

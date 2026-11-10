@@ -62,7 +62,7 @@ An additional short read-only smoke on Acer produced real capacity and I/O JSON;
 it did not benchmark the disk or verify the built wrapper/installed GTK panel.
 No full HM/Waybar build or activation was run by the agent.
 
-1. After review, apply your profile: `home-manager switch --flake .#samov-laptop`
+1. After review, apply your profile: `home-manager switch --flake .#samov-laptop-old`
    on Acer, or `.#samov-desktop` on desktop. Do not apply the Lenovo draft on Acer.
 2. Reload the existing panel with `pkill -USR2 waybar`; reopen Yazi. The current
    configs use Waybar's default SIGUSR2 reload action. No Hyprland logout or

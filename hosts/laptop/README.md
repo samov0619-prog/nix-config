@@ -1,13 +1,18 @@
-# Lenovo draft: laptop-next
+# Lenovo installation target: laptop
 
-Temporary outputs: `nixosConfigurations.laptop-next` and
-`homeConfigurations.samov-laptop-next`. Acer still owns `laptop`/`samov-laptop`.
+Outputs: `nixosConfigurations.laptop` and `homeConfigurations.samov-laptop`.
+Acer now uses `laptop-old`/`samov-laptop-old`; no activation has renamed the live Acer.
 Lenovo-specific settings stay isolated; explicitly shared changes such as the
 nomacs viewer below also apply to existing Linux GUI profiles.
 
 ## Already represented in configuration
 
 - NixOS/HM stateVersion 26.05; standalone HM stays separate from NixOS activation.
+- [Live hardware scan](hardware-configuration.nix) from ThinkBook 16 G8+ IPD
+  (`21VJ`): initrd storage/USB/Thunderbolt modules, `kvm-intel`, Intel NPU and
+  microcode defaults. Storage declarations remain exclusively in Disko; no live
+  USB mounts are copied. Declaration fixtures cover this import and its contents,
+  not installed boot, NPU functionality or complete configuration evaluation.
 - Hyprland/UWSM, familiar Dwindle controls, Russian/English layouts, three-finger
   workspace gesture, audio/Bluetooth/UDisks2 and the existing VPN clients.
 - Shared workstation [Avahi/mDNS](../../docs/laptop-audit/mdns.md) resolves LAN
@@ -16,7 +21,7 @@ nomacs viewer below also apply to existing Linux GUI profiles.
   VPS/installer do not. Actual Pi connectivity remains a live check.
 - PPD and a native Waybar profile icon: left click selects the next available
   profile, right click the previous. A
-  [Lenovo-only Waybar extension](../../home/linux/laptop-next/waybar/README.md)
+  [Lenovo-only Waybar extension](../../home/linux/laptop/waybar/README.md)
   names both destinations in the tooltip using the actual available profile list.
   Its algorithm/patch checks passed; the full binary/UI remain unbuilt and untested.
 - [Lenovo-only graphics module](graphics.nix): unstable `linuxPackages_latest`,
@@ -27,8 +32,14 @@ nomacs viewer below also apply to existing Linux GUI profiles.
   existing hosts intact. The rest of NixOS/HM remains on its existing sources.
   Current lock selects kernel **7.2.11**, NVIDIA **615.78.08**, Mesa **26.2.5** and
   firmware **20260916**, not today's upstream head. Input updates plus later
-  NixOS activation advance the stack; there is no background updater. PRIME mode,
-  Bus IDs, GPU power policy and live compatibility remain unverified. See the
+   NixOS activation advance the stack; there is no background updater. Live PCI
+   inventory confirms Intel `00:02.0` and NVIDIA `02:00.0`, with the built-in panel
+   active on Intel. The user selected PRIME render offload with `nvidia-offload`,
+   not a global GPU selection or an NVIDIA-wrapped Steam client. Select individual
+   games explicitly, e.g. `nvidia-offload %command%` in Steam Launch Options;
+   those per-game settings are mutable Steam state, not managed here. RTD3,
+   suspend/hibernate policy and installed-driver compatibility still need review.
+   See the
   [graphics audit](../../docs/laptop-audit/graphics.md) for evidence and limits.
 - Existing workstation CLI/devtools (including shared Python/Node prerequisites
   for Mason), OpenCode, browsers, Blender and Minecraft applications. Global Go
@@ -99,9 +110,11 @@ remain unreviewed. No fingerprint authentication, passwordless `sudo`, TPM unloc
 or Secure Boot configuration is enabled. Autologin is a separate explicit choice
 described above, not an implication of using unencrypted storage.
 
-The system has an explicit failing assertion until target hardware/PRIME settings
-and target disk are reviewed. Remove it only after resolving those items. The
-disk is still `REPLACE_ME`. Storage, initial memory/GC and bootstrap login choices
+The system has an explicit failing assertion pending the input update, GPU
+power/resume review and final installation review. The live hardware scan and
+PRIME IDs are configured; Disko points to the observed UMIS NVMe at
+`/dev/disk/by-path/pci-0000:01:00.0-nvme-1`. Recheck disk identity before wiping:
+this is a topology path, not a serial-number identity. Storage, initial memory/GC and bootstrap login choices
 are settled, not permission to install or proof of hardware/boot compatibility.
 
 Do not apply this HM profile on Acer: it manages the same user paths with Lenovo's
@@ -111,8 +124,8 @@ Disko from this draft.
 Source-only checks (do not build NixOS or Home Manager):
 
 ```fish
-nix eval --impure --json --offline --option allow-import-from-derivation false --file hosts/laptop-next/test-draft.nix
-nix eval --impure --json --offline --option allow-import-from-derivation false --file hosts/laptop-next/test-graphics.nix
+nix eval --impure --json --offline --option allow-import-from-derivation false --file hosts/laptop/test-draft.nix
+nix eval --impure --json --offline --option allow-import-from-derivation false --file hosts/laptop/test-graphics.nix
 ```
 
 The first check exercises real module declarations with fixture packages. The
@@ -127,13 +140,20 @@ do not attempt either output as an installation-ready configuration now.
 The user plans a full input update before the first Lenovo installation, not an
 installation frozen to Acer's old lock. Keep the tracked lock as the baseline and
 use `nix flake update`, not deletion; fixed refs still need separate consideration.
-Windows initial setup is not completed. First prepare a NixOS Live USB: the ISO
-choice remains open, with the user leaning toward minimal for a lightweight
-console-only environment; graphical is optional, not required for manual installation.
-The user prefers USB 3.x for speed; Gen 1 is enough, USB 2.0 also works, 8 GB or
-larger recommended. Collect read-only hardware
-inventory, resolve the host/disk/graphics blockers and coordinated rename, then let
-the user update. Review local integration/patch compatibility and build the final
+Disko is selected for this local installation too: update it with the other inputs,
+then use that same locked revision for review and partitioning, not an unrelated
+upstream/latest invocation. Install the complete prepared NixOS/HM configurations,
+not a temporary minimal system; standalone HM still has its own activation step.
+The user has booted the official stable 26.05 Minimal x86_64 ISO, written directly
+to the small USB drive without Ventoy. Windows Home need not be preserved; the
+internal SSD has not been repartitioned. User-supplied output confirms live kernel
+7.3.3, UEFI, CPU/RAM, PCI drivers and connector status; the hardware scan is now
+imported. A completed Memtest pass has not been reported.
+Follow the official manual installation sequence, adapting its examples to the
+reviewed flake, ext4, 48 GiB swap and GRUB EFI rather than replacing those choices.
+Hardware inventory and the coordinated source rename are complete; resolve the
+remaining power/resume and final installation review after the full input update.
+Review local integration/patch compatibility and build the final
 Lenovo outputs, not every upstream commit or every host. The ordered preparation
 and live acceptance stay in the [single checklist](../../docs/laptop-audit/lenovo-checklist.md).
 No USB write, firmware change, lock update, build or installation is authorized

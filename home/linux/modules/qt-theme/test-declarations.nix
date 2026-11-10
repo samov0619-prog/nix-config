@@ -51,9 +51,9 @@ let
     };
 in
 builtins.mapAttrs check {
-  samov-laptop = true;
+  samov-laptop-old = true;
   samov-desktop = true;
-  samov-laptop-next = true;
+  samov-laptop = true;
   samov-server = false;
   samov-mac = false;
 }
