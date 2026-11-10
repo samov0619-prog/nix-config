@@ -737,6 +737,50 @@ audio/video MIME defaults и собственного полного переч�
 pinned nixpkgs `pkgs/by-name/br/brightnessctl/package.nix` и выбранные
 `environment.systemPackages`/`users.users.samov.extraGroups` трёх NixOS hosts.
 
+## Bluetooth/Blueman: запуск и граница авторизации
+
+- Selected merged NixOS declarations подтверждают Bluetooth/Blueman на Acer
+  и Lenovo, но не desktop. На ноутбуках сохранён штатный `powerOnBoot=true`.
+  UWSM и XDG autostart включены. Расширенная evaluation с package/unit lists
+  превысила 20 секунд и не считается успешной; затем узкая evaluation этих
+  флагов трёх hosts прошла без builds/IFD.
+- Pinned NixOS modules устанавливают BlueZ, его service/udev/D-Bus registration,
+  а для Blueman — package и systemd/D-Bus registration. Installed Blueman 2.4.6
+  содержит `etc/xdg/autostart/blueman.desktop` с `Exec=blueman-applet`, без
+  desktop-specific ограничений, и D-Bus service `org.blueman.Applet`, связанный
+  с `Type=dbus` user unit. Это штатные пути запуска; новый Hyprland exec-once
+  или отдельный самописный user service не добавлены. Реальный login/автозапуск,
+  tray и пользовательские autostart overrides не проверены.
+- `AuthAgent` Blueman регистрирует BlueZ agent для passkey/pairing. Это не общий
+  графический Polkit authentication agent: прежняя граница проверки polkit для
+  других приложений этим не закрыта. Сопряжения и пользовательские plugins
+  не обследовались, удаление PIN/подтверждений сопряжения не предлагается.
+- Отдельный подтверждённый вопрос: установленный Blueman имеет
+  `Constants.POLKIT=False`. Его root helper `org.blueman.Mechanism` доступен
+  через поставляемую D-Bus policy локальным bus clients; метод
+  `confirm_authorization` при этом флаге возвращает без проверки Polkit.
+  Например, этот метод вызывают служебные операции настройки Bluetooth-сети.
+  Узкая evaluation Lenovo `pkgs.blueman.outPath` совпала с проверенным installed
+  package: это относится и к выбранному пакету будущего ноутбука.
+- Изолированная диагностика AST-extracted настоящего `confirm_authorization`
+  с fake timer/authority подтвердила возврат при False. Контроль с True и
+  отсутствующей authority завершился ожидаемой ошибкой, а не разрешением.
+  Не импортировались реальные plugins и не запускались helper, D-Bus или сеть.
+  Это подтверждение ветки авторизации, не проверка доступности всех операций
+  в живой системе и не доказательство произвольного root-доступа либо удалённой
+  Bluetooth-уязвимости. PIN/BlueZ pairing — отдельная граница.
+- Рекомендация для отдельного согласования: разобрать включение штатной Polkit
+  поддержки пакета, её policy и влияние на привычный workflow. Пакет/правила
+  пока не менялись; широкие разрешения, новые группы, pairing/network/power
+  операции не добавлялись. Адаптеры, адреса, список сопряжённых устройств,
+  scan/connect/disconnect и Bluetooth audio/OBEX не читались/не запускались.
+  В этом шаге только документация; NixOS/HM activation не нужна.
+
+Источники: pinned nixpkgs `services/hardware/bluetooth.nix`,
+`services/desktops/blueman.nix`, `config/xdg/autostart.nix`; installed Blueman
+2.4.6 desktop/D-Bus/systemd files, `Constants.py`, `AuthAgent.py`,
+`MechanismApplication.py` и `plugins/mechanism/Network.py`.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |
