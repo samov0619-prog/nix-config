@@ -31,6 +31,7 @@ Acer после backup/lifecycle fixes; это не проверка Minecraft r
 - [FileManager1](../../pkgs/filemanager1-common/README.md): `file://localhost` и `file:///` открывают один локальный путь в Kitty/Yazi.
 - [Запуск TUI](tui-launchers.md): текстовый файл → Kitty → Neovim, отличия shell/project environment и явного sudo-Yazi.
 - [Съёмные накопители](removable-media.md): рабочая секция меню udiskie и каталоги через Kitty/Yazi, без изменения прав/автомонтирования.
+- [Архивы Yazi](archives.md): отмена password mode без создания незашифрованного архива и изоляция параметров вызовов.
 - [Медиаклавиши](media-keys.md): playerctl и MPRIS MPV, управление вне активного workspace без новой службы.
 - [Polkit](polkit.md): штатная поддержка Blueman и графический агент Hyprland, без собственной разрешающей policy.
 - [Desktop portals](portals.md): штатный маршрут Hyprland/GTK и границы проверки chooser/screen sharing.

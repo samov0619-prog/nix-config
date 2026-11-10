@@ -915,6 +915,34 @@ pinned nixpkgs `pkgs/by-name/br/brightnessctl/package.nix` и выбранные
 pinned nixpkgs `services/networking/{networkmanager,dhcpcd}.nix` и installed
 NetworkManager policy. Реальная DNS/routing/VPN-интеграция этим не проверена.
 
+## Архивы Yazi: отмена пароля и параметры вызова
+
+- В installed compress 0.6 обнаружено продолжение создания незашифрованного
+  архива после Esc/пустого пароля и игнорирование password mode для TAR.
+  На настоящем Lua-коде с fake Yazi APIs воспроизведено также сохранение флагов
+  и аргумента пароля между entry calls одного экземпляра модуля; его lifetime
+  в настоящем Yazi этим не проверен.
+- Общий core-set подключает минимальный patch: отмена прекращает операцию,
+  неподдерживаемый password format отклоняется до создания temporary directory,
+  флаги сбрасываются, списки аргументов копируются. Клавиши c a a/c a p,
+  archive rules, версии и прежние API substitutions сохранены. Scope — все пять
+  HM profiles по общему import, не отдельный корпоративный OpenCode Mac archive.
+- На старом source четыре регрессионных проверки падают; с patch все восемь
+  проходят. Реальный 7zz выполняет полученные от plugin аргументы на tiny fixture
+  с пробелами/Unicode/кавычкой; верный тестовый пароль даёт исходные bytes,
+  неверный отклоняется. Проверен порядок patch/API substitutions на обратимо
+  восстановленной installed копии; pristine source отсутствовал, сборки не было.
+  Узкая merged evaluation Acer подтвердила wiring/версии/клавиши/rules.
+- Пароль в argv остаётся upstream-механизмом; криптографическая policy ZIP
+  не пересматривалась. Настоящий Yazi UI, extraction/preview integration,
+  все форматы/недоверенные имена, Darwin и полная HM-матрица не проверены.
+  Личные файлы/архивы/пароли не читались, installs/activation не запускались.
+  Nixfmt 1.3.1 применён только к shell.nix; Ruff/Prettier отсутствуют.
+- [Применение, ограничения и проверки](archives.md): пользовательский HM switch
+  нужного профиля, затем полный перезапуск Yazi и несекретный тестовый файл.
+  NixOS rebuild не нужен. Lenovo archive-сценарий добавлен в существующий
+  workflow checklist, а не отдельным десятым блоком приёмки.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |

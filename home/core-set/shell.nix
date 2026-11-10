@@ -43,6 +43,7 @@
     # nomacs подключается только в home/linux/modules/nomacs через Linux GUI.
     plugins = {
       compress = pkgsUnstable.yaziPlugins.compress.overrideAttrs (old: {
+        patches = (old.patches or [ ]) ++ [ ./yazi-compress-password.patch ];
         postPatch = (old.postPatch or "") + ''
           substituteInPlace main.lua \
             --replace-fail 'tostring(u.parent)' 'tostring(u.url.parent)' \

@@ -498,6 +498,17 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
   ordinary audits. The old `~/.config/llm-secrets/env` is no longer loaded and is
   not automatically migrated/deleted. See `docs/laptop-audit/fish-local-env.md`.
 
+### Yazi archives
+
+- Shared `home/core-set/shell.nix` patches compress 0.6 to abort password-mode
+  cancellation/empty input, reject formats without password support and isolate
+  flags/argument tables per invocation. Existing API substitutions and bindings
+  stay. Eight Lua/API-fixture and real tiny 7zz checks pass; actual Yazi UI,
+  full HM builds and Darwin remain unverified. Passwords still use upstream argv.
+  On upstream update, remove the password patch only after the same regressions
+  pass without it; review API substitutions separately. See
+  `docs/laptop-audit/archives.md` for application and acceptance.
+
 ### Neovim
 
 - Global Go is not imported by any HM profile. `home/core-set/go.nix` is retained
