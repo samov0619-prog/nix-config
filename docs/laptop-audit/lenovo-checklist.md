@@ -127,10 +127,22 @@ x86_64 USB. Windows Home сохранять не требуется; внутр�
    **Доставка через Git выбрана для практики**, не копированием checkout по SSH.
    После review сохранить согласованные изменения и lock локальными коммитами;
    push выполняет пользователь. В live Lenovo проверить наличие Git, при отсутствии
-   дать временный Git через Nix shell; clone делать из настоящего GitHub URL,
-   не Acer-specific SSH alias `github.com-samov0619`. Способ доступа зависит от
-   видимости repo; не копировать private keys Acer в live. Сверить HEAD и чистоту
-   install checkout, перенести его на целевой диск после mounts для сохранения
+   дать временный Git через `nix-shell -p git`. Публичный repo впервые клонировать
+   по HTTPS без ключей и авторизации, не через Acer-specific SSH alias
+   `github.com-samov0619`. На Lenovo live:
+
+   ```fish
+   git clone https://github.com/samov0619-prog/nix-config.git
+   cd nix-config
+   git rev-parse HEAD
+   git status --short
+   ```
+
+   Сверить HEAD с доставленным reviewed commit; `git status --short` должен быть
+   пустым. Не копировать private keys Acer в live: для clone они не нужны.
+   После установки настроить SSH для постоянного пользователя и сменить `origin`
+   в том же checkout, без повторного clone (пункт Git/SSH ниже).
+   Перенести install checkout на целевой диск после mounts для сохранения
    после reboot. До этого live checkout не переживёт перезагрузку.
    Git author identity и аутентификация — отдельные вещи; clone не требует
    `user.name`/`user.email`. Shared HM включает Git/editor/merge style, но не
@@ -197,6 +209,28 @@ x86_64 USB. Windows Home сохранять не требуется; внутр�
 
 ## Затем, с подготовленным окружением
 
+- [ ] **Git/SSH после установки:** в установленной системе под `samov`, не в live
+      под `nixos`, настроить доступ к GitHub. Создать отдельный SSH-ключ Lenovo
+      (либо осознанно перенести существующий безопасным способом), добавить только
+      публичную часть в GitHub. Приватный ключ остаётся вне Git и Nix store;
+      SSH aliases/options и публичные `authorized_keys` можно декларировать отдельно,
+      но они не заменяют приватный ключ для доступа к GitHub.
+      Проверить SSH-аутентификацию и поменять URL в сохранённом checkout:
+
+      ```fish
+      ssh -T git@github.com
+      git remote set-url origin git@github.com:samov0619-prog/nix-config.git
+      git remote get-url origin
+      ```
+
+      Перед подтверждением нового host key сверить fingerprint с официальной
+      документацией GitHub. Ожидается приветствие нужного GitHub account с сообщением
+      об отсутствии shell access; успешный `ssh -T` GitHub завершает с кодом 1.
+      При выбранном SSH alias использовать его вместо `github.com` и в проверке,
+      и в URL. Повторный clone не нужен; смена URL сама не делает fetch/push.
+      HTTPS допустимо оставить для чтения до готовности SSH. Отдельно проверить
+      Git author name/email: SSH-аутентификация их не задаёт. Nix activation для
+      ключа, его регистрации в GitHub и смены remote не требуется.
 - [ ] **Повседневный workflow:** Hyprland/UWSM, раскладки, терминал, Neovim/direnv,
       браузеры и нужные приложения работают. HTTP/HTTPS открываются в Chrome;
       Firefox доступен вторым.
