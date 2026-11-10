@@ -975,6 +975,31 @@ NetworkManager policy. Реальная DNS/routing/VPN-интеграция э�
   NixOS rebuild и lock update не нужны. После этого остаётся итоговая сверка
   текущего source-аудита, а не новый круг по уже принятым приложениям.
 
+## Итоговая независимая source-сверка
+
+- Пользователь сообщил, что switch после panel-helper fix прошёл, и предложил
+  независимого сабагента с минимальным контекстом. Это подтверждение HM switch,
+  не отдельная проверка rendering/unknown-state панели.
+- Read-only reviewer получил цель, краткие категории сделанного, основные docs
+  и локальный audit commit ledger до cdf40c9, без переписки/private continuation.
+  Новых доказанных существенных регрессий в просмотренном коде не нашёл.
+  Тесты/evaluation/builds/live operations не запускал; прошлые результаты
+  рассматривал как документированную evidence, не свою повторную верификацию.
+- Два замечания сверены родительским агентом: Tofi complex-argv issue действительно
+  остаётся в launcher, а README продолжал обещать незавершённый широкий этап.
+  Launcher не менялся. README теперь отделяет завершённый ограниченный проход
+  от невыполненного полного per-package/startup/mutable-state плана и приёмки Lenovo.
+- [Итог и точные остатки](closing.md): known source issue Tofi, ширина исходного
+  плана, hardware/disk/PRIME/rename guards, девять live acceptance blocks и отдельные
+  MTP/fingerprint/VPN решения. Это не «всё проверено» и не разрешение на установку.
+  OpenCode patches, все upstream modules/commit diffs и private state не получили
+  нового полного аудита. Согласованные пользовательские policy не переоткрыты.
+- Повторный focused review трёх closing-документов тем же независимым reviewer
+  не нашёл существенных documentation blockers; код и прежние tests заново
+  не проверялись.
+- Только документация; NixOS/HM activation, build, input update, rename или
+  hardware operations для этой сверки не требуются.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |
