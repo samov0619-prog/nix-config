@@ -841,6 +841,41 @@ pinned nixpkgs `pkgs/by-name/br/brightnessctl/package.nix` и выбранные
   workflow checklist; проверка Print не приравнивается к проверке ScreenCast.
   В этом шаге только документация, NixOS/HM activation не нужна.
 
+## Звук: PipeWire и совместимость Pulse/JACK
+
+- Selected merged NixOS evaluation Acer/desktop/Lenovo прошла offline/noIFD:
+  основной audio server — PipeWire, `systemWide=false`, socket activation,
+  WirePlumber и RTKit включены. ALSA/32-bit ALSA, PulseAudio и JACK compatibility
+  включены; отдельные `services.pulseaudio` и `services.jack.jackd` выключены.
+  Конфликта этих серверов на уровне деклараций не найдено.
+- Pinned modules подтверждают смысл опций: `pipewire-pulse` — PulseAudio protocol
+  compatibility server поверх того же PipeWire graph, JACK — совместимая библиотека,
+  не второй jackd. Название `pulseaudio` в Waybar не означает запуск отдельного
+  PulseAudio daemon. `pwvucontrol` остаётся выбранным интерфейсом управления;
+  приложения/текущие маршруты/объекты аудиографа в этом шаге не опрашивались.
+- Native NixOS user sockets PipeWire/Pulse привязаны к sockets.target,
+  WirePlumber — к pipewire.service. Read-only service-state snapshot Acer показал
+  pipewire, pipewire-pulse, wireplumber, оба sockets и system rtkit-daemon
+  active/running/success. Это не доказательство исправного вывода/записи,
+  realtime scheduling каждого приложения или отсутствия всех ручных daemon.
+- WirePlumber extraConfig пуст на трёх hosts. EasyEffects оставлен отключённым
+  в source; узкая merged HM evaluation Acer подтвердила false. Попытка общей
+  EasyEffects evaluation трёх GUI profiles превысила 20 секунд и не засчитывается
+  как успешная. Ручные PipeWire/WirePlumber/DAW конфиги не обследовались.
+- Совместимость 32-bit/игр и JACK/DAW сохраняется. Не добавлены audio groups,
+  собственные realtime limits, tuning latency/sample-rate/quantum, forced codecs,
+  эффекты, новая служба или restart. Нет обнаруженного дефекта, ради которого
+  менять этот baseline. Реальные динамики/наушники, microphone, Bluetooth profiles,
+  DAW backend/xruns и поведение после resume остаются живой проверкой Lenovo.
+- Не выполнялись playback/record/volume/routing commands, pw-dump/wpctl status
+  или чтение client/stream metadata, записей и проектов DAW. Только status и
+  исходники/декларации, без builds/activation. Уточнён существующий пункт устройств
+  Lenovo checklist; после этого шага NixOS/HM activation не требуется.
+
+Источники: `hosts/{laptop,desktop,laptop-next}/default.nix`,
+`home/linux/gui-set/default.nix`, host Waybar configs и pinned nixpkgs modules
+`services/desktops/pipewire/{pipewire,wireplumber}.nix`, `security/rtkit.nix`.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |
