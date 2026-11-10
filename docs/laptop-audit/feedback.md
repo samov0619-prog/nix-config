@@ -876,6 +876,45 @@ pinned nixpkgs `pkgs/by-name/br/brightnessctl/package.nix` и выбранные
 `home/linux/gui-set/default.nix`, host Waybar configs и pinned nixpkgs modules
 `services/desktops/pipewire/{pipewire,wireplumber}.nix`, `security/rtkit.nix`.
 
+## Сеть: NetworkManager, Wi-Fi и доступ к управлению
+
+- Selected merged NixOS evaluation Acer/desktop/Lenovo прошла offline/noIFD:
+  NetworkManager включён, DHCP internal, DNS mode systemd-resolved с включённым
+  resolved. Wi-Fi backend — wpa_supplicant под D-Bus-контролем NetworkManager,
+  autoDetectInterfaces=false, iwd выключен. Это согласованная композиция,
+  не два независимых менеджера Wi-Fi. Wi-Fi powersave не форсирован (`null`).
+- `useDHCP=false`, ни один объявленный interface не запрашивает отдельный DHCP,
+  dhcpcd unit не объявлен на всех трёх hosts. Само значение
+  `networking.dhcpcd.enable=true` не означает работающий второй DHCP client:
+  pinned module создаёт service только при запросе DHCP глобально/на interface.
+  Installed Acer dhcpcd.service not-found; NetworkManager, wpa_supplicant и
+  systemd-resolved active/running/success. Адреса, DNS servers и routes не читались.
+- Сохранён terminal workflow: Acer source явно предлагает nmcli/nmtui,
+  оба binary присутствуют в installed system. System nm-applet выключен на трёх
+  hosts; shared HM sources не объявляют его, network-блоки Waybar показывают
+  статус/скорость без click action. Отсутствие GUI-апплета не исправлялось как баг.
+- Polkit включён; samov не входит в networkmanager group на трёх hosts.
+  Read-only `nmcli general permissions` на Acer показал network-control и
+  settings.modify.own=yes, settings.modify.system=auth. Installed upstream policy
+  соответствует этому: системные profiles требуют auth_admin_keep. NixOS group
+  rule, напротив, разрешает все org.freedesktop.NetworkManager.* actions членам
+  networkmanager; группа не добавлена ради обхода авторизации. Это проверка
+  разрешений текущего процесса, не успешного соединения или password prompt.
+- wait-online выключен на обоих laptops (на Acer unit masked), desktop сохраняет
+  включённый default. network-online.target без waiter не гарантирует готовую сеть;
+  даже с waiter это не гарантия доступности Интернета и не монитор reconnect.
+  Новые зависимости/ожидания и retry-policy backup не добавлялись в этом шаге.
+- Подтверждённого дефекта не найдено. Не выполнялись scan/connect/disconnect,
+  DNS/network probes, rfkill, VPN operations, перезапуски, builds или activation.
+  Saved profiles, SSID/BSSID, пароли, connection/device inventories и журналы сети
+  не читались. Lenovo Wi-Fi firmware/подключение/автовозврат после сна и работа
+  авторизации остаются живой приёмкой в существующем checklist. Изменена только
+  документация; NixOS/HM применять не требуется.
+
+Источники: `hosts/{laptop,desktop,laptop-next}/default.nix`, host Waybar configs,
+pinned nixpkgs `services/networking/{networkmanager,dhcpcd}.nix` и installed
+NetworkManager policy. Реальная DNS/routing/VPN-интеграция этим не проверена.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |
