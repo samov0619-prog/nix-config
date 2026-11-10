@@ -33,6 +33,7 @@ Acer после backup/lifecycle fixes; это не проверка Minecraft r
 - [Съёмные накопители](removable-media.md): рабочая секция меню udiskie и каталоги через Kitty/Yazi, без изменения прав/автомонтирования.
 - [Медиаклавиши](media-keys.md): playerctl и MPRIS MPV, управление вне активного workspace без новой службы.
 - [Polkit](polkit.md): штатная поддержка Blueman и графический агент Hyprland, без собственной разрешающей policy.
+- [Desktop portals](portals.md): штатный маршрут Hyprland/GTK и границы проверки chooser/screen sharing.
 - [Карта запуска](startup.md): Minecraft, proxy и GUI; источники, зависимости и открытые риски.
 - [Питание и температуры](power.md): активная policy Acer, происхождение настроек и варианты Lenovo.
 - [Графика Lenovo](graphics.md): поддержка Panther Lake/RTX 5060 в locked stack и границы до живой проверки.

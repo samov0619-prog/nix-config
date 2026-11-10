@@ -814,6 +814,33 @@ pinned nixpkgs `pkgs/by-name/br/brightnessctl/package.nix` и выбранные
   непроверенными до пользовательской приёмки; прежняя runtime-граница Polkit
   теперь закрыта декларацией, не заявлением об успешном живом authentication.
 
+## Приёмка Polkit и следующий аудит desktop portals
+
+- Пользователь показал agent service active/running и сообщил о запросе пароля
+  при `pkexec /run/current-system/sw/bin/true`. Принят пользовательский сценарий
+  появления запроса, не независимая агентская GUI/PAM-проверка или тест всех
+  helper actions. Read-only installed Acer package inspection подтвердил
+  POLKIT=True, четыре ожидаемых action IDs/defaults и штатное wheel rule.
+  Логи пользовательской сборки/installCheck не исследовались; новые builds,
+  activation и Bluetooth calls агентом не выполнялись.
+- Обрезанное предупреждение host portal уточнено узким чтением журнала:
+  `Connection already associated with an application ID`. Source точного
+  xdg-desktop-portal 1.20.4 выдаёт эту ошибку для уже ассоциированного sender;
+  это не отказ регистрации Polkit agent. Не утверждается безвредность для всех
+  Qt/portal функций, но показанному сценарию password request оно не помешало.
+- Следующая bounded selected merged NixOS evaluation Acer/desktop/Lenovo прошла:
+  portal enabled, Hyprland+GTK extra backends, configPackages=hyprland,
+  собственный config пуст, wlr backend выключен. Installed Acer config задаёт
+  default=hyprland;gtk; descriptors распределяют ScreenCast/Screenshot и
+  FileChooser/Settings. Три user services сейчас active/running/success.
+  Реальные client environment/ручные overrides/permission store не обследовались.
+- Подтверждённого routing-дефекта не найдено: не добавлены свои per-interface
+  mappings, GTK_USE_PORTAL, иной chooser, capture rules или restart/cache workaround.
+  Portal methods, UI chooser, screen share и содержимое файлов/экрана не вызывались
+  и не читались. [Границы и приёмка](portals.md) внесены в существующий Lenovo
+  workflow checklist; проверка Print не приравнивается к проверке ScreenCast.
+  В этом шаге только документация, NixOS/HM activation не нужна.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |

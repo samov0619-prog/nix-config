@@ -83,11 +83,11 @@ for profile in samov-laptop samov-desktop samov-laptop-next samov-mac samov-serv
 end
 ```
 
-Сборки и installCheck на настоящем новом package ещё не запускались. Старый
-installed `POLKIT=False` остаётся до пользовательского rebuild/switch.
-Не проверены установленный layout, регистрация агента в сессии, PAM/парольный
-диалог, реальные действия Blueman и устройства. Сопряжения, адреса, scan/connect,
-network sharing/rfkill и Bluetooth streams не читались/не менялись.
+На этапе реализации агент не запускал сборки/installCheck настоящего нового
+package и не проверял installed layout или живой парольный диалог. Последующая
+проверка Acer описана ниже; реальные действия Blueman и устройства всё ещё
+не проверены. Сопряжения, адреса, scan/connect, network sharing/rfkill и Bluetooth
+streams не читались/не менялись.
 
 ## Применение и приёмка
 
@@ -119,6 +119,29 @@ network sharing/rfkill и Bluetooth streams не читались/не меня�
    `true`. Один успешный exit code не доказывает графический prompt: tty fallback
    тоже возможен. Не включать Bluetooth networking или rfkill ради этой проверки.
    Привычное подключение выбранной периферии проверить отдельно, когда удобно.
+
+## Последующая приёмка Acer
+
+Пользователь показал `hyprpolkitagent.service` active/running и сообщил, что
+`pkexec /run/current-system/sw/bin/true` запросил пароль. Это пользовательское
+подтверждение запроса авторизации, не независимая агентская проверка отрисовки
+диалога, введённого пароля или полного набора PAM-сценариев.
+
+Read-only проверка текущего installed Blueman независимо подтвердила
+`POLKIT=True`, четыре ожидаемых action IDs/defaults и наличие штатного wheel
+rule с прежним содержимым. Это уже evidence installed результата на Acer,
+не только декларации. Логи сборки/installCheck не исследовались; агент их
+не запускал. Доступ конкретных пользователей к helper не вызывался/не проверялся.
+
+Обрезанная строка `Failed to register with host portal` уточнена узким чтением
+журнала агента: `Connection already associated with an application ID`.
+Это ответ desktop portal о существующей app-ID association, не отказ Polkit.
+Реальный эффект на прочие функции Qt/portal не проверен; ошибка не помешала
+пользовательскому сценарию запроса пароля. Никакие portal/cache/environment
+обходы или перезапуски не добавлены. [Отдельные границы portals](portals.md).
+Desktop/Lenovo и реальные Bluetooth-подключения этим не приняты.
+
+## Обновление пакета
 
 При обновлении nixpkgs проверить штатный Blueman без override. Когда native
 package сам имеет Polkit и проходит этот install verifier, удалить только

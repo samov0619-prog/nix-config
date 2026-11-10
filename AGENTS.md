@@ -423,8 +423,17 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
   Mac/server are unchanged. Blueman's Polkit build override is separate and
   NixOS-only on the two laptops. Stock Blueman permits its four helper actions
   to wheel without authentication; do not call this per-application isolation.
-  Fixture/declaration checks pass, not real builds/install layout or GUI/PAM.
+  Fixture/declaration checks pass; installed Acer POLKIT=True/actions/wheel rule
+  are checked and the user confirms a pkexec password prompt with the agent active.
+  This is not independent GUI/PAM or Bluetooth helper-action coverage; other hosts
+  remain unverified. The host-portal app-ID warning did not block that scenario.
   See `docs/laptop-audit/polkit.md` for apply/acceptance and override cleanup.
+- Native desktop portals remain Hyprland + GTK with Hyprland's supplied
+  `default=hyprland;gtk`, not a custom routing policy. Selected three-host
+  declarations, installed Acer config/descriptors and active service states are
+  checked, not live chooser/screen sharing or per-client environment/overrides.
+  Do not add routing/cache workarounds solely for the agent's already-associated
+  app-ID warning. See `docs/laptop-audit/portals.md` and the Lenovo checklist.
 - Disk status in shared Waybar is `custom/disk` on Acer/desktop/Lenovo: home
   filesystem available/total GiB plus whole backing-disk I/O busy %, read/write
   MiB/s in tooltip. A Waybar-owned Python JSON stream reads statvfs/sysfs every 5s,
