@@ -700,6 +700,43 @@ audio/video MIME defaults и собственного полного переч�
   [Применение и проверка](media-keys.md): пользователь применяет HM и переоткрывает
   MPV; NixOS rebuild не нужен. Живая проверка с одним плеером ещё не выполнена.
 
+Затем пользователь подтвердил «да работает» и продолжил аудит.
+Это пользовательская приёмка текущего сценария медиаклавиш на Acer, не независимая
+проверка агентом. Отдельные MPV/Audacious, выбор нескольких плееров, desktop/Lenovo
+этим не подтверждены.
+
+## Яркость экрана: бинды, команда и права
+
+- Source/selected merged NixOS audit: Acer и Lenovo устанавливают brightnessctl;
+  desktop — нет. В текущем PATH Acer команда доступна. Две brightness bindings
+  каждого GUI host механически сверены: `brightnessctl -e4 -n2 set 5%+` и `5%-`.
+  Параметры поддерживаются installed help и upstream source 0.5.1: нелинейная
+  шкала с exponent 4, минимальное raw-значение 2 (не 2% яркости).
+- Pinned nixpkgs собирает brightnessctl с `ENABLE_SYSTEMD=1`. В source этого
+  release при отсутствии прямого доступа к sysfs используется logind
+  `Session.SetBrightness`. Документированный API systemd 260.2 позволяет
+  непривилегированным приложениям контролируемый доступ к backlight/leds;
+  это та же версия systemd, что выбрана на трёх hosts.
+  Отсутствие `video` в согласованных Lenovo groups само по себе не дефект:
+  группу, sudo, отдельные udev/polkit rules или агент ради яркости не добавляем.
+- Desktop содержит скопированные laptop brightness bindings без установленной
+  команды. Это отдельный пробел, но установка brightnessctl не гарантирует
+  регулировку внешних DVI/HDMI-мониторов. Нужность этих клавиш и подходящий
+  monitor-control interface на desktop не проверены; зависимости/бинды пока
+  не менялись, новый DDC stack не предлагается без реального сценария.
+- Наличие драйвера/правильного backlight device Lenovo, разрешение вызова в живой
+  сессии и реальные клавиши/remap/repeat не проверены. Device selection оставлен
+  штатным, без Acer-specific `--device`. Не выполнялись set/pretend, D-Bus
+  SetBrightness, сборки/activation или операции с sysfs; вызван только `--help`.
+  Дефекта ноутбучной конфигурации этим аудитом не найдено. Живая проверка Lenovo
+  остаётся в существующем пункте устройств checklist. Только документация:
+  NixOS/HM activation для этого шага не нужна.
+
+Источники: [brightnessctl 0.5.1](https://github.com/Hummer12007/brightnessctl/blob/0.5.1/brightnessctl.c),
+[logind 260.2 SetBrightness](https://github.com/systemd/systemd/blob/v260.2/man/org.freedesktop.login1.xml),
+pinned nixpkgs `pkgs/by-name/br/brightnessctl/package.nix` и выбранные
+`environment.systemPackages`/`users.users.samov.extraGroups` трёх NixOS hosts.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |
