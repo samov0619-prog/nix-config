@@ -124,6 +124,21 @@ in the [single Lenovo checklist](../../docs/laptop-audit/lenovo-checklist.md).
 Builds and activation are left to the user after the draft blockers are resolved;
 do not attempt either output as an installation-ready configuration now.
 
+The user plans a full input update before the first Lenovo installation, not an
+installation frozen to Acer's old lock. Keep the tracked lock as the baseline and
+use `nix flake update`, not deletion; fixed refs still need separate consideration.
+Windows initial setup is not completed. First prepare a NixOS Live USB: the ISO
+choice remains open, with the user leaning toward minimal for a lightweight
+console-only environment; graphical is optional, not required for manual installation.
+The user prefers USB 3.x for speed; Gen 1 is enough, USB 2.0 also works, 8 GB or
+larger recommended. Collect read-only hardware
+inventory, resolve the host/disk/graphics blockers and coordinated rename, then let
+the user update. Review local integration/patch compatibility and build the final
+Lenovo outputs, not every upstream commit or every host. The ordered preparation
+and live acceptance stay in the [single checklist](../../docs/laptop-audit/lenovo-checklist.md).
+No USB write, firmware change, lock update, build or installation is authorized
+merely by this plan; keep the guard until the actual blockers are reviewed.
+
 For this draft, declaration fixtures, Nix syntax, formatter checks and source
 composition comparisons passed. Existing outputs' module lists were preserved;
 Lenovo has its own HM output, NixOS overlay and isolated graphics package argument.

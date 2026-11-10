@@ -75,7 +75,12 @@ Reviewer считает возможным завершить текущий о�
 2. На самом Lenovo согласовать read-only hardware inventory, затем завершать
    host-specific настройки и передачу имён. Это не разрешение запускать inventory,
    builds, rename, Disko или installation сейчас.
-3. После снятия guards пользователь проверяет/применяет конечные outputs и
+   Последующее уточнение: Windows initial setup не пройден, нужен Live USB;
+   пользователь выбирает полный input update перед установкой, затем целевой review
+   patches/integration и Lenovo builds вместо анализа каждого upstream-коммита.
+   [Единый порядок подготовки](lenovo-checklist.md#до-установки-согласованный-порядок-на-10112026)
+   фиксирует границы операций; lock пока не обновлялся.
+3. После hardware review, полного update и снятия guards пользователь проверяет/применяет конечные outputs и
    проходит существующий checklist; до этого Lenovo draft на Acer не применять.
 
 Первоначальный closing-шаг менял только документацию. Последующий Tofi fix
