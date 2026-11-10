@@ -27,15 +27,35 @@ use `laptop-old`; do not apply either Lenovo output on Acer.
 
 ## Verification and application
 
+On 10 November 2026, the user successfully built and switched Acer's NixOS
+`laptop-old` and standalone HM `samov-laptop-old`, then confirmed normal operation.
+The installed verifier's help lists `laptop-old`. Read-only agent checks confirmed
+the current system is the `laptop-old` closure and `/etc/hostname` is `laptop-old`.
+The old transient hostname initially remained `laptop`; after the suggested
+`sudo hostnamectl --transient set-hostname laptop-old`, the user confirmed success.
+Reboot and suspend/hibernate have not been rechecked for this rename. This is not
+acceptance of Lenovo's uninstalled configuration or compatibility after an input update.
+
+Review confirmed Acer's hardware scan and three HM files are byte-identical to
+their pre-rename versions; its NixOS module changes only the hostname. Earlier
+role/declaration/graphics/mDNS checks and targeted source-path tests passed;
+verifier/settings tests ran 13 cases with 3 skips and mocked build/update calls.
+The separate Blueman declaration evaluation timed out after 25 seconds, so the
+following voice declaration evaluation was not reached. No further builds were
+run by the agent. Python syntax and laptop-related documentation links were checked.
+Git's whitespace check flags three pre-existing trailing-space lines in the
+byte-preserved Acer Hyprland file; they were not rewritten. Prettier/Ruff/Beautysh
+were unavailable, so no replacement formatter was used for Markdown/Python.
+
 1. Review `flake.nix`, the moved leaves and the selected SSD in `hosts/laptop/disko.nix`.
 2. Run the lightweight ownership/composition check, without building closures:
    `nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/profiles/test-laptop-roles.nix`.
    It covers selected declarations, not full builds or live boot/resume.
 3. Continue the [Lenovo installation checklist](lenovo-checklist.md): full input
    update, compatibility review and the final Lenovo builds remain separate steps.
-4. Acer does not need activation for Lenovo preparation. If its hostname/profile
-   is later to be applied after personal review, use
+4. Acer activation is complete; do not repeat it just for Lenovo preparation.
+   Future Acer applications after personal review use
    `sudo nixos-rebuild switch --flake .#laptop-old` and separately
-   `home-manager switch --flake .#samov-laptop-old`. Do not run these just for this check.
+   `home-manager switch --flake .#samov-laptop-old`.
 5. Lenovo installation and later standalone HM use `laptop` / `samov-laptop` only
    on Lenovo, after its guard is resolved. Documentation changes need no activation.

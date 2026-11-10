@@ -96,7 +96,10 @@ x86_64 USB. Windows Home сохранять не требуется; внутр�
    В исходниках переданы `laptop`/`samov-laptop` Lenovo, Acer →
    `laptop-old`/`samov-laptop-old`: каталоги, outputs, hostname, helpers, completions,
    tests и текущие команды документации. Исторические записи не переписываются.
-   [Границы и проверка rename](host-renaming.md); live Acer не активировался.
+   [Границы и проверка rename](host-renaming.md): пользователь успешно применил
+   Acer NixOS/HM под новыми именами и подтвердил работу. Static hostname стал
+   `laptop-old`; старое transient имя исправлено отдельно. Это не проверка
+   Lenovo, повторной загрузки или resume.
    Install assertion сохранён до полного input update и финального review,
    не снимать его ради обхода ошибки build.
 5. **Пользователь выполняет `nix flake update`**, сохранив прежний tracked lock как

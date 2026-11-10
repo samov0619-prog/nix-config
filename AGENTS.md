@@ -758,7 +758,7 @@ nix eval .#nixosConfigurations.laptop-old.config.system.build.toplevel --no-buil
 
 ## Текущее состояние хостов
 
-- **laptop-old**: текущий Acer с Intel/NVIDIA, ext4, GRUB EFI, Hibernate/zram; точная модель здесь не зафиксирована. Исходники/outputs/hostname переименованы, live activation не выполнялась. Снимок stable inputs требует актуализации; короткий GC-retention обусловлен нехваткой места на SSD Acer.
+- **laptop-old**: текущий Acer с Intel/NVIDIA, ext4, GRUB EFI, Hibernate/zram. Пользователь успешно применил NixOS/HM под новыми именами и подтвердил работу; оставшееся transient hostname обновлено отдельно. Повторная загрузка/resume этим не проверены. Снимок stable inputs требует актуализации; короткий GC-retention обусловлен нехваткой места на SSD Acer.
 - **laptop**: Lenovo ThinkBook 16 G8+ IPD (21VJ), Core Ultra 7 356H + RTX 5060 Mobile. Live inventory получен, аппаратный scan/PRIME offload и путь UMIS 1 TB SSD заданы. Полный input update и финальный GPU power/resume/install review ещё впереди; install guard сохранён. NixOS/HM не установлены.
 - **desktop**: старше laptop. AMD + NVIDIA, два монитора (DVI 1680x1050 + HDMI 3840x2160@3x). Нет Bluetooth/uinput/xremap/hibernate.
 - **server**: модульный VPS stack без Docker, Disko и generic virtio hardware modules. Preflight пишет внешний settings input по данным rescue environment; в Git остаётся только пример.

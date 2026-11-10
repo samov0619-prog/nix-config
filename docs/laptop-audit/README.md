@@ -6,7 +6,8 @@
 `samov-laptop` пока относятся к нему, не к Lenovo. Точная модель Acer не установлена.
 Это историческое именование исходного среза. В текущих исходниках после передачи
 имён Acer — `laptop-old`/`samov-laptop-old`, Lenovo — `laptop`/`samov-laptop`;
-не применять Lenovo профиль на Acer. Live Acer ещё не переименован активацией.
+не применять Lenovo профиль на Acer. Пользователь уже успешно применил Acer
+NixOS/HM под новыми именами и подтвердил работу после обновления transient hostname.
 Целевая новая машина — Lenovo ThinkBook 16 G8+ IPD (21VJ0004CD).
 CPU **Core Ultra 7 356H** подтверждён пользователем по BIOS; соответствие Panther
 Lake и source-поддержка thermald разобраны в [питании и температурах](power.md).
@@ -122,7 +123,7 @@ completions, тесты и актуальные команды документ�
 [Целевой конфиг Lenovo](../../hosts/laptop/README.md) включает live hardware scan,
 PRIME offload без принудительного Steam и проверенный путь SSD. Явный install
 guard остаётся до полного update inputs, GPU power/resume и final install review.
-Live Acer не менялся; [границы и проверка переименования](host-renaming.md).
+Acer NixOS/HM применены пользователем; [результаты и границы проверки](host-renaming.md).
 
 Три поколения NixOS/HM и weekly GC на Acer — компромисс из-за недостатка места на
 SSD. Для Lenovo согласованы 10 поколений NixOS + 10 HM и weekly GC через общий

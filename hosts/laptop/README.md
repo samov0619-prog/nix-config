@@ -1,7 +1,8 @@
 # Lenovo installation target: laptop
 
 Outputs: `nixosConfigurations.laptop` and `homeConfigurations.samov-laptop`.
-Acer now uses `laptop-old`/`samov-laptop-old`; no activation has renamed the live Acer.
+Acer now uses `laptop-old`/`samov-laptop-old`; the user successfully applied both
+outputs on Acer and confirmed operation after correcting its transient hostname.
 Lenovo-specific settings stay isolated; explicitly shared changes such as the
 nomacs viewer below also apply to existing Linux GUI profiles.
 
