@@ -12,8 +12,8 @@ lock="$flake_dir/flake.lock"
 is_stale() {
   cached_hash=$1
 
-  [ -z "$flake_dir" ] && return 1
-  [ ! -f "$lock" ] && return 1
+  [ -z "$flake_dir" ] && return 0
+  [ ! -f "$lock" ] && return 0
 
   current_hash=$(sha256sum "$lock" 2>/dev/null | awk '{print $1}')
 

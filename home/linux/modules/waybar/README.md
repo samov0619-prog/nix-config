@@ -74,3 +74,46 @@ No full HM/Waybar build or activation was run by the agent.
    no longer shows `FREE`, but ordinary navigation/preview and window context work.
 
 Lenovo follows the same procedure after its installation blockers are resolved.
+
+## Other panel and menu helpers
+
+- `nix-updates-view.sh` reads the local cache and compares its lock hash with
+  `NIX_FLAKE/flake.lock`. A missing workspace/environment/lock means **unknown**,
+  never a still-valid cached clean/pending result. It performs no network request.
+- `check-nix-updates.sh` is invoked on click, not by a polling timer. It calls
+  `nix flake update` for all inputs with a temporary `--output-lock-file`, compares
+  locks and removes its temporary directory. This is a network-capable update
+  **check**, not a build, activation or change to the repository's lock. It does
+  not replace the separate one-input `nix-flake-update-verify` workflow. No real
+  update/network operation was run during this audit; only a fake Nix was used.
+- `gp.sh` retains the existing single-NVIDIA-GPU reader on Acer/desktop. Lenovo
+  has no periodic GPU reader, avoiding speculative dGPU wake-ups. Multi-GPU and
+  live power behaviour were not tested.
+- `startup-time.sh` parses the current boot's systemd startup summary, not the
+  time to a usable desktop. Seconds/minutes/hours and missing summaries are
+  covered by fixture logs. Colour thresholds are cosmetic legacy host policy;
+  revisit the Acer/Lenovo mapping at the agreed host rename, not as a boot SLA.
+  Actual journals were not read in this step.
+- The Tofi session menu still accepts only `Poweroff`/`Reboot`; cancellation or
+  another answer performs no action. Tests extract its actual shell body from
+  `../tofi/module.nix` and use a fake systemctl, never real power actions.
+- The terminal-layout watcher was source-reviewed only: it listens to Hyprland
+  focus events and selects layout 0 when entering a terminal, reconnecting after
+  a socket loss. No real window inventory/layout changes or live reconnect test.
+
+```fish
+python3 -B home/linux/modules/waybar/test_panel_helpers.py
+```
+
+Eight test methods exercise the actual scripts, with subcases for cache validity,
+missing workspace/lock, loading/error/empty cache, temporary-lock-only clean/pending
+checks and failures, preflight, power-menu cancellation, fake GPU results and boot
+time parsing. The old viewer failed six missing-workspace/lock subcases; all pass
+after the two-line fix. Builds, installed panel/UI and actual Nix network behaviour
+are not covered. Beautysh/Ruff/Prettier were unavailable; existing script layout
+was preserved, without installing a formatter or using a fallback.
+
+For the viewer fix: review the diff, apply the appropriate HM profile, then reload
+Waybar with `pkill -USR2 waybar` as above. Do not click the update icon just to
+validate rendering: that explicitly starts the network-capable check. NixOS
+rebuild, lock update and service restart are unnecessary.

@@ -943,6 +943,38 @@ NetworkManager policy. Реальная DNS/routing/VPN-интеграция э�
   NixOS rebuild не нужен. Lenovo archive-сценарий добавлен в существующий
   workflow checklist, а не отдельным десятым блоком приёмки.
 
+## Приёмка Yazi и оставшиеся panel/menu helpers
+
+- Пользователь сообщил «все ок работает идем дальше» после archive fix.
+  Принята пользовательская проверка workflow Acer, не независимая UI-проверка
+  каждого формата/команды активации и не приёмка других hosts.
+- В nix-updates viewer найдено: при отсутствующих NIX_FLAKE/workspace/flake.lock
+  кешированные clean/pending ошибочно считались актуальными. Два return-кода
+  исправлены: без текущего lock результат unknown. Не менялись сеть, update scope,
+  кеш пользователя, стили/клавиши или конфигурация host.
+- Восемь fixture test methods (с subcases) выполняют настоящие shell helpers:
+  шесть регрессий missing environment/path/lock воспроизведены до исправления,
+  после него всё проходит. Проверены hash mismatch, clean/pending/loading/error,
+  отсутствие/пустой кеш, отказ preflight, temporary-lock-only update и cleanup,
+  точные Poweroff/Reboot и отмена меню, GPU reader и boot time parsing.
+  Nix/systemctl/nvidia-smi/journalctl подставные; настоящие updates, сеть,
+  выключение/перезагрузка, опрос GPU и журналы не запускались/не читались.
+- Click-check по source вызывает nix flake update всех inputs с отдельным
+  output-lock-file; это не применение lock и не build/верификация host.
+  Поведение реального Nix network backend не проверено; штатная команда
+  one-input update/build остаётся отдельным workflow. Viewer сам не ходит в сеть.
+- Периодический gp.sh остаётся Acer/desktop-only, Lenovo его не запускает.
+  Boot indicator — systemd startup summary, не время готовности desktop;
+  legacy цветовые пороги согласовать с именами Acer/Lenovo при будущем rename.
+  Новые GPU/power/latency policies не добавлены. Terminal-layout watcher
+  source-reviewed: focus → layout 0 только при входе в терминал, reconnect socket;
+  live focus/window metadata/keyboard changes не вызывались.
+- [Проверки и ограничения](../../home/linux/modules/waybar/README.md#other-panel-and-menu-helpers).
+  Beautysh/Ruff/Prettier отсутствуют, сохранён layout. После review применить HM
+  нужного профиля и reload Waybar через USR2; не кликать update ради проверки UI.
+  NixOS rebuild и lock update не нужны. После этого остаётся итоговая сверка
+  текущего source-аудита, а не новый круг по уже принятым приложениям.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |

@@ -504,7 +504,9 @@ graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
   cancellation/empty input, reject formats without password support and isolate
   flags/argument tables per invocation. Existing API substitutions and bindings
   stay. Eight Lua/API-fixture and real tiny 7zz checks pass; actual Yazi UI,
-  full HM builds and Darwin remain unverified. Passwords still use upstream argv.
+  full HM builds and Darwin remain unverified. The user subsequently accepted the
+  Acer archive workflow, not independent UI coverage or other-host acceptance.
+  Passwords still use upstream argv.
   On upstream update, remove the password patch only after the same regressions
   pass without it; review API substitutions separately. See
   `docs/laptop-audit/archives.md` for application and acceptance.
