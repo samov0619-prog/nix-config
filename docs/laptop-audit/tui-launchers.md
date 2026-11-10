@@ -33,7 +33,7 @@ Mac/server, браузерные и архивные associations, внешни�
 | `Super+N` | Hyprland → Kitty → Neovim | Обычный пользователь, прямой запуск без Fish |
 | `Super+E` | Hyprland → Kitty → `env EDITOR=nvim yazi` | Обычный пользователь, прямой запуск без Fish |
 | `Super+Shift+E` | Hyprland → Kitty → sh → **sudo** → Yazi | Намеренно root; потенциально root и дочерние редакторы/команды |
-| Tofi, пункт Neovim | Tofi добавляет `kitty --` → UWSM → Kitty → Neovim | Обычный пользователь; сложный quoted Exec имеет отдельный известный риск |
+| Tofi, пункт Neovim | `tofi-launch` → Tofi добавляет `kitty --` → GLib argv → UWSM → Kitty → Neovim | Обычный пользователь; кавычки разбираются без shell evaluation, ограничения field codes ниже |
 | FileManager1 | User D-Bus service → wrapper → Kitty → Yazi | User service, не системный root-daemon; окружение от user service manager |
 | Обычное окно Kitty без команды | Kitty → Fish → вручную запущенный TUI | Интерактивный Fish читает `local-env.fish`, включена интеграция direnv |
 
@@ -71,6 +71,13 @@ sudo-Yazi shortcut повышается Yazi, не сам GUI Kitty. Запущ�
 - Пользовательские systemd/D-Bus службы получают окружение своего manager,
   не shell, из которого когда-то пришёл запрос. UWSM помогает управлять
   графической сессией, но не загружает за TUI произвольный `.envrc`.
+  Важно отличать их от default `uwsm app`: installed UWSM 0.26.4 по умолчанию
+  использует `systemd-run --user --scope --same-dir`, а не service. В scope
+  окружение/cwd наследуются от вызывающей цепочки графической сессии (кроме
+  служебных `DESKTOP_ENTRY_*`, которые UWSM удаляет). В декларациях нет
+  `UWSM_APP_UNIT_TYPE` override; возможный unmanaged runtime override не проверен.
+  Scope/cgroup управляет процессами, но сам не создаёт новые Linux namespaces,
+  контейнер, project environment или повышенные права.
 - Открыть файл внутри проекта — не то же самое, что `cd` в проект и вход
   в одобренное direnv/devenv окружение. Новый handler намеренно не меняет cwd,
   не выполняет `.envrc` и не обходит `direnv allow`.
@@ -85,7 +92,60 @@ Docker использует их вместе с cgroups, capabilities, seccomp,
 и runtime/orchestration. «Docker — это namespaces» полезно как упрощение,
 но не полное описание и не гарантия изоляции. Эта учебная тема сохранена отдельно.
 
-## Проверки и границы
+## Исправление quoted arguments в Tofi
+
+На Acer/desktop/Lenovo `$menu = tofi-launch` заменяет прежнее
+`uwsm app -- $(tofi-drun)`. Прежний shell word splitting не разбирал кавычки
+из вывода команды: `fixture-app --label "two words"` передавал два аргумента
+`"two` и `words"`, а не один `two words`.
+
+[Помощник](../../home/linux/modules/tofi/launch.py) получает stdout
+`tofi-drun --drun-launch=false` и передаёт его публичной GLib
+[`g_shell_parse_argv`](https://docs.gtk.org/glib/func.shell_parse_argv.html).
+UWSM получает готовый argv через `os.execv`, без `eval`, `sh -c`, globbing,
+variable expansion или command substitution. Это не sandbox: выбранное приложение
+по-прежнему исполняется, включая явно заданный в его Exec shell.
+Отмена/пустой вывод ничего не запускают; неверные кавычки, NUL и пустой executable
+дают ошибку без вызова UWSM. Nonzero exit Tofi также считается отменой.
+
+Nix wrapper ссылается прямо на Python, GLib, выбранный `programs.tofi.package`
+и UWSM. Tofi сохраняет `terminal = "kitty --"` и добавляет терминал только для
+`Terminal=true`; помощник не добавляет второй. Окружение/права/cwd не меняются
+помощником до границы UWSM; это не обещание окружения или cwd, выбранных самим
+UWSM/systemd для приложения. Fish и unmanaged `local-env.fish` не запускаются.
+Passmenu, power menu, F1 и Mac/server не меняются.
+
+**Граница:** Tofi 0.9.1 печатает строку после собственной замены desktop field codes,
+не desktop-entry ID. Помощник не может восстановить неоднозначную подстановку
+`%c`/`%i`/`%k`, если Tofi вставил значение с пробелами/кавычками без нужного
+экранирования. `drun-launch=true` обошёл бы сохранённую UWSM/terminal цепочку;
+переход на него не делался. Это фикс передачи quoted argv, не полный desktop-entry
+launcher; например, отдельные desktop metadata и `Path` им не восстанавливаются.
+
+Десять process/fixture tests запускают настоящий помощник и native GLib, но
+**подставные Tofi/UWSM**: обычный Kitty/Neovim argv, пробелы, пустой аргумент,
+Unicode, кавычки/слеши, literal shell characters, отмена/невалидный вывод,
+missing dependency errors, сохранение UID/EUID/cwd и синтетической переменной.
+Старая команда воспроизводит дефект; source check проверяет wiring трёх GUI hosts.
+Реальное меню, UWSM/systemd app launch, терминал и installed HM layout не проверены.
+
+```fish
+# Use an existing GLib library; this does not build or open a menu.
+python3 -B home/linux/modules/tofi/test_launch.py --glib /path/to/libglib-2.0.so.0
+nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/modules/tofi/test-declarations.nix --apply 'profiles: profiles.samov-laptop'
+```
+
+Выбранные merged declarations Acer проверены: ровно один launcher, точный wrapper
+recipe с явными зависимостями, `kitty --`, сохранённые opt-in menus и `$menu`.
+Общая evaluation пяти профилей была прервана по короткому timeout; её assertions
+для остальных профилей не считаются выполненными. Сборок/активации не было.
+Ruff/Prettier отсутствуют; Python/Markdown не форматировались заменой инструмента.
+
+После этих проверок пользователь подтвердил успешный HM switch на Acer. Это
+пользовательское подтверждение активации, не независимая проверка installed layout,
+меню, GUI/Neovim/Esc или остальных hosts. Повторять switch на Acer не требуется.
+
+## Проверки XDG handler и границы
 
 ```fish
 set desktop_file (mktemp /tmp/opencode/nvim-xdg.XXXXXX.desktop)
@@ -117,6 +177,7 @@ Fake Kitty только проверяет/передаёт argv; это **не*
 
 1. Пользователь применяет HM: на Acer `home-manager switch --flake .#samov-laptop`;
    desktop использует `.#samov-desktop`. Lenovo draft на Acer не применять.
+   Затем `hyprctl reload`, чтобы raw config использовал новый `tofi-launch`.
    NixOS rebuild и рестарт FileManager1 не нужны.
 2. Проверить `xdg-mime query default text/plain`: ожидается `nvim-xdg.desktop`.
 3. В обычном пользовательском Fish создать безопасный текстовый файл и открыть его:
@@ -132,6 +193,9 @@ Fake Kitty только проверяет/передаёт argv; это **не*
    `ps -o pid,euid,egid,comm -p <PID>` должен показать UID/GID пользователя,
    не root. Закрыть Neovim через `:q`.
 4. Проверить `Super+N`, `Super+E` и обычный пункт Neovim в Tofi: без лишнего
-   второго терминала/дубликата пункта. Привилегированный shortcut для этого
-   теста не нужен. Если требуется project environment, отдельно проверить
-   запуск из уже подготовленного Fish; этот handler не обещает его автоимпорт.
+    второго терминала/дубликата пункта. Привилегированный shortcut для этого
+    теста не нужен. Если требуется project environment, отдельно проверить
+    запуск из уже подготовленного Fish; этот handler не обещает его автоимпорт.
+5. Открыть launcher привычным bind и нажать Esc: приложение/пустой UWSM job
+   не запускается. Повторно выбрать обычное GUI-приложение: оно запускается
+   без терминала. Это минимальная live-приёмка, не проверка всех field codes.

@@ -7,6 +7,12 @@
 
 let
   cfg = config.programs.tofi;
+  drunLauncher = pkgs.writeShellScriptBin "tofi-launch" ''
+    exec ${pkgs.python3}/bin/python3 ${./launch.py} \
+      --glib ${lib.getLib pkgs.glib}/lib/libglib-2.0.so.0 \
+      --tofi ${lib.getExe' cfg.package "tofi-drun"} \
+      --uwsm ${lib.getExe pkgs.uwsm}
+  '';
 in
 {
   options.programs.tofi = {
@@ -58,6 +64,7 @@ in
     })
     (lib.mkIf cfg.enable {
       home.packages = [
+        drunLauncher
         (pkgs.writeShellScriptBin "hypr-controls" ''
           #!${pkgs.runtimeShell}
 

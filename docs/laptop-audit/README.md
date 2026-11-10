@@ -21,7 +21,7 @@ Acer после backup/lifecycle fixes; это не проверка Minecraft r
 - [Карта модулей](modules.md): flowchart, все локальные module imports и внешние границы.
 - [Каталог компонентов](components.md): назначение, необходимость, происхождение и риски переноса.
 - [Замечания и решения](feedback.md): отдельный журнал пользовательского ревью и открытых вопросов.
-- [Итог source-прохода](closing.md): независимая сверка, known Tofi issue и отличие от готовности Lenovo.
+- [Итог source-прохода](closing.md): независимая сверка, последующий Tofi fix с ограничениями и отличие от готовности Lenovo.
 - [Пояс и часы](time.md): общая NixOS policy и отдельная ручная настройка Mac.
 - [Локальные устройства](mdns.md): общий Avahi/mDNS для workstation outputs и доступа к Zynthian Pi по `*.local`.
 - [Личные переменные Fish](fish-local-env.md): unmanaged `local-env.fish`, пример синтаксиса и ручной переход со старого dotenv.

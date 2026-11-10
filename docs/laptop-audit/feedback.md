@@ -1000,6 +1000,41 @@ NetworkManager policy. Реальная DNS/routing/VPN-интеграция э�
 - Только документация; NixOS/HM activation, build, input update, rename или
   hardware operations для этой сверки не требуются.
 
+## Tofi: отдельный фикс quoted argv
+
+- После closing-review пользователь согласовал сначала исправление Tofi.
+  Прежний `$menu = uwsm app -- $(tofi-drun)` на Acer/desktop/Lenovo заменён
+  общим `tofi-launch`: Python получает stdout `tofi-drun --drun-launch=false`,
+  native GLib `g_shell_parse_argv` разбирает строку, `os.execv` передаёт argv UWSM.
+  Выбранная строка не исполняется через shell. Отмена/пустой stdout не вызывают
+  UWSM, невалидные кавычки/NUL/пустой executable отвергаются.
+- Сохранены UWSM, `terminal = "kitty --"`, plain Neovim entry и остальные меню;
+  Python/GLib/Tofi/UWSM заданы store paths. Не добавлены Fish/secret loading,
+  sudo, смена cwd или второе терминальное обёртывание. Mac/server не менялись.
+- Десять process/fixture tests проходят на настоящем helper/native GLib и fake
+  Tofi/UWSM: quoting/Unicode/empty args/backslashes/literal metacharacters,
+  cancel/invalid output/missing dependencies и UID/EUID/cwd/synthetic env.
+  Старая команда воспроизводит broken quoting; wiring трёх raw configs проверен.
+  Выбранная offline/noIFD merged evaluation Acer проходит и сверяет точный wrapper
+  recipe/dependencies, menus и terminal. Общая evaluation пяти профилей прервана
+  по короткому timeout; её остальные assertions не засчитаны.
+- Это не полная desktop-entry реализация: Tofi уже подставляет `%c`/`%i`/`%k`
+  в строку и может потерять необходимое экранирование; helper эту информацию
+  не восстанавливает. Реальные Tofi menu/UWSM/systemd/Kitty, installed layout,
+  HM build и live UI не проверялись. Ни сборок, ни активации, ни GUI не запускали.
+  Nix отформатирован nixfmt 1.3.1; Ruff/Prettier недоступны, замены не применялись.
+- [Механизм, границы и применение](tui-launchers.md#исправление-quoted-arguments-в-tofi):
+  HM нужного GUI-профиля, затем `hyprctl reload`; проверить GUI/Neovim/Esc.
+  Lenovo draft на Acer не применять. NixOS rebuild не нужен.
+- Пользователь подтвердил успешный switch и разрешил локальный commit. Это
+  подтверждение HM activation на Acer, не отдельная live-проверка GUI/Neovim/Esc
+  или сложного quoted Exec и не приёмка desktop/Lenovo. Агент новых сборок,
+  активации или GUI-запусков не выполнял.
+- Прежняя команда действительно приведена в официальном README UWSM 0.26.4;
+  пользователь не ошибся, следуя руководству. Подтверждённый дефект относится
+  к пограничному fixture со сложными аргументами; затронутого установленного
+  приложения не нашли. Это профилактический фикс, не блокер миграции Lenovo.
+
 ## Разобрать отдельно
 
 | Тема              | Краткий вывод / следующий вопрос                                                                                                                                                                                                                                                                        |
