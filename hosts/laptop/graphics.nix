@@ -27,7 +27,9 @@
         enableOffloadCmd = true;
       };
     };
-    # RTD3 and suspend/hibernate policy still need review with the final driver.
+    # Agreed baseline: keep NVIDIA 615/open's native suspend/VRAM handling and
+    # automatic RTD3 on supported notebooks. Do not force finegrained/legacy
+    # suspend services; real idle, offload and resume remain installed checks.
     # Do not force Steam or global session variables onto NVIDIA.
   };
 

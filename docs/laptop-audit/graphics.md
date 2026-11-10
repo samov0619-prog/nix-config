@@ -5,7 +5,10 @@
 Цель — проверить наличие поддержки **Core Ultra 7 356H / Panther Lake + RTX 5060
 Laptop**, а не подобрать PCI Bus IDs или объявить ThinkBook проверенным без запуска.
 CPU подтверждён пользователем по BIOS; фактические GPU IDs и разводка дисплеев
-ещё не сняты. Windows setup для этой проверки не требуется.
+на момент исходного среза ещё не были сняты; последующий live inventory приведён
+ниже. Windows setup для этой проверки не требуется. Старые таблицы — исторические;
+review фактического полного input update от 10.11 и финальный результат 11.11
+приведены в конце. Упоминания сохранённого guard ниже описывают прежние этапы.
 
 ## Что даёт текущий lock
 
@@ -144,3 +147,132 @@ suspend/hibernate или внешние порты не проверены.
 Graphics change в будущем требует NixOS activation только Lenovo, после аппаратной
 проверки и разрешения блокеров; не применять его профиль на Acer. HM switch не
 обновляет ядро и системные graphics drivers. Документация activation не требует.
+
+## 10.11: начальный review фактического полного input update
+
+Пользователь обновил inputs; на этапе начального review новый `flake.lock` ещё не
+был закоммичен и доставлен на Lenovo. Узкая offline evaluation package attributes
+без builds/IFD подтвердила:
+
+| Компонент       | Версия обновлённого lock |
+| --------------- | ----------------------- |
+| Kernel latest   | 7.3.1                   |
+| NVIDIA latest   | 615.78.08               |
+| Mesa            | 26.2.6                  |
+| linux-firmware  | 20261019                |
+| Stable Hyprland | 0.55.4                  |
+| Stable Waybar   | 0.15.0                  |
+| Stable Blueman  | 2.4.6                   |
+| Stable Kitty    | 0.49.1                  |
+| Stable gh       | 2.103.3                 |
+| Stable Node     | 26.13.0                 |
+
+Root stable: `ac588ef1c914865dad517b337ea0eb9694a4021c`;
+unstable: `4fe25e12eb9f4c744966dd3de5a05246cf098601`.
+Kitty новее требуемой 0.47.1, но live F11 остаётся в checklist.
+Unstable Amnezia всё ещё `5.0.3.0`: оснований автоматически убирать рабочий локальный
+`5.0.1.5` override нет. OpenCode по-прежнему pinned на `v2.1.4`; обновление остальных
+inputs не меняет эту upstream-версию и не доказывает совместимость patches.
+
+`hosts/laptop/test-draft.nix` прошёл на обновлённых inputs. Selected merged
+`test-graphics.nix` сначала был остановлен по таймаутам 20 и 90 s. После bounded
+диагностики и восстановления кешированных sources повторная проверка завершилась
+успешно в прежнем лимите 90 s: обе Mesa, NVIDIA/open derivation, native power policy,
+единственный linux-firmware, остальные firmware inputs и изоляция хостов проверены.
+Это evaluation, не сборки или установленные graphics/resume. Полные configuration
+evaluation/builds ещё не завершены; guard сохранён.
+
+### Уточнение power-management contracts именно NVIDIA 615
+
+Сверена документация выбранного релиза:
+[suspend/hibernate](https://us.download.nvidia.com/XFree86/Linux-x86_64/615.78.08/README/powermanagement.html)
+и [RTD3](https://us.download.nvidia.com/XFree86/Linux-x86_64/615.78.08/README/dynamicpowermanagement.html).
+
+- Для поддерживаемых Ampere+ notebook configurations driver default `0x03`
+  означает fine-grained RTD3; runtime PM GPU function 0 также включается по умолчанию.
+  Blackwell относится к более новым поколениям, но поддержку ACPI и реальный idle
+  конкретного Lenovo этим не доказываем. `finegrained = false` в NixOS означает
+  отсутствие явного `0x02`/дополнительных правил, а не принудительное отключение RTD3.
+- NVIDIA описывает автоматическое сохранение видеопамяти при suspend/hibernate
+  для open modules. Раздел старых systemd `/proc` hooks адресован прежде всего
+  proprietary modules и соответствующему способу сохранения; не переносить его
+  автоматически на выбранный open driver. Сохранение может расходовать RAM/tmpfs;
+  при проблемах нужны проверка фактического backing store и свободного места,
+  не слепой выбор `/tmp` или `/run`.
+- Обновлённый stable NixOS module по-прежнему добавляет
+  `NVreg_UseKernelSuspendNotifiers=1` и `NVreg_PreserveVideoMemoryAllocations=1`
+  только при явном `powerManagement.enable`. Отсутствие этих явных параметров
+  само по себе не устанавливает внутренние defaults драйвера.
+
+Пользователь согласовал baseline: начать со штатного поведения 615/open без
+принудительных RTD3/S0ix/deep, дополнительных suspend units и Dynamic Boost.
+Комментарии и declaration checks фиксируют отсутствие этих overrides; это не
+изменение внутренних defaults драйвера и не проверка resume. Обновлённый merged
+`test-graphics.nix` впоследствии завершился успешно, отдельно от fixtures.
+Согласованные ignore lid/power/suspend/hibernate keys и PPD не пересматриваются.
+Проверки idle, offload, suspend/hibernate и внешних экранов остаются в одном
+Lenovo checklist; до их выполнения нельзя обещать автономность или надёжный сон.
+
+### Узкие compatibility checks после согласования baseline
+
+- Обновлённый `test-draft.nix` прошёл, включая отсутствие дополнительных GPU
+  power overrides. Новый `test-disko.nix` прошёл через настоящий config generator
+  locked Disko с небольшими option fixtures: ext4 `/`, vfat `/boot`, один
+  unencrypted swap 48 GiB и тот же `disk-main-swap` для resume. Скрипты Disko не
+  собирались и не запускались; это не проверка фактических разделов или загрузки.
+- Source derivations Waybar `0.15.0`, Blueman `2.4.6` и Yazi compress `0.6`
+  совпадают до/после update. Маленький production Waybar cycle-helper unit test
+  прошёл; повторный patch dry-run по точному store source пропущен, поскольку тот
+  не realized. Прежняя проверка patch не заменяет сборку с новыми dependencies.
+- Lock entries OpenCode и его собственного nixpkgs не изменились. Hermes module
+  по-прежнему не импортирован; xremap не включён на Lenovo. Полный runtime/PTY
+  OpenCode не запускался; обновившиеся shared runtime libraries этим не проверены.
+- Derivations обновлённого Freesm, локальной Amnezia `5.0.1.5` и выбранные package
+  attributes Blueman evaluated без builds/IFD. У Blueman сохраняются Polkit input,
+  `--enable-polkit` и install-check. Это package-level checks, не полный merged
+  NixOS/HM evaluation и не доказательство успешной компиляции/живого UI.
+
+После отдельного разрешения выполнены последовательные evaluation до 90 s:
+
+- NixOS assertions: единственный отказ — намеренный Lenovo install guard; других
+  failed assertions нет. Это не полное evaluation `system.build.toplevel.drvPath`.
+- Selected merged graphics: успешно после описанной выше диагностики.
+- Дополнительная узкая merged-проверка native NVIDIA settings и storage/resume
+  также прошла: ext4/vfat, один unencrypted swap, правильный resume target.
+- Lenovo HM `activationPackage.drvPath`: два запуска остановлены по timeout 90 s;
+  короткая debug-диагностика показала восстановление
+  собственного nixpkgs input OpenCode из локального Git-кеша после GC; затем этот
+  source полностью появился в store. Последующая диагностика показывает дальнейшее
+  evaluation package graph, но не устанавливает единственную причину полной задержки.
+  После отдельного разрешения повторный offline запуск с запрещённым IFD и лимитом
+  **180 s завершился успешно**, вернув Home Manager generation `.drv`.
+  Штатный OpenCode quota reminder остался предупреждением, не ошибкой.
+  Это завершённая evaluation, не скачивание/сборка closure, activation или live UI.
+
+На этом этапе следующим gate были финальный install review и согласованное снятие
+install guard; их результат приведён ниже.
+Nix builds не запускались; дальнейшие ресурсоёмкие проверки требуют отдельного
+разрешения. Prettier недоступен: Markdown layout сохранялся,
+другой formatter не подставлялся. Nix-файлы обработаны nixfmt 1.3.1.
+
+### 11.11: финальный configuration review и снятие guard
+
+Проверены конкретная NixOS/HM композиция Lenovo, EFI GRUB, Disko ext4/48 GiB swap
+и resume target, bootstrap login/sudo, native NVIDIA power policy и отсутствие
+неподготовленного Minecraft instance/backup. По согласованию с пользователем удалён
+только намеренный failing install assertion; graphics/runtime policy не менялась.
+Fixtures теперь требуют отсутствия guard, а merged graphics test — истинности всех
+NixOS assertions вместо прежнего ожидаемого отказа. Он также явно проверяет отсутствие
+принудительного `NVreg_EnableS0ixPowerManagement`.
+
+После изменения повторно прошли `test-draft.nix`, `test-disko.nix` и
+`test-graphics.nix`. NixOS `system.build.toplevel.drvPath` evaluation завершилась
+offline с запрещённым IFD в лимите 90 s, без сборок. Ранее завершённая полная HM
+activation derivation evaluation остаётся применимой: HM sources/lock не менялись.
+
+Это готовность конфигурации по evaluation, не успешно собранная или установленная
+система. До основных downloads нужно согласовать store/build порядок для Lenovo:
+live writable store находится в RAM и не считается достаточным для обеих closures.
+До Disko нужны доставка reviewed commit, повторная сверка SSD и отдельное согласие
+на стирание. После reboot понадобится локальный вход: live SSH не переносится,
+SSH server в target выключен, standalone HM применяется отдельно.

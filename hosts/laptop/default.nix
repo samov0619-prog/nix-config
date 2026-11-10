@@ -11,14 +11,6 @@
     ./hardware-configuration.nix
   ];
 
-  # Draft only: never inherit Acer's hardware scan or compatibility workarounds.
-  assertions = [
-    {
-      assertion = false;
-      message = "Lenovo laptop is not install-ready: review updated inputs, GPU power/resume policy and final installation settings before removing this guard.";
-    }
-  ];
-
   networking = {
     hostName = "laptop";
     networkmanager.enable = true;

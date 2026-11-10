@@ -42,7 +42,7 @@ NixOS и HM управляются раздельно: NixOS через `nixosCo
 | Архитектура      | x86_64-linux                | x86_64-linux                | x86_64-linux     | aarch64-darwin   |
 
 Lenovo owns `laptop`/`samov-laptop` with stateVersion 26.05, its separate hardware
-scan, PRIME offload, Disko ext4/48 GiB swap and PPD; details and install guard below.
+scan, PRIME offload, Disko ext4/48 GiB swap and PPD; review/install gates below.
 Its HM leaf is `home/linux/laptop`, with the same GUI overlays but no Minecraft
 instance activation. Old `*-next` laptop outputs are removed, not compatibility
 aliases: never apply Lenovo's `laptop` profile on Acer. Source renaming does not
@@ -106,9 +106,10 @@ not import Disko.
 
 Lenovo target: `laptop` has a separate `samov-laptop` HM output and
 `home/linux/laptop` leaf. Acer moved to `laptop-old` with its hardware/settings
-preserved except hostname. The NixOS target deliberately fails an assertion
-pending the full input update, GPU power/resume and final installation review;
-see `hosts/laptop/README.md`. Disko selects the live-observed UMIS NVMe topology
+preserved except hostname. After the full input update and final configuration
+review, the user-approved deliberate install guard was removed on 11.11.2026;
+NixOS toplevel evaluation and all merged assertions pass without builds/IFD.
+See `hosts/laptop/README.md`. Disko selects the live-observed UMIS NVMe topology
 path; recheck disk identity before destructive use. Agreed: plain ext4 + 48 GiB swap,
 no zram initially (commented opt-in with evidence-based conditions), weekly GC
 keeping 10 NixOS + 10 HM generations. Initial login matches Acer: one tty1 autologin
@@ -128,10 +129,23 @@ preserving other firmware and existing hosts/HM package sets. No beta/testing,
 hardcoded version, lock update or automatic updater. User-provided live scan is
 imported without filesystem declarations. PRIME offload is selected, with Intel
 `PCI:0:2:0`, NVIDIA `PCI:2:0:0` and `nvidia-offload`; never force the whole Steam
-client or global GPU variables onto NVIDIA. RTD3 and suspend/hibernate policy
-remain pending. Declaration fixtures and selected merged NixOS attributes
-(including NVIDIA/open derivation evaluation, not builds) are checked; live
-graphics/resume and full builds are not. See `docs/laptop-audit/graphics.md`.
+client or global GPU variables onto NVIDIA. Agreed power baseline keeps native
+NVIDIA 615/open VRAM/suspend handling and default RTD3 on supported notebooks;
+no forced RTD3/S0ix/deep, legacy suspend units or Dynamic Boost. Real idle/resume
+remain unverified. Declaration fixtures and selected merged graphics checks pass
+with the updated inputs, including NVIDIA/open derivation evaluation.
+Initial 20/90 s timeouts were followed by bounded diagnostics and a successful
+graphics check after cache restoration. Selected merged storage/resume checks pass;
+after guard removal all merged NixOS assertions pass. Full Lenovo
+HM activation derivation evaluation passed in a separately approved 180 s run
+after two 90 s timeouts. This does not establish a built/activated HM generation.
+No full builds or live installed graphics/resume checks. See `docs/laptop-audit/graphics.md`.
+Before main closure downloads, settle Lenovo's storage-aware install/build order:
+the live writable store is RAM-backed (~14 GiB previously free), not assumed large
+enough for both closures. Do not build updated HM on space-constrained Acer.
+No destructive/install consent follows from evaluation or guard removal. First
+installed boot needs local console/network setup and separate standalone HM;
+live SSH does not persist and the target does not enable an SSH server.
 
 ## Ключевые паттерны и gotchas
 
@@ -593,8 +607,11 @@ wipe-history`: Nix не предоставляет API "keep N", а его histo
   hooks/custom routing are rejected, raw upstream output is suppressed. Direct LAN
   SSH is checked when metadata is present; this is not a universal connectivity
   guarantee. Wrapper/actual-script fixtures and selected derivation checks do not
-  establish a built helper or live VPN/DNS/SSH/teardown. See its README and Lenovo
-  checklist. Leave helper/full builds and real tunnel operations to the user.
+  establish a built helper or live VPN/DNS/SSH/teardown. Separately, the user built
+  checkout `b5ccba9` on Lenovo live and accepted handshake, AdGuard DNS, IPv4 VPS
+  egress, LAN SSH and return to ordinary routing/DNS/IPv4/HTTPS after down.
+  This does not cover IPv6 leaks, all firewall state or the updated lock.
+  See its README and Lenovo checklist. Leave builds and real tunnel operations to the user.
 - `pkgs/amnezia-vpn/` вендорит Linux-клиент `5.0.1.5` с `amneziawg-go`
   `v3.1.20260814`, который upstream release использует для AWG 3.1.
 - Локальный клиент `5.0.1.5` проверенно работает с deployed AWG3.1 server.
@@ -618,7 +635,7 @@ wipe-history`: Nix не предоставляет API "keep N", а его histo
 
 - `disko` pinned as a flake input; shared layouts live in `hosts/disko/layouts.nix`.
 - Remote VPS install uses verified `--store-paths` for nixos-anywhere from another machine in provider rescue mode; obtain both closures with the external settings override per `SERVER_AI_INSTRUCTIONS.md`. Keep both GC-root links via `--out-link` under `~/.local/state/nix-config/deploy/server/` until successful installation, not `--no-link` results that GC may remove.
-- `root@<vps-ip>` is SSH syntax for the remote rescue host. A local laptop/desktop install needs no IP: boot a NixOS installer USB, run the reviewed locked Disko locally, then `nixos-install --flake .#laptop` after its guard is resolved.
+- `root@<vps-ip>` is SSH syntax for the remote rescue host. A local laptop/desktop install needs no IP: boot a NixOS installer USB, run the reviewed locked Disko locally, then `nixos-install --flake .#laptop` after storage planning, disk re-identification and explicit destructive-stage consent.
 - Before any destructive install, replace every `REPLACE_ME` after checking `lsblk`; future desktop must also confirm BIOS vs EFI with `efibootmgr -v`.
 - Acer laptop-old retains `/swapfile` plus `resume_offset`; Lenovo laptop uses a swap partition with `resumeDevice = true`, so the two schemes never coexist on one host.
 
@@ -681,8 +698,8 @@ all` проверяет все hosts, поддерживаемые текуще�
   outputs; `server-installer` строит только NixOS ISO output; `mac` строит
   только свой Home Manager output на macOS.
 - `desktop-next` намеренно не поддерживается: это непроверенный шаблон будущего
-  оборудования. Старое имя `laptop-next` удалено; `laptop` — Lenovo и пока имеет
-  install guard. Не запускать `--hosts all` ради миграции одного ноутбука.
+  оборудования. Старое имя `laptop-next` удалено; `laptop` — Lenovo, его install
+  guard снят после review, но builds/install ещё не выполнены. Не запускать `--hosts all` ради миграции одного ноутбука.
 
 После переноса одного и того же `flake.lock` на другую машину проверить её
 host без изменения lock-файла:
@@ -769,7 +786,7 @@ nix eval .#nixosConfigurations.laptop-old.config.system.build.toplevel --no-buil
 ## Текущее состояние хостов
 
 - **laptop-old**: текущий Acer с Intel/NVIDIA, ext4, GRUB EFI, Hibernate/zram. Пользователь успешно применил NixOS/HM под новыми именами и подтвердил работу; оставшееся transient hostname обновлено отдельно. Повторная загрузка/resume этим не проверены. Снимок stable inputs требует актуализации; короткий GC-retention обусловлен нехваткой места на SSD Acer.
-- **laptop**: Lenovo ThinkBook 16 G8+ IPD (21VJ), Core Ultra 7 356H + RTX 5060 Mobile. Live inventory получен, аппаратный scan/PRIME offload и путь UMIS 1 TB SSD заданы. Полный input update и финальный GPU power/resume/install review ещё впереди; install guard сохранён. NixOS/HM не установлены.
+- **laptop**: Lenovo ThinkBook 16 G8+ IPD (21VJ), Core Ultra 7 356H + RTX 5060 Mobile. Live inventory получен, аппаратный scan/PRIME offload и путь UMIS 1 TB SSD заданы. Полный input update и финальный configuration review выполнены, native NVIDIA baseline согласован; install guard снят 11.11. NixOS toplevel/HM activation derivation evaluations прошли без builds/IFD. Build placement для RAM-backed live store ещё согласовать; builds, installation и живые idle/resume проверки не выполнены.
 - **desktop**: старше laptop. AMD + NVIDIA, два монитора (DVI 1680x1050 + HDMI 3840x2160@3x). Нет Bluetooth/uinput/xremap/hibernate.
 - **server**: модульный VPS stack без Docker, Disko и generic virtio hardware modules. Preflight пишет внешний settings input по данным rescue environment; в Git остаётся только пример.
 - **mac**: только standalone HM (users + core-set). Без nix-darwin, без GUI, без проверки совместимости Linux-пакетов.

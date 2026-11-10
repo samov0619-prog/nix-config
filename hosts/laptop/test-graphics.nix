@@ -14,6 +14,7 @@ let
   };
   target = flake.nixosConfigurations.laptop;
   cfg = target.config;
+  nvidiaParams = cfg.hardware.nvidia.moduleParams.nvidia or { };
   # The option's apply function turns this list into a compressed buildEnv.
   # Inspect merged definitions before apply, without realizing that environment.
   firmwareInputs = lib.concatLists target.options.hardware.firmware.definitions;
@@ -44,6 +45,15 @@ assert !cfg.hardware.nvidia.prime.sync.enable;
 assert !cfg.hardware.nvidia.prime.reverseSync.enable;
 assert !cfg.hardware.nvidia.powerManagement.enable;
 assert !cfg.hardware.nvidia.powerManagement.finegrained;
+assert !cfg.hardware.nvidia.dynamicBoost.enable;
+assert !(nvidiaParams ? NVreg_DynamicPowerManagement);
+assert !(nvidiaParams ? NVreg_PreserveVideoMemoryAllocations);
+assert !(nvidiaParams ? NVreg_UseKernelSuspendNotifiers);
+assert !(nvidiaParams ? NVreg_EnableS0ixPowerManagement);
+assert !(cfg.systemd.services ? nvidia-suspend);
+assert !(cfg.systemd.services ? nvidia-hibernate);
+assert !(cfg.systemd.services ? nvidia-resume);
+assert !(lib.any (lib.hasPrefix "mem_sleep_default=") cfg.boot.kernelParams);
 assert lib.all
   (
     name:
@@ -64,7 +74,7 @@ assert lib.length linuxFirmware == 1;
 assert (lib.head linuxFirmware).drvPath == unstable.linux-firmware.drvPath;
 assert lib.elem target.pkgs.sof-firmware.drvPath firmwarePaths;
 assert lib.elem target.pkgs.wireless-regdb.drvPath firmwarePaths;
-assert lib.any (a: lib.hasInfix "not install-ready" a.message && !a.assertion) cfg.assertions;
+assert lib.all (a: a.assertion) cfg.assertions;
 {
   kernel = cfg.boot.kernelPackages.kernel.version;
   nvidia = cfg.hardware.nvidia.package.version;
@@ -75,5 +85,6 @@ assert lib.any (a: lib.hasInfix "not install-ready" a.message && !a.assertion) c
   selectedMergedGraphicsAttributes = true;
   openModuleDerivationEvaluates = true;
   primeOffloadWithExplicitCommandAndNoGlobalGpuSelection = true;
-  installGuardPresent = true;
+  nativeNvidiaPowerDefaultsWithoutForcedRtd3OrLegacySuspendUnits = true;
+  allMergedNixosAssertionsPass = true;
 }

@@ -31,15 +31,18 @@ nomacs viewer below also apply to existing Linux GUI profiles.
   pinned version. An isolated unfree-enabled package import is passed only to
   Lenovo; only its NixOS firmware input is overlaid, leaving other firmware and
   existing hosts intact. The rest of NixOS/HM remains on its existing sources.
-  Current lock selects kernel **7.2.11**, NVIDIA **615.78.08**, Mesa **26.2.5** and
-  firmware **20260916**, not today's upstream head. Input updates plus later
+  The updated lock selects kernel **7.3.1**, NVIDIA **615.78.08**, Mesa
+  **26.2.6** and firmware **20261019**, not today's upstream head. Input updates plus later
    NixOS activation advance the stack; there is no background updater. Live PCI
    inventory confirms Intel `00:02.0` and NVIDIA `02:00.0`, with the built-in panel
    active on Intel. The user selected PRIME render offload with `nvidia-offload`,
    not a global GPU selection or an NVIDIA-wrapped Steam client. Select individual
    games explicitly, e.g. `nvidia-offload %command%` in Steam Launch Options;
-   those per-game settings are mutable Steam state, not managed here. RTD3,
-   suspend/hibernate policy and installed-driver compatibility still need review.
+    those per-game settings are mutable Steam state, not managed here. The agreed
+    power baseline keeps NVIDIA 615/open's native VRAM/suspend handling and default
+    RTD3 on supported notebooks, without forced RTD3/S0ix/deep, legacy suspend units
+    or Dynamic Boost. Actual idle, resume and installed-driver compatibility still
+    need installed-system validation; configuration alone does not establish them.
    See the
   [graphics audit](../../docs/laptop-audit/graphics.md) for evidence and limits.
 - Existing workstation CLI/devtools (including shared Python/Node prerequisites
@@ -64,7 +67,7 @@ nomacs viewer below also apply to existing Linux GUI profiles.
   Node/npm CLI and Mason's prerequisite, not an LTS-only major; projects pin their
   own version through devShell/direnv when needed. No Lenovo-only selector or
   second Node package is introduced; the lean server still does not import Node.
-  `latest` follows the locked stable input: currently **26.4.0**, not today's
+  `latest` follows the locked stable input: the updated lock selects **26.13.0**, not today's
   upstream release. Updating the input and applying HM advances it; no background
   updater, input update or project/Mason configuration change is introduced here.
 - Minecraft generic server module is imported, but instance is **unset**: no world,
@@ -99,7 +102,7 @@ nomacs viewer below also apply to existing Linux GUI profiles.
   improvements are deferred until live Lenovo testing; no extra Acer groups or
   `nix.settings.trusted-users` privileges are copied.
 
-## Still blocked, not installation instructions
+## Review status and remaining installation gates
 
 The user chose **ext4 with no disk encryption** for Lenovo, with a separate
 **48 GiB swap partition**, also unencrypted.
@@ -111,38 +114,53 @@ remain unreviewed. No fingerprint authentication, passwordless `sudo`, TPM unloc
 or Secure Boot configuration is enabled. Autologin is a separate explicit choice
 described above, not an implication of using unencrypted storage.
 
-The system has an explicit failing assertion pending the input update, GPU
-power/resume review and final installation review. The live hardware scan and
+The deliberate failing assertion was removed after updated-input compatibility
+and final configuration review on **11.11.2026**, with the user's approval.
+NixOS `system.build.toplevel.drvPath` evaluation then passed offline with IFD
+disabled; all merged NixOS assertions pass. Full standalone HM activation
+derivation evaluation also passed before this host-only change. Neither output
+has been built or installed. The GPU power baseline is agreed;
+live idle/suspend/hibernate acceptance remains required after installation.
+The live hardware scan and
 PRIME IDs are configured; Disko points to the observed UMIS NVMe at
 `/dev/disk/by-path/pci-0000:01:00.0-nvme-1`. Recheck disk identity before wiping:
 this is a topology path, not a serial-number identity. Storage, initial memory/GC and bootstrap login choices
 are settled, not permission to install or proof of hardware/boot compatibility.
 
 Do not apply this HM profile on Acer: it manages the same user paths with Lenovo's
-configuration. No switch is needed for the current machine. Do not install or run
-Disko from this draft.
+configuration. No switch is needed for the current machine. Before any destructive
+step, finish the live-store capacity plan, deliver the reviewed commit, recheck
+the SSD and obtain explicit permission to erase it. Guard removal is not that permission.
 
 Source-only checks (do not build NixOS or Home Manager):
 
 ```fish
 nix eval --impure --json --offline --option allow-import-from-derivation false --file hosts/laptop/test-draft.nix
+nix eval --impure --json --offline --option allow-import-from-derivation false --file hosts/laptop/test-disko.nix
 nix eval --impure --json --offline --option allow-import-from-derivation false --file hosts/laptop/test-graphics.nix
 ```
 
 The first check exercises real module declarations with fixture packages. The
-second evaluates selected merged NixOS graphics attributes and open-module
+second exercises the locked Disko config generator with small option fixtures:
+ext4, EFI vfat and the same unencrypted swap partition for swap/resume. It neither
+realizes a Disko script nor inspects or changes a disk. The third evaluates
+selected merged NixOS graphics attributes and open-module
 derivations, including one updated linux-firmware input, preserved other firmware
 and unchanged Acer/desktop firmware selection. Neither builds a driver, checks
 all configuration attributes/assertions or validates hardware/UI. Real checks remain
 in the [single Lenovo checklist](../../docs/laptop-audit/lenovo-checklist.md).
-Builds and activation are left to the user after the draft blockers are resolved;
-do not attempt either output as an installation-ready configuration now.
+Builds and activation are left to the user on Lenovo, not on space-constrained Acer.
+The live writable store was RAM-backed with roughly 14 GiB free: do not download
+the main closures there without an explicit storage-aware plan. In particular,
+do not assume both outputs must be built in RAM before partitioning; settle where
+the installer stores/downloads/builds them before proceeding.
 
-The user plans a full input update before the first Lenovo installation, not an
-installation frozen to Acer's old lock. Keep the tracked lock as the baseline and
-use `nix flake update`, not deletion; fixed refs still need separate consideration.
-Disko is selected for this local installation too: update it with the other inputs,
-then use that same locked revision for review and partitioning, not an unrelated
+The user completed the full input update before the first Lenovo installation,
+not an installation frozen to Acer's old lock. Deliver the updated lock and review
+changes together from the reviewed local commit; the user performs Git network
+operations and verifies the checkout on Lenovo before installation.
+Disko is selected for this local installation too: use that same updated locked
+revision for review and partitioning, not an unrelated
 upstream/latest invocation. Install the complete prepared NixOS/HM configurations,
 not a temporary minimal system; standalone HM still has its own activation step.
 The user has booted the official stable 26.05 Minimal x86_64 ISO, written directly
@@ -152,18 +170,28 @@ internal SSD has not been repartitioned. User-supplied output confirms live kern
 imported. A completed Memtest pass has not been reported.
 Follow the official manual installation sequence, adapting its examples to the
 reviewed flake, ext4, 48 GiB swap and GRUB EFI rather than replacing those choices.
-Hardware inventory and the coordinated source rename are complete; resolve the
-remaining power/resume and final installation review after the full input update.
+Hardware inventory, the coordinated source rename and final configuration review
+are complete. The native
+power baseline is agreed; its hardware acceptance comes after installation.
 Review local integration/patch compatibility and build the final
 Lenovo outputs, not every upstream commit or every host. The ordered preparation
 and live acceptance stay in the [single checklist](../../docs/laptop-audit/lenovo-checklist.md).
-No USB write, firmware change, lock update, build or installation is authorized
-merely by this plan; keep the guard until the actual blockers are reviewed.
+No further USB write, firmware change, lock update, build or installation is
+authorized merely by guard removal or successful evaluation.
 
-For this draft, declaration fixtures, Nix syntax, formatter checks and source
+For this target, declaration fixtures, Nix syntax, formatter checks and source
 composition comparisons passed. Existing outputs' module lists were preserved;
 Lenovo has its own HM output, NixOS overlay and isolated graphics package argument.
-No full configuration evaluation, build, activation or live UI validation was run;
-only selected merged graphics and HM viewer attributes were evaluated. The viewer
+NixOS toplevel and full standalone HM activation derivation evaluations passed;
+no full build, activation or installed live UI validation was run. The viewer
 checks confirm stable nomacs/Yazi/MIME and preserved Swappy on Acer, desktop and
 Lenovo; server and Mac do not gain an image viewer.
+
+The first boot is not a finished HM desktop: NixOS and standalone HM are separate.
+Until HM is applied, the user's managed Hyprland/UWSM configuration is absent.
+Use a local console (for example Ctrl+Alt+F2) and log in as `samov` with the agreed
+bootstrap password if tty1 cannot start the graphical session. Connect networking
+and apply HM from that installed-user session. The installed host does not enable
+an SSH server; the live installer SSH access does not survive reboot. Set a personal
+password with `passwd`; do not put it in Git/store. Follow the single checklist
+for the exact installation and acceptance sequence, not this overview alone.

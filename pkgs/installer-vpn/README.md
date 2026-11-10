@@ -27,7 +27,8 @@ and reproducible from the reviewed checkout and lock.
 - Keep the profile outside the checkout, for example `/home/nixos/lenovo.conf`,
   with `chmod 600 "$HOME/lenovo.conf"`. Never put it in Git, a Nix expression,
   `environment.etc`, a derivation or the store; never paste its contents into chat.
-- Use a short filename such as `lenovo.conf`: it selects interface `lenovo`.
+- Use a short filename beginning with a Latin letter, such as `lenovo.conf`:
+  it selects interface `lenovo`. The helper rejects a numeric-only name such as `55.conf`.
   Choose an unused name and do not edit, rename or remove the profile until `down`.
 - Only the native single-peer AWG 3.1 full-tunnel export is supported: numeric
   DNS, `HeaderProtectionKey`, and `AllowedIPs = 0.0.0.0/0, ::/0`. Hooks, custom
@@ -140,7 +141,18 @@ do not also leave the installer tunnel running.
 
 No full build, installed layout, real sudo/TUN/UDP, live DNS/firewall/SSH or actual
 VPN connection is implied by the local tests. They never access a real profile.
-User acceptance on Lenovo remains required before relying on the tunnel.
+Those fixtures are separate from the user-reported live acceptance below.
+
+On 10 November 2026, the user built the helper on Lenovo's live installer from
+checkout `b5ccba9`, using its committed pre-update lock. The user reported a
+successful connection and LAN SSH access; supplied output showed a recent
+handshake (14 seconds), DNS `10.66.0.1` for the VPS AdGuard, and routes to that DNS
+and a public IPv4 through `lenovo`. Cache HTTPS returned HTTP/2 200, and an external
+IPv4 check matched the VPS. After `down`, supplied output showed ordinary Wi-Fi
+routing, the router's DNS and working HTTPS; the external IPv4 returned to the
+home address. This is user acceptance of that live setup, not independent agent
+network verification, an IPv6 leak/firewall audit or acceptance of the pending
+updated lock, full system or graphical client. No private profile was inspected.
 
 On 10 November 2026, all 15 local tests passed with the pinned quick source,
 including IPv4/IPv6 policy-rule removal and private-output failure fixtures.

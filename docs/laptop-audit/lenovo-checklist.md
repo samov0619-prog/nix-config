@@ -72,8 +72,11 @@ x86_64 USB. Windows Home сохранять не требуется; внутр�
    `nvidia-offload %command%`; это ручное состояние Steam, не HM-managed config.
    Декларативные per-app launchers возможны позже для явно выбранных приложений,
    сейчас обёртки для Steam/Blender или других apps автоматически не добавляются.
-   RTD3 и suspend/hibernate settings ещё требуют отдельного review финального
-   драйвера; offload сам по себе не доказывает засыпание NVIDIA.
+   После review документации выбранного NVIDIA 615 пользователь согласовал его
+   штатную open-module power policy: без принудительных RTD3/S0ix/deep, старых
+   suspend units и Dynamic Boost. RTD3 поддерживаемых новых notebooks и сохранение
+   VRAM описаны NVIDIA как автоматические; реальную работу проверить после установки.
+   Offload сам по себе не доказывает засыпание NVIDIA или надёжный resume.
    DRM: Intel `card0-eDP-1` — connected, DP-1…4 — disconnected;
    NVIDIA `card1-eDP-2` и `card1-HDMI-A-1` — disconnected. Пользователь подтвердил,
    что подключён только встроенный экран: в текущем режиме активная панель на Intel.
@@ -92,7 +95,11 @@ x86_64 USB. Windows Home сохранять не требуется; внутр�
    nixpkgs. Declaration fixtures проверяют import/modules/platform/NPU и отсутствие
    live filesystems. Это не полный merged evaluation/build или реальная проверка NPU.
 4. **Завершить конфигурацию и передачу имён.** Hardware scan и PRIME offload заданы;
-   GPU power/resume review ещё впереди. Проверенный путь SSD внесён в Disko.
+   Нативный NVIDIA power baseline согласован. Selected merged graphics/storage и
+   HM activation derivation evaluation прошли на обновлённом lock. После финального
+   configuration review 11.11 и согласия пользователя install guard снят:
+   NixOS toplevel derivation evaluation прошла offline без IFD; все merged assertions
+   истинны. Builds и живые idle/resume проверки ещё впереди. Проверенный путь SSD внесён в Disko.
    В исходниках переданы `laptop`/`samov-laptop` Lenovo, Acer →
    `laptop-old`/`samov-laptop-old`: каталоги, outputs, hostname, helpers, completions,
    tests и текущие команды документации. Исторические записи не переписываются.
@@ -100,9 +107,9 @@ x86_64 USB. Windows Home сохранять не требуется; внутр�
    Acer NixOS/HM под новыми именами и подтвердил работу. Static hostname стал
    `laptop-old`; старое transient имя исправлено отдельно. Это не проверка
    Lenovo, повторной загрузки или resume.
-   Install assertion сохранён до полного input update и финального review,
-   не снимать его ради обхода ошибки build.
-5. **Пользователь выполняет `nix flake update`**, сохранив прежний tracked lock как
+   Guard снят по результатам review, не ради обхода ошибки build; это не разрешение
+   на стирание SSD или автоматический запуск установки.
+5. **Пользователь выполнил `nix flake update`**, сохранив прежний tracked lock как
    исходную точку в Git. Не удалять lock: полный update достаточно явно обновляет
    зависимости согласно `flake.nix`. Команда не собирает и не активирует систему,
    но скачанные input sources тоже занимают место. Фиксированные tags/revisions и
@@ -118,11 +125,23 @@ x86_64 USB. Windows Home сохранять не требуется; внутр�
    host matrix по умолчанию не собирать. Builds, Disko, install и activation остаются
    отдельными действиями пользователя. После update прежние fixtures/acceptance
    сохраняют историческую ценность, но не гарантируют совместимость новых packages.
+   **До основных downloads согласовать место для Nix store.** Live writable store
+   находится в RAM: ранее около 14 GiB свободно при лимите 16 GiB, без swap.
+   Не предполагать, что туда поместятся обе полные closures или их сборки.
+   На Acer полный обновлённый HM не собирать. Сначала выбрать storage-aware
+   install/build порядок; если он требует предварительной разметки SSD, отдельно
+   согласовать её до выполнения, не выдавать RAM-build за обязательный preflight.
    До скачивания основной closure на Lenovo можно подключить отдельный AWG 3.1
    профиль через декларативный [installer-vpn](../../pkgs/installer-vpn/README.md).
    Пользователь уже создал отдельного клиента и передал `.conf` с Acer в live;
-   секретный файл остаётся вне Git/store. Сначала нужны review/build самого helper
-   и живая проверка handshake, LAN SSH, DNS/HTTPS и отключения; VPN пока не проверен.
+   секретный файл остаётся вне Git/store. Helper прошёл review и локальные fixtures;
+   10.11 пользователь собрал его в live Lenovo из checkout `b5ccba9` и подтвердил
+   подключение, свежий handshake (14 s), публичный IPv4 VPS и LAN SSH. Вывод показал
+   DNS `10.66.0.1` (AdGuard), маршруты к DNS и публичному IPv4 через `lenovo`, HTTPS
+   к `cache.nixos.org` — HTTP/2 200. После `down` вернулись Wi-Fi-маршрут, DNS роутера,
+   домашний внешний IPv4 и рабочий HTTPS. Это пользовательская живая приёмка helper
+   на прежнем committed lock, не проверка полного обновлённого NixOS/HM, IPv6 leaks,
+   всех firewall rules или установленного графического клиента.
    Это не требует установки графической Amnezia или административного SSH к VPS.
    **Доставка через Git выбрана для практики**, не копированием checkout по SSH.
    После review сохранить согласованные изменения и lock локальными коммитами;
@@ -153,7 +172,7 @@ x86_64 USB. Windows Home сохранять не требуется; внутр�
    сеть → разметка/форматирование → mounts → конфигурация → `nixos-install` → reboot.
    Его `/dev/sda`, swap 8 GB и systemd-boot — примеры, не замена согласованным
    ext4, swap 48 GiB и GRUB EFI. До destructive stage ещё нужны hardware/disk
-   review, готовые конечные outputs и отдельное явное согласие на стирание
+   review, согласованный storage-aware build/install порядок и отдельное явное согласие на стирание
    проверенного SSD. Для разметки использовать проверенную декларацию Disko из
    обновлённого lock; ручной partition/format/mount второй раз не выполнять.
    Сверить `/mnt`, `/mnt/boot` и swap; получить hardware configuration на целевых
@@ -165,8 +184,13 @@ x86_64 USB. Windows Home сохранять не требуется; внутр�
    Сгенерированный пример `configuration.nix` не заменяет существующий flake.
    Перед install перепроверить конечную композицию с реальными hardware settings;
    команда `nixos-install --flake` должна указывать именно reviewed checkout и
-   конечный output после передачи имён, не нынешний заблокированный draft.
+   конечный output `laptop` после передачи имён, без старого guard и без изменения lock.
    Проверить способ входа и пароль перед reboot, затем загрузку без USB.
+   Live SSH после reboot не сохранится: установленный host не включает SSH server.
+   До standalone HM нет управляемого пользовательского Hyprland/UWSM config;
+   при проблеме tty1 войти локально на Ctrl+Alt+F2 как `samov` с согласованным
+   bootstrap-паролем, подключить сеть и применить HM под установленным пользователем.
+   Задать личный пароль через `passwd`, не записывать его в flake.
    Standalone Home Manager применять отдельно. Сначала графика, устройства и
    suspend/hibernate, потом перенос основных данных. Успешная сборка не заменяет
    эти проверки. Команды на Lenovo выполняет пользователь по SSH с Acer;

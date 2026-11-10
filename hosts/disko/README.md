@@ -56,11 +56,13 @@ required, though the user may operate the live system over SSH. Lenovo now uses
 `laptop`; Acer is `laptop-old` and does not import Disko. Run from the reviewed
 repository checkout, not from the Acer profile. First complete the
 [Lenovo checklist](../../docs/laptop-audit/lenovo-checklist.md), update/review the
-inputs and resolve the install guard. Recheck the target disk against model,
+inputs (Lenovo's deliberate guard was removed after review on 11.11.2026).
+Resolve live-store capacity/build placement first. Recheck the target disk against model,
 capacity and mounts immediately before the explicitly approved destructive step.
 The configured Lenovo path is a live-observed PCI topology path, not a disk serial.
 
-The commands below are **not ready to run while the Lenovo guard remains**.
+The commands below still require **explicit destructive-stage consent and the
+storage-aware installation plan**; passing evaluation is not permission to run them.
 `--inputs-from .` resolves `disko` from this checkout's updated lock instead of
 selecting an independent upstream revision; `--no-write-lock-file` prevents a
 silent lock change during this installation step.
