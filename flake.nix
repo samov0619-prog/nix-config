@@ -147,6 +147,14 @@
       formatter = lib.genAttrs (builtins.attrValues systems) (system: (pkgsFor system [ ]).nixfmt);
 
       packages.x86_64-linux.hypr-spaces = (pkgsFor systems.linux [ ]).callPackage ./pkgs/hypr-spaces { };
+      packages.x86_64-linux.installer-vpn =
+        (pkgsFor systems.linux [ ]).callPackage ./pkgs/installer-vpn
+          { };
+      apps.x86_64-linux.installer-vpn = {
+        type = "app";
+        program = "${self.packages.x86_64-linux.installer-vpn}/bin/installer-vpn";
+        meta.description = "Temporary userspace AWG 3.1 tunnel for the live installer";
+      };
       packages.x86_64-linux.opencode = import ./home/apps/opencode/package.nix {
         upstream = opencode.packages.x86_64-linux.opencode;
         pkgs = pkgsFor systems.linux [ ];

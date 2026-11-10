@@ -6,7 +6,6 @@
   pkg-config,
   kdePackages,
   libsecret,
-  amneziawg-go,
   openvpn,
   wireguard-tools,
   libssh,
@@ -20,38 +19,29 @@
 }:
 let
   # The 5.0.1.5 Linux release explicitly requires this AWG 3.1 backend.
-  amneziawg-go-pinned = amneziawg-go.overrideAttrs (finalAttrs: _: {
-    version = "3.1.20260814";
+  amneziawg-go-pinned = callPackage ../amneziawg-3.1/go.nix { };
 
-    src = fetchFromGitHub {
-      owner = "amnezia-vpn";
-      repo = "amneziawg-go";
-      tag = "v${finalAttrs.version}";
-      hash = "sha256-HMmbKd1wYzotB+GAZ8GulyJmX7+XUnXOEerab0OCPO8=";
-    };
+  tun2socks-pinned = tun2socks.overrideAttrs (
+    finalAttrs: _: {
+      version = "2.6.0";
 
-    vendorHash = "sha256-Y2dCwlKMVLrkzDcNKyCPxFJwMbCA2mQKkakvzwbamCY=";
-  });
+      src = fetchFromGitHub {
+        owner = "xjasonlyu";
+        repo = "tun2socks";
+        tag = "v${finalAttrs.version}";
+        hash = "sha256-ec4M107BE6MCnW/uz9S83JYJtY9tsQQXDFL98h951DA=";
+      };
 
-  tun2socks-pinned = tun2socks.overrideAttrs (finalAttrs: _: {
-    version = "2.6.0";
+      vendorHash = "sha256-YAAdyV2p/Ci9RzgVWYXBwR/ctERSQ8SPK7AbwRuUJiI=";
 
-    src = fetchFromGitHub {
-      owner = "xjasonlyu";
-      repo = "tun2socks";
-      tag = "v${finalAttrs.version}";
-      hash = "sha256-ec4M107BE6MCnW/uz9S83JYJtY9tsQQXDFL98h951DA=";
-    };
-
-    vendorHash = "sha256-YAAdyV2p/Ci9RzgVWYXBwR/ctERSQ8SPK7AbwRuUJiI=";
-
-    ldflags = [
-      "-w"
-      "-s"
-      "-X github.com/xjasonlyu/tun2socks/v2/internal/version.Version=v${finalAttrs.version}"
-      "-X github.com/xjasonlyu/tun2socks/v2/internal/version.GitCommit=v${finalAttrs.version}"
-    ];
-  });
+      ldflags = [
+        "-w"
+        "-s"
+        "-X github.com/xjasonlyu/tun2socks/v2/internal/version.Version=v${finalAttrs.version}"
+        "-X github.com/xjasonlyu/tun2socks/v2/internal/version.GitCommit=v${finalAttrs.version}"
+      ];
+    }
+  );
 
   amnezia-xray = callPackage ./xray-lib.nix { };
 

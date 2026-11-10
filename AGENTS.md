@@ -585,6 +585,16 @@ wipe-history`: Nix не предоставляет API "keep N", а его histo
 
 ### AmneziaVPN clients
 
+- `pkgs/installer-vpn` exposes Linux `nix run .#installer-vpn -- up|status|down /external/profile.conf`
+  for an x86_64 live installer before full closure downloads. Shared pinned AWG 3.1
+  Go backend lives in `pkgs/amneziawg-3.1/go.nix`; server tools are reused unchanged,
+  with a separate userspace-only quick script. No GUI, kernel-module build, NixOS/HM
+  activation or VPS administration is needed. Profiles stay outside Git/store;
+  hooks/custom routing are rejected, raw upstream output is suppressed. Direct LAN
+  SSH is checked when metadata is present; this is not a universal connectivity
+  guarantee. Wrapper/actual-script fixtures and selected derivation checks do not
+  establish a built helper or live VPN/DNS/SSH/teardown. See its README and Lenovo
+  checklist. Leave helper/full builds and real tunnel operations to the user.
 - `pkgs/amnezia-vpn/` вендорит Linux-клиент `5.0.1.5` с `amneziawg-go`
   `v3.1.20260814`, который upstream release использует для AWG 3.1.
 - Локальный клиент `5.0.1.5` проверенно работает с deployed AWG3.1 server.
