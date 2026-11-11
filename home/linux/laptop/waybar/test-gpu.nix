@@ -11,10 +11,11 @@ let
   fixture = import ../default.nix {
     pkgs = {
       python3 = "/fixture/python";
+      hyprland = "/fixture/hyprland";
       writeShellScriptBin =
         name: text:
         assert lib.hasInfix "/fixture/python/bin/python3" text;
-        assert lib.hasInfix "gpu-status.py" text;
+        assert lib.hasInfix (if name == "waybar-gpu-status" then "gpu-status.py" else "touchpad.py") text;
         assert lib.hasInfix ''"$@"'' text;
         {
           outPath = "/fixture/${name}";

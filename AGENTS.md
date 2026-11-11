@@ -361,6 +361,21 @@ adds grey hover without changing profile cycling; only Lenovo uses PPD. Acer/
 desktop retain gp.sh. See `home/linux/laptop/waybar/README.md`; no NixOS/power/
 driver/audio/VPN policy change, build or activation by the agent.
 
+Lenovo hotkeys are now prepared in its HM leaf: F8 toggles only the named
+GXTP5100 touchpad, F9/star opens todo, ordinary F11 (Fn+F11) switches theme without
+Super, and ordinary F1 (Fn+F1) retains help. Lenovo's old F3 todo binding is removed;
+F1–F6 hardware actions, working F10 screenshot and F7/Super+P stay unchanged.
+The Smart Connect F11 side was measured as scancode 0x148/KEY_UNKNOWN, but the user
+chose Fn+F11 instead: no kernel backport or code:248 binding. The session-local
+touchpad helper serializes presses, records successful hyprctl setters and resets
+to enabled on config reload/login; no daemon or sudo. Host-specific Tofi help
+preserves Acer/desktop labels. Mocked actual-helper and selected merged checks do
+not establish live input/UI behavior. The user subsequently applied and accepted
+the hotkeys; this is not independent agent UI or every reload/login scenario
+coverage. No further build/activation was run by the agent.
+The user confirms camera, screen sharing and video calls work. See
+`home/linux/laptop/README.md` for checks, recovery and the HM-only apply procedure.
+
 Disko is imported directly by fresh `server`, `laptop`, and `desktop-next`
 targets. It runs only through an explicit Disko/nixos-anywhere command, never
 through `nixos-rebuild switch`. Existing `laptop-old` and `desktop` intentionally do

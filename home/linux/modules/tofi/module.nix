@@ -18,6 +18,16 @@ in
   options.programs.tofi = {
     passmenu.enable = lib.mkEnableOption "tofi-passmenu (rg + tofi + pass)";
     sessionmenu.enable = lib.mkEnableOption "tofi-based power menu";
+    controls.shortcuts = lib.mkOption {
+      type = lib.types.lines;
+      default = ''
+        F1                  this help
+        F3                  agent todo in Neovim
+        Print               select screenshot region, edit in Swappy
+        Super+F11           toggle light/dark theme
+      '';
+      description = "Host-specific shortcut lines displayed by hypr-controls.";
+    };
   };
 
   config = lib.mkMerge [
@@ -70,10 +80,7 @@ in
 
           printf '%s\n' '
           HYPRLAND CONTROLS
-
-          F1                  this help
-          F3                  agent todo in Neovim
-          Print               select screenshot region, edit in Swappy
+          ' ${lib.escapeShellArg cfg.controls.shortcuts} '
           Super+M             fullscreen
           Super+F             focus floating window
           Super+Shift+F       focus tiled window

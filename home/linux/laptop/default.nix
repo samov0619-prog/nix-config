@@ -3,6 +3,9 @@ let
   gpuStatus = pkgs.writeShellScriptBin "waybar-gpu-status" ''
     exec ${pkgs.python3}/bin/python3 ${./waybar/gpu-status.py} "$@"
   '';
+  touchpad = pkgs.writeShellScriptBin "lenovo-touchpad" ''
+    exec ${pkgs.python3}/bin/python3 ${./touchpad.py} --hyprctl ${pkgs.hyprland}/bin/hyprctl "$@"
+  '';
 in
 {
   imports = [
@@ -19,8 +22,17 @@ in
   xdg.configFile."waybar/config.jsonc".source = ./waybar-config.jsonc;
   xdg.configFile."waybar/scripts/gpu-status".source = "${gpuStatus}/bin/waybar-gpu-status";
 
+  programs.tofi.controls.shortcuts = ''
+    Fn+F1              this help
+    F8 (touchpad)      toggle touchpad (enabled again on config reload)
+    F9 (star)          agent todo in Neovim
+    F10                select screenshot region, edit in Swappy
+    Fn+F11             toggle light/dark theme
+  '';
+
   # Keep the apps, but do not activate an unprepared world/backup watcher.
   home.packages = with pkgs; [
+    touchpad
     freesmlauncher
     packwiz
     jdk_headless
