@@ -26,13 +26,15 @@ nomacs viewer below also apply to existing Linux GUI profiles.
   names both destinations in the tooltip using the actual available profile list.
   Its algorithm/patch checks passed; the full binary/UI remain unbuilt and untested.
 - [Lenovo-only graphics module](graphics.nix): unstable `linuxPackages_latest`,
-  NVIDIA `latest` from that kernel's package set with open modules, Mesa 64/32-bit
-  and linux-firmware. No testing kernel, NVIDIA beta/bleeding_edge or manually
+  NVIDIA `latest` from that kernel's package set with open modules and linux-firmware.
+  Stable Mesa 64/32-bit follows the stable userspace libc: mixing unstable Mesa
+  with stable Hyprland caused an installed `GLIBC_2.43` loader failure.
+  No testing kernel, NVIDIA beta/bleeding_edge or manually
   pinned version. An isolated unfree-enabled package import is passed only to
   Lenovo; only its NixOS firmware input is overlaid, leaving other firmware and
   existing hosts intact. The rest of NixOS/HM remains on its existing sources.
   The updated lock selects kernel **7.3.1**, NVIDIA **615.78.08**, Mesa
-  **26.2.6** and firmware **20261019**, not today's upstream head. Input updates plus later
+  **26.1.8** and firmware **20261019**, not today's upstream head. Input updates plus later
    NixOS activation advance the stack; there is no background updater. Live PCI
    inventory confirms Intel `00:02.0` and NVIDIA `02:00.0`, with the built-in panel
    active on Intel. The user selected PRIME render offload with `nvidia-offload`,

@@ -121,9 +121,14 @@ local Waybar override for dynamic previous/current/next tooltip labels, sharing
 one cycle helper with clicks; stock Waybar has no such placeholders. See
 `home/linux/laptop/waybar/README.md` for checks and update obligations.
 Only the helper/patch/declarations are checked, not the full binary or live UI.
-Lenovo graphics now follows unstable release packages via
-`hosts/laptop/graphics.nix`: latest kernel, matching NVIDIA latest/open,
-Mesa 64/32-bit and linux-firmware. A separate unfree-enabled `pkgsGraphics` import
+Lenovo graphics uses `hosts/laptop/graphics.nix`: unstable latest kernel, matching
+NVIDIA latest/open and linux-firmware. Mesa 64/32-bit stays with stable host
+userspace/glibc: installed stable Hyprland aborted loading unstable Mesa with
+`GLIBC_2.43 not found` (stable glibc 2.42). The user approved Mesa-only correction;
+kernel/NVIDIA/firmware and lock stay unchanged. Focused declaration checks pass;
+the corrected system is not yet built/applied or live-tested. Do not mask this
+with LD_LIBRARY_PATH/glibc replacement or fix only the compositor package.
+A separate unfree-enabled `pkgsGraphics` import
 is passed only to this NixOS output; a local overlay replaces only linux-firmware,
 preserving other firmware and existing hosts/HM package sets. No beta/testing,
 hardcoded version, lock update or automatic updater. User-provided live scan is

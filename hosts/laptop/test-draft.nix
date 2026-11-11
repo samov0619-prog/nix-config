@@ -9,6 +9,8 @@ let
     amnezia-vpn.version = "5.0.1.5";
     iptables = "iptables";
     gawk = "gawk";
+    mesa = "stable-mesa-64";
+    pkgsi686Linux.mesa = "stable-mesa-32";
     stdenv.cc.cc.lib = "libstdc++";
     zlib = "zlib";
     openssl = "openssl";
@@ -53,7 +55,7 @@ let
     linux-firmware = "unstable-firmware";
   };
   graphics = import ./graphics.nix {
-    inherit pkgsGraphics;
+    inherit pkgs pkgsGraphics;
     config.boot.kernelPackages = pkgsGraphics.linuxPackages_latest;
   };
   firmwareOverrides = (builtins.head graphics.nixpkgs.overlays) { } { };
@@ -100,8 +102,8 @@ assert !(hardware.boot ? resumeDevice);
 assert graphics.boot.kernelPackages == pkgsGraphics.linuxPackages_latest;
 assert graphics.hardware.graphics.enable;
 assert graphics.hardware.graphics.enable32Bit;
-assert graphics.hardware.graphics.package == pkgsGraphics.mesa;
-assert graphics.hardware.graphics.package32 == pkgsGraphics.pkgsi686Linux.mesa;
+assert graphics.hardware.graphics.package == pkgs.mesa;
+assert graphics.hardware.graphics.package32 == pkgs.pkgsi686Linux.mesa;
 assert graphics.hardware.nvidia.open;
 assert graphics.hardware.nvidia.modesetting.enable;
 assert graphics.services.xserver.videoDrivers == [ "nvidia" ];
@@ -200,7 +202,7 @@ assert !(viewer.xdg ? configFile);
   lenovoLiveHardwareScanWithoutStorageDeclarations = true;
   lenovoPrimeOffloadIsOptInWithoutSteamOverride = true;
   lenovoNativeNvidiaPowerPolicyWithoutExtraHooks = true;
-  lenovoUnstableReleaseGraphicsDeclarations = true;
+  lenovoStableMesaWithUnstableKernelNvidiaAndFirmware = true;
   noAcerHardwareOrExtraPrivileges = true;
   requestedBootstrapAutologinAndSudoDeclarations = true;
   noUnpreparedMinecraftInstance = true;

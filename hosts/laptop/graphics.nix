@@ -1,5 +1,6 @@
 {
   config,
+  pkgs,
   pkgsGraphics,
   ...
 }:
@@ -10,8 +11,10 @@
   hardware.graphics = {
     enable = true;
     enable32Bit = true;
-    package = pkgsGraphics.mesa;
-    package32 = pkgsGraphics.pkgsi686Linux.mesa;
+    # Mesa is dlopened by the stable desktop/apps: keep its libc compatible.
+    # The newer unstable Mesa requires GLIBC_2.43, absent from stable glibc 2.42.
+    package = pkgs.mesa;
+    package32 = pkgs.pkgsi686Linux.mesa;
   };
   services.xserver.videoDrivers = [ "nvidia" ];
   hardware.nvidia = {

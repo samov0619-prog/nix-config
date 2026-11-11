@@ -13,6 +13,7 @@ let
     config.allowUnfree = true;
   };
   target = flake.nixosConfigurations.laptop;
+  mesaContract = import ./test-mesa.nix;
   cfg = target.config;
   nvidiaParams = cfg.hardware.nvidia.moduleParams.nvidia or { };
   # The option's apply function turns this list into a compressed buildEnv.
@@ -68,8 +69,7 @@ assert lib.all
     "DRI_PRIME"
   ];
 assert cfg.hardware.graphics.enable32Bit;
-assert cfg.hardware.graphics.package.drvPath == unstable.mesa.drvPath;
-assert cfg.hardware.graphics.package32.drvPath == unstable.pkgsi686Linux.mesa.drvPath;
+assert mesaContract.mesaMatchesStableUserspaceLibc;
 assert lib.length linuxFirmware == 1;
 assert (lib.head linuxFirmware).drvPath == unstable.linux-firmware.drvPath;
 assert lib.elem target.pkgs.sof-firmware.drvPath firmwarePaths;
@@ -80,6 +80,7 @@ assert lib.all (a: a.assertion) cfg.assertions;
   nvidia = cfg.hardware.nvidia.package.version;
   mesa64 = cfg.hardware.graphics.package.version;
   mesa32 = cfg.hardware.graphics.package32.version;
+  inherit (mesaContract) mesaLibc64 mesaLibc32 mesaMatchesStableUserspaceLibc;
   firmware = (lib.head linuxFirmware).version;
   inherit existingFirmware;
   selectedMergedGraphicsAttributes = true;
