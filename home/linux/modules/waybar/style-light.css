@@ -51,6 +51,7 @@ window#waybar.chromium {
 #power-profiles-daemon,
 #mpd,
 #custom-gpu,
+#custom-gpu-manual,
 #custom-pacman,
 #custom-vpn {
 	color: #000000;

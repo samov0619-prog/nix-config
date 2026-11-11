@@ -342,6 +342,24 @@ eight baseline/eight patched NVIDIA compile variants, three selected Nix checks
 and pinned nixfmt. No new builds. Preserve exact upstream patch bytes: Git flags
 its two single-space blank context lines, which are valid unified-diff syntax;
 non-patch source whitespace checks pass. Prettier/Ruff are still unavailable.
+The user subsequently rejected always-passive GPU metrics without a confirmed
+non-waking API, then approved a manual 60-second Waybar sampling window. Lenovo's
+new `custom/gpu-manual` follows disk, starts as GPU, samples utilization/VRAM only
+after LMB and renews on another click. At the user's subsequent request, expiry
+now hides figures from the bar/tooltip and restores the plain GPU button.
+The Waybar-owned helper blocks on private session IPC while idle; no idle NVIDIA
+query/cache polling or service. Shared lock/cache deduplicates multi-output
+queries; each command has a bounded timeout, BOOTTIME counts suspend, restart is
+idle. Explicit sampling can wake/postpone sleep; userspace cannot bound an
+uninterruptible kernel ioctl or promise exact D3cold timing. The user applied the
+initial reader and confirms correct GPU return to sleep, not independently
+measured or repeated-cycle acceptance. The user subsequently applied and accepted
+the hide-on-expiry adjustment: only the GPU button remains after the minute.
+This is user UI acceptance, not independent agent observation.
+Shared CSS removes PPD's bright fills and
+adds grey hover without changing profile cycling; only Lenovo uses PPD. Acer/
+desktop retain gp.sh. See `home/linux/laptop/waybar/README.md`; no NixOS/power/
+driver/audio/VPN policy change, build or activation by the agent.
 
 Disko is imported directly by fresh `server`, `laptop`, and `desktop-next`
 targets. It runs only through an explicit Disko/nixos-anywhere command, never

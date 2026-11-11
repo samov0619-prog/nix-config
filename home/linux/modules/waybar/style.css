@@ -53,6 +53,8 @@ button:hover {
 }
 
 #pulseaudio:hover,
+#custom-gpu-manual:hover,
+#power-profiles-daemon:hover,
 #tray *:hover,
 #workspaces button:hover,
 #custom-vpn:hover {
@@ -71,6 +73,7 @@ button:hover {
 #battery,
 #disk,
 #custom-disk,
+#custom-gpu-manual,
 #temperature,
 #backlight,
 #language,
@@ -138,19 +141,12 @@ button:hover {
 	padding-right: 15px;
 }
 
-#power-profiles-daemon.performance {
-	background-color: #f53c3c;
-	color: #ffffff;
+#custom-gpu-manual.active {
+	box-shadow: inset 0 -2px #808080;
 }
 
-#power-profiles-daemon.balanced {
-	background-color: #2980b9;
-	color: #ffffff;
-}
-
-#power-profiles-daemon.power-saver {
-	background-color: #2ecc71;
-	color: #000000;
+#custom-gpu-manual.unavailable {
+	opacity: 0.55;
 }
 
 #network.disconnected {

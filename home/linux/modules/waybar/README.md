@@ -87,8 +87,15 @@ Lenovo follows the same procedure after its installation blockers are resolved.
   not replace the separate one-input `nix-flake-update-verify` workflow. No real
   update/network operation was run during this audit; only a fake Nix was used.
 - `gp.sh` retains the existing single-NVIDIA-GPU reader on Acer/desktop. Lenovo
-  has no periodic GPU reader, avoiding speculative dGPU wake-ups. Multi-GPU and
-  live power behaviour were not tested.
+  instead prepares a click-only 60-second reader: idle listeners make no GPU
+  queries, but an explicit click may wake it. After expiration only the GPU button
+  remains. Its helper/tests/application are in
+  [the Lenovo README](../../laptop/waybar/README.md). The user confirms correct GPU
+  return to sleep with the initial reader and subsequently accepted the plain GPU
+  button after expiration. This is user acceptance, not independent UI/PM
+  observation. Shared CSS removes the colored PPD fills (only Lenovo
+  uses that module), adds neutral hover and styles only the new GPU module ID;
+  Acer/desktop's GPU modules are unchanged.
 - `startup-time.sh` parses the current boot's systemd startup summary, not the
   time to a usable desktop. Seconds/minutes/hours and missing summaries are
   covered by fixture logs. Colour thresholds are cosmetic legacy host policy;

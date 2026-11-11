@@ -6,6 +6,7 @@
     "cpu",
     "memory",
     "custom/disk",
+    "custom/gpu-manual",
     "network",
     "custom/nix-updates",
   ],
@@ -69,7 +70,15 @@
     "restart-interval": 5,
     "tooltip": true,
   },
-  // No periodic nvidia-smi: establish dGPU idle/power management on the target first.
+  // GPU queries are explicitly enabled by a click, for at most 60 seconds.
+  "custom/gpu-manual": {
+    "exec": "~/.config/waybar/scripts/gpu-status",
+    "return-type": "json",
+    "restart-interval": 5,
+    "exec-on-event": false,
+    "on-click": "~/.config/waybar/scripts/gpu-status --activate",
+    "tooltip": true,
+  },
   "custom/startup": {
     "format": " ",
     "exec": "~/.config/waybar/scripts/startup-time.sh",

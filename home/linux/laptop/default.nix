@@ -1,4 +1,9 @@
 { pkgs, ... }:
+let
+  gpuStatus = pkgs.writeShellScriptBin "waybar-gpu-status" ''
+    exec ${pkgs.python3}/bin/python3 ${./waybar/gpu-status.py} "$@"
+  '';
+in
 {
   imports = [
     ../core-set
@@ -12,6 +17,7 @@
   programs.waybar.package = import ./waybar/package.nix { waybar = pkgs.waybar; };
   xdg.configFile."hypr/hyprland.conf".source = ./hyprland.conf;
   xdg.configFile."waybar/config.jsonc".source = ./waybar-config.jsonc;
+  xdg.configFile."waybar/scripts/gpu-status".source = "${gpuStatus}/bin/waybar-gpu-status";
 
   # Keep the apps, but do not activate an unprepared world/backup watcher.
   home.packages = with pkgs; [
