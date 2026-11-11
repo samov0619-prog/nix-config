@@ -226,10 +226,28 @@ followed by remaining functional acceptance. Preserve applied fixes and their
 regression/removal checks; do not claim residual messages are harmless or fixed.
 BIOS/headphone investigation and WirePlumber startup tracing remain deferred.
 Read-only display inspection found eDP-2 at 3200×2000/60 Hz, scale 1.0, and default
-brightnessctl selecting nvidia_0 instead of intel_backlight (496/496). No display
-settings changed; test visible backlight control and agree scale before persisting.
-Screen-only lid behavior without sleep is an interpretation to confirm, not yet
-implemented. Preserve external displays, audio/VPN/drivers and unchanged sudo.
+brightnessctl selecting nvidia_0 instead of intel_backlight (496/496).
+The user then confirmed visible panel dim/restore
+with explicit intel_backlight 70%/100% commands without sudo. Lenovo's HM brightness
+bindings now select that device, preserving -e4/-n2/5% steps. The initial failed-key
+report still had old live binds; the user subsequently confirms keys work and
+read-only inspection finds the new binds without config errors. Minimum usability
+and post-resume control remain unverified. The user prefers roughly 150% over
+200%, sees no useful difference from 160%, and approves the technically preferable
+value. The user confirms the saved 160% scale applied successfully; it gives
+exact 2000×1250 logical dimensions. They then reject 60 Hz: the panel advertises
+165 Hz, now selected by the Lenovo HM rule, with external-screen fallback unchanged.
+This is not integer pixel scaling or a guarantee for every app/XWayland; the new
+mode is now user-applied and accepted. Final read-only review confirms eDP-2 at
+3200×2000/164.995 Hz, scale 1.6, DPMS on and no config errors. Later-login persistence
+and individual app rendering remain separate checks. The user also accepts the
+ordinary lid close/reopen behavior without sleep. Lenovo bindl actions use
+switch:on/off:Lid Switch and native dpms off/on eDP-2, not monitor disable or sleep.
+Both binds are loaded; external displays/lock-screen integration remain unverified.
+Existing keyboard
+DPMS wake remains enabled: this is edge-triggered behavior, not a closed-lid lock
+against keyboard wake or login/reload while already closed. These are HM-only edits;
+logind policy, audio/VPN/drivers and sudo remain unchanged.
 
 Disko is imported directly by fresh `server`, `laptop`, and `desktop-next`
 targets. It runs only through an explicit Disko/nixos-anywhere command, never

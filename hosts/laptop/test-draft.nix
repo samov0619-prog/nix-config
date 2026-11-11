@@ -40,6 +40,9 @@ let
     config.hardware.enableRedistributableFirmware = host.hardware.enableRedistributableFirmware;
   };
   home = import ../../home/linux/laptop/default.nix { inherit pkgs; };
+  hyprlandLines = lib.splitString "\n" (
+    builtins.readFile home.xdg.configFile."hypr/hyprland.conf".source
+  );
   sharedGui = import ../../home/linux/gui-set/default.nix {
     inherit pkgs;
     config.home.homeDirectory = "/fixture/home";
@@ -79,6 +82,22 @@ assert partitions.swap.size == "48G";
 assert partitions.swap.content.type == "swap";
 assert partitions.swap.content.resumeDevice;
 assert host.services.power-profiles-daemon.enable;
+assert lib.all (name: host.services.logind.settings.Login.${name} == "ignore") [
+  "HandleLidSwitch"
+  "HandleLidSwitchExternalPower"
+  "HandleLidSwitchDocked"
+];
+assert lib.all (line: builtins.elem line hyprlandLines) [
+  "monitor = eDP-2, 3200x2000@165, auto, 1.6"
+  "monitor = , preferred, auto, 1"
+  "bindel = , XF86MonBrightnessUp, exec, brightnessctl --device=intel_backlight -e4 -n2 set 5%+"
+  "bindel = , XF86MonBrightnessDown, exec, brightnessctl --device=intel_backlight -e4 -n2 set 5%-"
+];
+assert
+  lib.filter (lib.hasPrefix "bindl = , switch:") hyprlandLines == [
+    "bindl = , switch:on:Lid Switch, dpms, off eDP-2"
+    "bindl = , switch:off:Lid Switch, dpms, on eDP-2"
+  ];
 assert builtins.elem ./graphics.nix host.imports;
 assert builtins.elem ./hardware-configuration.nix host.imports;
 assert hardware.imports == [ "/fixture/nixos/modules/installer/scan/not-detected.nix" ];
@@ -200,6 +219,8 @@ assert !(viewer.xdg.mimeApps.defaultApplications ? "image/svg+xml");
 assert !(viewer.xdg ? configFile);
 {
   lenovoDeclarations = true;
+  lenovoPanel165Hz160PercentAndIntelBrightnessBindings = true;
+  lenovoLidTargetsOnlyInternalPanelDpms = true;
   lenovoLiveHardwareScanWithoutStorageDeclarations = true;
   lenovoPrimeOffloadIsOptInWithoutSteamOverride = true;
   lenovoNativeNvidiaPowerPolicyWithoutExtraHooks = true;

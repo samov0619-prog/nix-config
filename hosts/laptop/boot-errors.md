@@ -724,15 +724,53 @@ The user chose practical usability over a clean journal. Retain the applied
 fixes and their regression/removal tests; remaining messages are not declared
 harmless or resolved, but do not by themselves justify more changes.
 
-1. Screen brightness: current keys omit a device; read-only inspection finds
+1. Screen brightness: the original keys omitted a device; read-only inspection found
    `brightnessctl` selects `nvidia_0` (3/100), while `intel_backlight` is 496/496.
-   Verify visible panel control before preparing Lenovo-only explicit bindings.
-2. Display scale: the internal `eDP-2` is 3200×2000 at 60 Hz, scale 1.0. Agree a
-   comfortable scale with the user; no brightness/scale/refresh change was made.
-3. Lid closure: prepare internal-screen off/on behavior, not Suspend/Hibernate.
-   This is the assistant's interpretation of the request; confirm before applying
-   behavior. Logind currently ignores lid closure on battery/AC/docked, Hyprland
-   reports `Lid Switch`, and no lid bindings exist. Preserve external displays.
+   The user confirms `brightnessctl --device=intel_backlight set 70%` visibly
+   dims the screen and `set 100%` restores it, without sudo. Lenovo-only HM
+   bindings now explicitly select `intel_backlight`, retaining `-e4 -n2` and
+   the 5% step. After the initial report that keys still failed, read-only
+   inspection found the running binds still used the old device-less commands.
+   The user subsequently confirms brightness keys work; the live binds now
+   explicitly select Intel and Hyprland reports no config errors. Minimum
+   usability and post-resume control remain unverified. No NixOS change is needed.
+2. Display scale: the user prefers approximately 150% over 200%, sees no useful
+   difference between 150% and 160%, and authorizes the technically preferable
+   value. The first scale-test snapshot had `eDP-2` at 3200×2000/60 Hz and 1.6.
+   Persist 160% for the internal panel: 2000×1250 exact logical pixels, rather
+   than 2133⅓×1333⅓ at 150%. This avoids fractional logical dimensions, not all
+   fractional-scale rendering limitations or XWayland blur. The user confirms
+   the saved scale was applied successfully, then rejects retaining 60 Hz.
+   The panel advertises 3200×2000 at both 60 and 165 Hz; the HM rule now selects
+   **165 Hz**, preserving 160% and the external-screen unscaled fallback. Higher
+   refresh can increase battery use; no automatic AC/battery refresh policy is added.
+   Apply with `home-manager switch --flake .#samov-laptop`, then `hyprctl reload`.
+   The user applied this and confirms it works. Final read-only review reports
+   `eDP-2` at 3200×2000, 164.995 Hz, scale 1.6, DPMS on and no config errors.
+   This confirms the active mode plus user acceptance, not independent rendering
+   tests for every app or persistence after a future login.
+3. Lid closure: the user confirms internal-screen off/on, without sleep or changes
+   to external displays. Lenovo's new `bindl` switch-on/off actions target only
+   `dpms off/on eDP-2`; the panel stays logically enabled, without workspace moves.
+   Logind still ignores lid closure on battery/AC/docked. No service, daemon,
+   suspend/Hibernate action or restart is added. Both binds use the observed
+   `Lid Switch` name and the native lock-permitted bind flag; no lock-screen
+   integration test was performed. The user applied the HM switch/reload and
+   confirms the requested close/reopen behavior works. Final read-only review
+   finds both exact DPMS binds loaded. This is user acceptance of the ordinary
+   cycle, not independent measurement of the closed panel. External-screen
+   behavior is not yet tested. Existing `key_press_enables_dpms = true`
+   remains: a key can wake DPMS-off screens, so these are lid-event actions, not
+   a guaranteed closed-lid power lock. Check external-keyboard behavior if used;
+   initial-login/reload while already closed is also not covered by edge binds.
+   Focused checks pass: the existing Nix declaration fixture reads the real HM
+   config source and requires panel/brightness rules plus exactly these two lid
+   actions. Installed Hyprland 0.55.4 accepts the extracted monitor/brightness/lid
+   lines through `--verify-config` in isolated HOME/runtime directories
+   (`/tmp/opencode/hyprland-panel-config-5xpifchx/`). This checks parsing, not DPMS
+   hardware behavior or actual 165 Hz output. No compositor start, live reload,
+   display mutation, full HM build or activation was run by the agent. Nixfmt
+   1.5.0 and diff whitespace checks pass; Markdown formatter remains unavailable.
 4. Then return to remaining functional acceptance, including GPU/offload,
    microphone and reliable Hibernate, and separately settle UPower's complete
    critical-battery policy. Preferred Hibernate is not automatic-action consent.
