@@ -46,17 +46,18 @@ let
   };
   viewer = import ../../home/linux/modules/nomacs/default.nix { inherit lib pkgs; };
   pkgsGraphics = {
-    linuxPackages_latest = {
-      kernel = "unstable-latest-kernel";
+    linuxPackagesFor = kernel: {
+      inherit kernel;
       nvidiaPackages.latest = "matching-nvidia-latest";
     };
     mesa = "unstable-mesa-64";
     pkgsi686Linux.mesa = "unstable-mesa-32";
     linux-firmware = "unstable-firmware";
   };
+  pkgsKernel.linux_latest = "separate-released-kernel";
   graphics = import ./graphics.nix {
-    inherit pkgs pkgsGraphics;
-    config.boot.kernelPackages = pkgsGraphics.linuxPackages_latest;
+    inherit pkgs pkgsGraphics pkgsKernel;
+    config.boot.kernelPackages = pkgsGraphics.linuxPackagesFor pkgsKernel.linux_latest;
   };
   firmwareOverrides = (builtins.head graphics.nixpkgs.overlays) { } { };
   disk = (import ./disko.nix { }).disko.devices.disk.main;
@@ -99,7 +100,7 @@ assert hardware.hardware.cpu.intel.updateMicrocode.content;
 assert !(hardware ? fileSystems);
 assert !(hardware ? swapDevices);
 assert !(hardware.boot ? resumeDevice);
-assert graphics.boot.kernelPackages == pkgsGraphics.linuxPackages_latest;
+assert graphics.boot.kernelPackages == pkgsGraphics.linuxPackagesFor pkgsKernel.linux_latest;
 assert graphics.hardware.graphics.enable;
 assert graphics.hardware.graphics.enable32Bit;
 assert graphics.hardware.graphics.package == pkgs.mesa;
@@ -202,7 +203,7 @@ assert !(viewer.xdg ? configFile);
   lenovoLiveHardwareScanWithoutStorageDeclarations = true;
   lenovoPrimeOffloadIsOptInWithoutSteamOverride = true;
   lenovoNativeNvidiaPowerPolicyWithoutExtraHooks = true;
-  lenovoStableMesaWithUnstableKernelNvidiaAndFirmware = true;
+  lenovoStableMesaWithIsolatedKernelAndPreservedNvidiaFirmware = true;
   noAcerHardwareOrExtraPrivileges = true;
   requestedBootstrapAutologinAndSudoDeclarations = true;
   noUnpreparedMinecraftInstance = true;

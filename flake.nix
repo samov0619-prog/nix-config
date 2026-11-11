@@ -17,6 +17,9 @@
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-26.05";
     nixpkgs-unstable.url = "nixpkgs/nixpkgs-unstable";
+    # Lenovo kernel only: released stable kernels can precede channel promotion.
+    # linux_latest selects a released kernel, never linux_testing/RC.
+    nixpkgs-kernel.url = "github:NixOS/nixpkgs/master";
     opencode.url = "github:anomalyco/opencode/v2.1.4";
 
     home-manager = {
@@ -58,6 +61,7 @@
       self,
       nixpkgs,
       nixpkgs-unstable,
+      nixpkgs-kernel,
       home-manager,
       browser-previews,
       disko,
@@ -223,6 +227,11 @@
           # Isolated graphics package set; NVIDIA needs unfree evaluation enabled.
           extraSpecialArgs.pkgsGraphics = import nixpkgs-unstable {
             system = systems.linux;
+            config.allowUnfree = true;
+          };
+          extraSpecialArgs.pkgsKernel = import nixpkgs-kernel {
+            system = systems.linux;
+            # Module recipes inherit the kernel's stdenv/license policy.
             config.allowUnfree = true;
           };
           modules = [

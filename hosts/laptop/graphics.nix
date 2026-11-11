@@ -2,12 +2,15 @@
   config,
   pkgs,
   pkgsGraphics,
+  pkgsKernel,
   ...
 }:
 {
   # Latest packaged releases, not linux_testing or NVIDIA bleeding_edge/beta.
-  # Kernel and its NVIDIA module come from the same unstable package set.
-  boot.kernelPackages = pkgsGraphics.linuxPackages_latest;
+  # Kernel-only input follows released stable ahead of channel promotion.
+  # Reinstantiate the existing module recipes for that kernel (same compiler),
+  # preserving the unstable NVIDIA version rather than importing a new stack.
+  boot.kernelPackages = pkgsGraphics.linuxPackagesFor pkgsKernel.linux_latest;
   hardware.graphics = {
     enable = true;
     enable32Bit = true;

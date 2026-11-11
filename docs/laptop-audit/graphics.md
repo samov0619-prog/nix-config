@@ -337,3 +337,111 @@ Hyprland login и проверить реальное аппаратное ус�
 graphics startup; Mesa-only изменение их не исправляет и не заявляет desktop
 полностью принятым. Нативная Amnezia, cleanup bootstrap/profile, перенос checkout
 и финальные пользовательские гайды ещё не завершены.
+
+## 11.11: released stable kernel input
+
+The user recalled choosing 7.3.3 rather than LTS on the live USB and stopped the
+earlier Bluetooth switch plan. Rechecking the actual locked package sets explains
+the mismatch: stable `linuxPackages_latest` is 7.3.3, while the selected unstable
+snapshot's is 7.3.1. The installed/booted system and all five retained system
+generations were still 7.3.1. `unstable` did not mean a newer kernel here.
+
+Kernel.org reports released stable 7.3.4; neither published channel had promoted
+it at inspection time. With user approval, `nixpkgs-kernel` follows Nixpkgs
+**master** only to obtain `linux_latest`, explicitly not `linux_testing`/RC.
+The new lock node pins `20771b995ab1cef82179579fb05847ca21cfb7f0`, selecting
+7.3.4. No existing lock node changed. This input is passed only to Lenovo.
+
+`pkgsGraphics.linuxPackagesFor pkgsKernel.linux_latest` instantiates the existing
+unstable external-module recipes against the new kernel. It retains NVIDIA
+615.78.08 and firmware 20261019 rather than adopting master NVIDIA/userspace.
+The module package set inherits the kernel's compiler; both isolated imports
+allow unfree evaluation because the inherited kernel stdenv's license policy
+also checks the existing NVIDIA recipe. This is not a global package-set change.
+
+Different kernel/userspace versions are supported through the Linux userspace
+ABI; identical Nixpkgs versions are not a requirement. Out-of-tree modules are the
+important exception: their headers/build directory/compiler must match the chosen
+kernel. Selected merged declarations confirm NVIDIA open-module `SYSSRC` and
+`SYSOUT` reference the **patched** 7.3.4 kernel and the stdenv derivations match
+(GCC 16.2.0). The module derivation evaluates. This declaration check does not establish
+compilation, loadability, real GPU behavior, suspend/Hibernate or freedom from
+regressions; the subsequent built-result review below adds separate artifact evidence.
+
+Mesa remains stable 26.1.8, preserving the previous userspace ABI correction.
+No other host receives the new input through specialArgs. Previous PipeWire,
+BlueZ, portal and shared Amnezia fixes are userspace fixes, not local kernel
+patches; a new kernel is not evidence that they are obsolete. The two recent
+[Bluetooth PM backports](../../hosts/laptop/bluetooth-pm.md) are still absent in
+7.3.4. Their unchanged patches apply with zero fuzz/offset and all twelve
+baseline/patched source-contract scenarios pass on the 7.3.4 stable-tag files.
+GP1 mailbox handling, SPD5118/panel/ISH and real Bluetooth acceptance remain open.
+
+### Updates and checks
+
+The input follows a branch in `flake.nix`, not a permanently hardcoded revision;
+`flake.lock` records the reviewed revision until explicitly updated. It will not
+silently jump during a normal rebuild. There is no unattended updater. Nixpkgs
+packaging can lag kernel.org, so future updates still require version review.
+
+- `nix flake update` includes the new input along with every other input.
+- `nix flake update nixpkgs-kernel` updates only the kernel input.
+- The managed `nix-flake-update-verify` helper and Fish completions now accept
+  `nixpkgs-kernel`. Its `--input all` already covers it. Updating only
+  `nixpkgs-unstable` does **not** update this separate kernel pin.
+- After applying the HM helper change, the existing opt-in update/build workflow
+  is `nix-flake-update-verify --hosts laptop --input nixpkgs-kernel`. It builds
+  both Lenovo outputs by the helper's existing policy; it does not switch or reboot.
+  Before HM application, the direct `nix flake update nixpkgs-kernel` works already.
+- Review `BTINTEL PM CLEANUP` on each kernel update. Test future unpatched source
+  with `--check-upstream` before explicitly removing backports; keep scenarios.
+
+Completed: kernel/NVIDIA/version/compiler declarations, actual open-module header
+paths, preserved existing input nodes, declaration fixtures, Bluetooth contracts,
+and three generated-updater mock tests (new input/all/no-update) plus Bash syntax.
+The mock updater never performs a real build/update or Git operation. Full
+graphics/assertion fixture evaluation was not separately rerun, and the agent
+ran no kernel/NVIDIA/system/HM builds or live acceptance. Ruff/Prettier are
+unavailable; no fallback formatter.
+
+The user subsequently completed the Lenovo NixOS build. Source/configuration
+review found no known application blockers and required no code or lock changes.
+The existing `result` resolves to
+`/nix/store/gn2f71lbm17cr7mk1wyqyz3clqmjzcdr-nixos-system-laptop-26.05.20261108.ac588ef`.
+Its boot spec selects kernel/initrd 7.3.4; kernel output matches the current
+configuration's evaluated output. Actual kernel derivation attributes include
+both PM patches, byte-identical to the repository files. Its merged module tree
+contains NVIDIA open 615.78.08 and `btintel_pcie`; `modinfo` reports matching
+`7.3.4 SMP preempt mod_unload` on NVIDIA core/DRM and Bluetooth. This is built
+artifact/metadata evidence, not real module loading or live GPU/Bluetooth/Hibernate
+acceptance. At that review, running/current system were still 7.3.1. No rebuild or activation was
+performed by the agent; only documentation was corrected after the user's build.
+
+The user subsequently applied/rebooted. Boot `3d979c37f8d44f169933195991de40e3`
+confirms running/current/booted 7.3.4 from that reviewed system, NVIDIA 615.78.08
+loaded and Intel Bluetooth bound to `btintel_pcie`; there are no failed system/user
+units. Startup still has xe's VBT WARN and NVIDIA DP-0 EDID warnings. One subsequent
+manual Hibernate returns but repeats Bluetooth reprobe/GP1, SPD5118, panel and ISH
+errors; initial headphone connection trouble remains unclassified. Real GPU/offload
+and reliable Bluetooth reconnection are not established by module loading or a
+later active A2DP/aptX snapshot. See [the boot audit](../../hosts/laptop/boot-errors.md) for the
+successful private journal export, persistent errors and exact coverage.
+
+### User verification and application
+
+1. Review `git diff` and build only Lenovo NixOS (already completed/reviewed above):
+   `nixos-rebuild build --flake .#laptop`. Allow for the local patched-kernel and
+   NVIDIA module build cost/free disk space. Keep the known-good generation.
+2. After a successful build and review, apply:
+    `sudo nixos-rebuild switch --flake .#laptop`, then reboot. No driver reload or
+    Hibernate is needed merely to install the configuration. Application/reboot
+    are now completed; the remaining steps are functional acceptance.
+3. After reboot require `uname -r` to report `7.3.4`, then verify Hyprland,
+   `nvidia-offload`/GPU function and real Bluetooth function before a manual
+   Hibernate cycle. Record entry/exit times and inspect the kernel journal;
+   check session/VPN restoration without restarting the working tunnel.
+4. Optionally apply `home-manager switch --flake .#samov-laptop` to install the
+   updated verifier/completions. HM does not install this kernel; NixOS alone
+   handles the kernel change. Documentation requires no activation.
+
+No agent-run build, activation, reboot, driver reload or live Hibernate occurred.

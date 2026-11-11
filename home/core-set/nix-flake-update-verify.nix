@@ -16,7 +16,7 @@ let
       Usage: nix-flake-update-verify --hosts HOST (--input INPUT | --no-update) [--server-settings DIR]
 
       Hosts: laptop, laptop-old, desktop, server, server-installer, mac, all
-      Inputs: nixpkgs, nixpkgs-unstable, home-manager, browser-previews,
+      Inputs: nixpkgs, nixpkgs-unstable, nixpkgs-kernel, home-manager, browser-previews,
               disko, freesm, nix-gc-env, xremap-flake, all
 
       --hosts HOST   Verify one host, or every host supported by this platform.
@@ -114,7 +114,7 @@ let
         input=locked
       else
         case "$input" in
-          nixpkgs | nixpkgs-unstable | home-manager | browser-previews | disko | freesm | nix-gc-env | xremap-flake)
+          nixpkgs | nixpkgs-unstable | nixpkgs-kernel | home-manager | browser-previews | disko | freesm | nix-gc-env | xremap-flake)
             if nix flake update "$input"; then
               :
             else
@@ -185,7 +185,7 @@ in
   home.file.".config/fish/completions/nix-flake-update-verify.fish".text = ''
     complete -c nix-flake-update-verify -f
     complete -c nix-flake-update-verify -l hosts -r -a 'laptop laptop-old desktop server server-installer mac all' -d 'Host to verify'
-    complete -c nix-flake-update-verify -l input -r -a 'nixpkgs nixpkgs-unstable home-manager browser-previews disko freesm nix-gc-env xremap-flake all' -d 'Root input to update'
+    complete -c nix-flake-update-verify -l input -r -a 'nixpkgs nixpkgs-unstable nixpkgs-kernel home-manager browser-previews disko freesm nix-gc-env xremap-flake all' -d 'Root input to update'
     complete -c nix-flake-update-verify -l no-update -d 'Build the existing lock file'
     complete -c nix-flake-update-verify -l server-settings -r -a '(__fish_complete_directories)' -d 'External server settings directory'
     complete -c nix-flake-update-verify -s h -l help -d 'Show usage'

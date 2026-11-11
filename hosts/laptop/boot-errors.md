@@ -114,6 +114,254 @@ and Ruff are unavailable, so Markdown/Python formatting was not rerun and no
 fallback formatter was substituted. No agent-run build, activation, reboot,
 Hibernate, VPN operation or remote Git operation is part of this commit review.
 
+## Bluetooth kernel PM correction (applied; Hibernate acceptance pending)
+
+Following the user's request to fix Hibernate errors, source review found that
+7.3.1 resets/reprobes Bluetooth on intermediate thaw as well as true restore.
+The generic Hibernate snapshot path calls thaw before image write/poweroff too,
+so this can reset a still-powered controller unnecessarily. Stable 7.3.4 retains
+the same faulty routing and the old log-only GP1 handler. The exact errno of the
+saved reprobe failure is not known; no claim is made that every reprobe failure
+or mailbox message is explained by this path.
+
+With explicit user approval of the kernel rebuild trade-off, Lenovo now prepares
+two upstream PM backports (`12997a385f71`, `2926eb396711`) through named
+`boot.kernelPatches`. Initially these preserved 7.3.1 and the lock; the user
+stopped the switch plan after recalling live USB 7.3.3. A separate, approved
+kernel-only input now targets released 7.3.4 without changing existing input
+nodes or NVIDIA/firmware versions. Only header context is adapted in the PM
+backports; added/removed source lines match upstream.
+The patches separate thaw/D0 from genuine restore/FLR and refresh hardware state
+for missed-interrupt fallback checks. They do not import the larger mailbox
+series or suppress diagnostics. See [Bluetooth PM](bluetooth-pm.md) for tests,
+limitations, application and explicit removal on future updates.
+
+On both 7.3.1 and the now-selected 7.3.4 stable-tag sources, the source harness
+reproduces baseline thaw/S3/stale-cache defects and passes
+twelve corrected contract cases with zero-fuzz patch application. These are
+actual extracted driver functions/table with mocked hardware/reset dependencies,
+not a native kernel, firmware, device, IRQ-race or Hibernate test. The existing
+runtime was unchanged at this source-test stage; real Bluetooth acceptance and
+the GP1 finding remain open.
+Selected merged declarations pass for Lenovo and the two existing GUI hosts,
+including patch delivery, preserved versions/source/existing patches, matching
+NVIDIA selection and the update reminder. Server merged evaluation requires its
+unselected external settings and is not claimed; source composition is Lenovo-only.
+The removal-mode positive/negative controls pass, using a temporarily corrected
+source tree and pristine 7.3.1 respectively, not a future upstream release.
+The `BTINTEL PM CLEANUP` reminder requires testing a future unpatched driver
+before dropping either backport; a version change or patch conflict is insufficient.
+The selected NVIDIA open-module recipe uses the patched 7.3.4 kernel's headers
+and compiler by declaration; this is not a compiled module or live GPU test.
+Other local fixes (PipeWire, BlueZ, portal, Amnezia) are userspace fixes, not
+kernel-version patches, and are not removed merely because the kernel advances.
+See [the kernel update audit](../../docs/laptop-audit/graphics.md#1111-released-stable-kernel-input)
+for update/application scope. No agent-run kernel/module/system build or switch was run.
+The user subsequently reported successful NixOS build. Review inspected `result`
+(`gn2f71lbm17cr7mk1wyqyz3clqmjzcdr-nixos-system-laptop-26.05.20261108.ac588ef`):
+kernel 7.3.4, both current patches in its actual derivation attributes, NVIDIA
+open 615.78.08 and Bluetooth modules with matching 7.3.4 vermagic. No code/lock
+fix was required by this review; only build-status documentation changed. At that
+review, current and running system remained 7.3.1. The user subsequently applied
+and rebooted; the new observed state follows.
+
+### 11.11, 17:10: applied 7.3.4 startup observation
+
+Boot `3d979c37f8d44f169933195991de40e3` runs **7.3.4**. Current and booted system
+both resolve to the reviewed `gn2f71lbm17cr7mk1wyqyz3clqmjzcdr` generation.
+NVIDIA 615.78.08 is loaded; PCI `8086:e376` is bound to `btintel_pcie`.
+There are zero failed system/user units. BlueZ's adapter is powered; Bluetooth,
+Avahi, resolved, PipeWire, WirePlumber, onionbell and all three portal units are
+active. These are startup/registration observations, not real device/GPU acceptance.
+
+Private successful export:
+`/tmp/opencode/laptop-kernel-acceptance-3d979c37-1794406209856351/`.
+Its manifest records hashes, successful exit codes and matching boot IDs for
+1,352 kernel records, 171 warning-or-higher records and 91 selected audio/portal
+user-unit records. Capture was at about 17:10 +03:00; latest exported kernel and
+warning records are at 17:02:46.474644. The preceding capture attempt used a
+hyphenated boot descriptor rejected by journalctl: its empty current-boot files
+and printed zero counts are invalid evidence, not absence of errors.
+
+- Bluetooth firmware/DDC initialization and MGMT registration succeed. Four GP1
+  messages remain at 17:02:32.740351–17:02:33.250637; no `BT reprobe failed` occurs
+  in this startup export. There is **no actual Hibernate entry** in this boot's
+  captured kernel journal, so this does not validate the PM correction.
+- ISH repeats three `cmd 2 failed 10` errors. ACPI duplicate-object, xe VBT WARN,
+  Lenovo WMI profile-probe and NVIDIA DP-0 EDID warnings remain visible.
+  SPD5118 registers its sensor without the prior write error; no panel
+  double-unprepare appears in this startup-only capture. Neither finding is
+  closed without a post-update Hibernate cycle.
+- Four WirePlumber `source_plugin` Lua errors and the UPower
+  `NameHasNoOwner` warning repeat. No pidns, invalid environment assignment,
+  duplicate-mDNS-stack or SEGV/core-dump matches occur in the warning export.
+  This is selected journal coverage, not functional audio/portal/DNS acceptance.
+- The separately successful previous-boot PipeWire export in the preceding
+  capture directory has eight records. Its final 120-second selection has four
+  X11-disconnect matches, one normal stop and no SEGV/core-dump matches. This is
+  another observed normal selected-unit shutdown, not full late-shutdown coverage.
+
+At this startup checkpoint, the next step was real-device checks and one user-run
+Hibernate; that subsequent cycle is recorded below.
+No agent-run activation, power cycle, driver reload or VPN operation occurred.
+These evidence/documentation updates require no Nix activation.
+
+### 11.11, 17:26: first observed 7.3.4 Hibernate cycle
+
+The user reports returning from Hibernate, with an initially unsuccessful headphone
+connection; they suspect the headphones may have connected elsewhere. This is not
+yet evidence of that cause, nor acceptance of reliable Bluetooth reconnection.
+The same boot records entry at **17:16:57.064727** and exit at
+**17:17:53.834391 +03:00**; systemd reports successful return. Intermediate kernel
+messages are buffered, so their receipt times alone do not establish the exact
+entry/thaw/restore phase or the duration of individual callbacks.
+
+Private export:
+`/tmp/opencode/laptop-hibernate-acceptance-3d979c37-1794407163315989/`.
+All four journal queries succeeded with matching boot IDs: 1,525 kernel records,
+207 warning-or-higher records, 103 Bluetooth/logind/Hibernate-unit records and
+17 selected audio-unit records. The manifest records hashes and separate private
+BlueZ/PipeWire object snapshots. Device names, addresses and raw snapshots stay
+outside Git.
+
+- The Hibernate kernel window still contains one `BT reprobe failed`, four GP1
+  messages, the SPD5118 write/restore failure `-6`, one panel double-unprepare and
+  three ISH `cmd 2 failed 10` errors. These findings remain open after the update.
+  No `Failed to set D0/D3` match occurs. The retained genuine-restore FLR means
+  a reset alone is not proof of incorrect thaw handling; this journal does not
+  trace the callbacks or prove removal of the unnecessary reset on hardware.
+- The controller is re-registered as **hci1**, with firmware/DDC initialization
+  and MGMT registration succeeding by 17:17:54.391336. Querying old `/org/bluez/hci0`
+  consequently fails; it does not mean the current adapter is absent or off.
+  ObjectManager confirms one powered adapter, one paired/bonded unblocked device,
+  `Connected=true` and `ServicesResolved=true`. `Trusted=false` is also observed,
+  but is not by itself a proven cause of the connection failure.
+- BlueZ records A2DP authorization cancellation at 17:21:16.174608
+  (`Access denied: org.bluez.Error.Canceled`) and Hands-Free transport-disconnect
+  diagnostics. The capture does not establish who canceled or whether another
+  host owned the headphones. At inspection, a media transport is active and
+  PipeWire's Bluetooth Audio/Sink is **running, A2DP/aptX**. This establishes current
+  connection/audio-graph state, not audible output or automatic reconnection.
+- No failed system/user units are present. UPower's missing-owner warning repeats;
+  no new `source_plugin` or SEGV/core-dump matches occur in the post-entry warning
+  selection. This does not close the earlier WirePlumber startup issue or establish
+  real audio/GPU/VPN acceptance for this cycle.
+
+The user subsequently confirms audible headphone output after several manual
+reconnect/remove/add attempts; another host or output selection may have played
+a part. They explicitly defer that connection investigation and Bluetooth tuning.
+This accepts current audible output, not automatic reconnection. Do not change
+pairing/trust/global policy or add restart hooks on the assumption that cancellation
+explains the kernel errors.
+No runtime configuration, Bluetooth/VPN restart or power operation was performed
+by the agent. Documentation-only changes require no activation.
+
+### Follow-up source diagnosis: reprobe and SPD write protection
+
+Exact unpatched 7.3.4 source passages are saved under
+`/tmp/opencode/laptop-error-source-7.3.4/`, with URLs/hashes in `sources.json`.
+The Bluetooth file is byte-identical to the earlier inspected stable-tag source.
+Current mainline comparison files/hashes are separately saved under
+`/tmp/opencode/laptop-error-source-mainline/`. These are source inspections, not
+runtime tracing, native driver tests or kernel builds.
+
+- **Bluetooth reprobe:** `device_reprobe()` calls the bus rescan helper, which
+  normalizes a positive successful attach result to zero. Thus the warning is
+  not explained by accidentally treating the normal `1` attach result as an
+  error. Another supported possibility is PM probe deferral: `really_probe()`
+  returns `-EPROBE_DEFER` while probing is blocked, and `dpm_complete()` later
+  unblocks and triggers deferred probes. This fits a warning followed by hci1
+  registration, but the journal omits the actual return value and cannot prove
+  that it was `-517`. See exact [bus](https://github.com/gregkh/linux/blob/v7.3.4/drivers/base/bus.c#L859),
+  [probe](https://github.com/gregkh/linux/blob/v7.3.4/drivers/base/dd.c#L653) and
+  [PM completion](https://github.com/gregkh/linux/blob/v7.3.4/drivers/base/power/main.c#L1329)
+  paths. Hans de Goede reports this deferral/retry behavior on hci_h5 in
+  [upstream review](https://lkml.iu.edu/2608.2/08172.html), not on this Lenovo.
+  The [v4 core-helper series](https://lkml.rescloud.iu.edu/2610.2/03248.html)
+  is broader than a diagnostic fix; its author explicitly lacks Bluetooth hardware
+  testing. The inspected mainline Bluetooth source still uses `device_reprobe()`.
+  Do not import that series or suppress the message on this hypothesis. Obtaining
+  the live return code needs separately authorized tracing; no trace was enabled
+  and no tracing tools were installed.
+- **SPD5118:** the saved startup already records `SPD Write Disable is set`
+  at 17:02:32.500538. Exact 7.3.4 `spd5118_suspend()` ignores the disable-write
+  result, marks regcache dirty, and resume calls `regcache_sync()`; the observed
+  write-protection/`-ENXIO` combination matches the
+  [upstream report](https://lkml.indiana.edu/hypermail/linux/kernel/2608.2/02306.html).
+  Current read-only hwmon inspection returns 38 C, limits 55/85 C and no max/crit
+  alarm. Those readable values do not prove correct page selection after every
+  resume: the maintainer [rejects read-only bypass](https://lore-kernel.gnuweeb.org/all/1274727e-b41a-443b-9955-ac8119417edc@roeck-us.net)
+  because firmware may select a different register page.
+- A **merged upstream fix exists**:
+  [`bf31dd72f0d5`, i801 SPD instantiation gate](https://github.com/torvalds/linux/commit/bf31dd72f0d50d5acc71d7777b5dae6c51b3ba17).
+  It passes the existing hardware write-disable status to the SMBus core, which
+  skips DDR5 SPD5118 instantiation while preserving legacy DDR4 handling. It does
+  not clear the protection bit or disable RAM/its hardware thermal protection.
+  The exact upstream patch passes a zero-fuzz, zero-offset dry-run on 7.3.4;
+  the needed write-disable-aware core helpers/declarations already exist there.
+  No backport is configured, compiled or applied yet. Its consequence on this host
+  is loss of this SPD5118 hwmon temperature interface, so the user must decide
+  whether to prepare a Lenovo-only backport with contract/declaration checks.
+  The user questions that functional loss; do not interpret the discussion as
+  approval to prepare the backport. BIOS options/vendor fixes are being considered.
+- **Panel/ISH remain separate:** the panel warning is the DRM guard rejecting an
+  already-unprepared panel before callbacks, not a sensor-restore errno. It does
+  not by itself establish harmlessness of the whole display PM sequence. ISH
+  command `2` is firmware START; `10` is a response status, not Linux errno 10.
+  Generic `ish_ptl.bin` remains the attempted image, without a verified OEM image
+  for this exact ThinkBook. No foreign firmware, panel guard removal or driver
+  disable was selected.
+
+### BIOS candidate: TRCN23WW (inspection only)
+
+Read-only DMI reports installed BIOS **TRCN21WW**, product `21VJ` / ThinkBook 16
+G8+ IPD. The user supplies Lenovo driver **DRV202602050028**,
+[download page](https://think.lenovo.com.cn/support/driver/driverdetail.aspx?DEditid=161846),
+TRCN23WW released 10 August 2026 and its Windows-only
+[update instructions](https://iknow.lenovo.com.cn/detail/415223.html). The supplied
+release note concerns real-time quiet-mode switching in BaiYing; it does not
+explicitly claim SPD/ISH/ACPI repairs. A BIOS update is not approved or performed.
+
+Local `~/Downloads/TRCN23WW.exe` is 14,075,240 bytes, SHA-256
+`ca8eb54d537bc67d3d16a1f9f99c1f1cde01ab73fb78cf39b2e960fc6a568cbd`.
+Static inspection using already-present libarchive, without installing packages
+or executing any payload, finds an embedded 7z with `H2OFFT-Wx64.exe`,
+`WinTRCN23WW.fd`, `platform.ini` and `InterToolx64.efi`. The latter is an x64 EFI
+application with flash/platform/security checks; this does **not** establish a
+supported standalone UEFI Shell update procedure for this model. The INI's generic
+ESP/memory capsule settings are not instructions to manually copy files to ESP.
+Artifacts are under `/tmp/opencode/bios-trcn23ww-inspect/`. No Authenticode/image
+signature validation, native updater test, firmware/ESP/boot write or settings
+change was performed. Do not launch through Wine, bypass checks, treat `.fd` as a
+raw flash image or assume that Windows PE is supported. Inspect ordinary BIOS
+menus/vendor-supported update options before choosing a flashing route; do not
+unlock hidden settings or clear SPD write protection for the temperature sensor.
+
+The user subsequently **defers BIOS work** and requests preservation, not an
+update. A persistent private archive outside Git and `/tmp` now holds the original
+EXE, complete inspection copies, web-source snapshots, a resume README and
+checksums at
+`~/.local/state/nix-config/firmware/lenovo-trcn23ww-2026-11-11/`.
+Original Downloads/temporary files remain untouched. Copy/hash verification is
+not authenticity/signature verification. No Nix activation is required.
+
+Follow-up static research finds `TRCN23WW` / `ThinkBook 16 G8+ IPD` in the image's
+`$BVDT` and version candidate `0x71250023` after its sole `$ESRT` tag. The `.fd`
+is an x64 PE/EFI application, not a demonstrated raw SPI image. This host exposes
+10 ESRT entries, but their attributes require root; no live GUID/version match
+has been performed. The [fwupd packaging project](https://github.com/nadimkobeissi/lenovo-bios-fwupd)
+has other-model success reports, not exact 21VJ/TRCN23WW coverage. Its original
+first-system-entry selection, synthetic current+1 version and weakened CAB trust
+policy must not be adopted blindly. [PR 4](https://github.com/nadimkobeissi/lenovo-bios-fwupd/pull/4)
+discusses checks/real versions; [issue 3](https://github.com/nadimkobeissi/lenovo-bios-fwupd/issues/3)
+reports cleared boot entries. A [ThinkBook UEFI Shell report](https://blog.ferstar.org/en/posts/update-insydeh2o-bios-linux/)
+uses Framework's flasher on an older AMD model; it does not validate our InterTool
+or a cross-vendor tool here. Resume with separately authorized read-only ESRT
+matching, signature/component review and boot recovery planning, not flashing.
+No downloaded script was executed, fwupd installed, CAB built, capsule staged,
+trust setting changed or boot/firmware write performed. SPD backport approval
+also remains absent.
+
 ## Applied fixes observed after reboot
 
 - **Two mDNS responders:** [the workstation module](../profiles/mdns.nix) now
@@ -430,21 +678,71 @@ is still disabled pending follow-up; no new activation is needed for this audit.
   also remains unchanged in pinned unstable Qt 6.12.0 versus stable 6.11.2. No
   broad Qt/network upgrade was made on the assumption that a version fixes it.
 
-## Next error-work order
+### WirePlumber follow-up after BIOS deferral
 
-1. Investigate the freshly repeated Intel Bluetooth reprobe/mailbox errors around
-   Hibernate first, using the saved timeline and actual device acceptance; review
-   SPD5118/panel/ISH as separate findings, not consequences of the VPN fix.
-2. Investigate the freshly reproduced WirePlumber startup Lua errors with an
-   installed full-profile trace/reproducer; the earlier dummy-sink probe did not
-   reproduce them. Preserve working audio and do not add speculative guards.
-3. Decide UPower's complete critical-battery policy, using the user's preference
-   for Hibernate rather than HybridSleep. Successful manual Hibernate is useful
-   evidence, not authorization to enable automatic battery actions.
-4. Keep ACPI/ISH/VBT/WMI and the separate Qt/udiskie diagnostics visible; follow
-   verified upstream fixes rather than suppressing logs or disabling features.
-5. Waybar's rare Pulse reconnect crash remains deliberately deferred. Brightness,
-   scale, lid and fingerprint changes still follow error work; sudo stays unchanged.
+Read-only inspection of the still-running boot `3d979c37...` confirms WirePlumber
+0.5.14 and PipeWire 1.6.6 are active with zero restarts. The same four startup Lua
+traces call `common-utils.get_object_manager()` from `find-defined-target.lua`
+and `find-default-target.lua`; UPower's separate absence still produces its own
+message. No local user WirePlumber config/scripts or `/etc/wireplumber` directory
+were present, and the installed NixOS extra config/scripts directories were empty.
+
+Exact 0.5.14 source is retained in
+`/tmp/opencode/wp-startup-source-0.5.14/`. The event source installs seven object
+managers and can push object events during activation; the component loader only
+registers it after activation completes. This supports the existing registration
+race hypothesis, not a measured startup sequence on this host.
+
+Two small native hardware-free probe runs used the installed binaries, an isolated
+socket/HOME/state and unavailable private D-Bus addresses, without hardware
+monitors. They verified a pre-existing sink/stream before manager startup:
+
+- `/tmp/opencode/wp-metadata-probe-8humemcr/`: 0/16/64 additional metadata objects;
+  all three cases produced two links and zero `source_plugin` errors.
+- `/tmp/opencode/wp-preexisting-ports-probe-dxgrba54/`: four preconfigured dummy
+  ports, with 0/16 additional metadata; both cases produced two links and zero
+  matching errors. All five cases exercised `select-target` in trace logs.
+
+The first two expanded-metadata fixture attempts stopped on an enumeration
+assertion before starting WirePlumber for that case: empty metadata do not appear
+in `pw-dump` without property events. Adding a sentinel value made their existence
+observable; no expectation was weakened. Those incomplete attempts are not
+negative reproducer results. The final probe script is
+`/tmp/opencode/probe-wp-startup-metadata.py` (preconfigured-port variant).
+Completed runs confirm unchanged live audio service PIDs/restart counters.
+
+These results do not cover real monitors or full-profile boot timing. No live
+logging configuration, service restart, package selection, audio policy or
+Bluetooth setting was changed here. A real-startup trace remains a possible
+future diagnostic, not approved work: the user subsequently paused investigation
+of journal messages without established functional impact. Do not add speculative
+nil guards, dependencies or delays.
+
+## Current functional priorities and deferred investigations
+
+The user chose practical usability over a clean journal. Retain the applied
+fixes and their regression/removal tests; remaining messages are not declared
+harmless or resolved, but do not by themselves justify more changes.
+
+1. Screen brightness: current keys omit a device; read-only inspection finds
+   `brightnessctl` selects `nvidia_0` (3/100), while `intel_backlight` is 496/496.
+   Verify visible panel control before preparing Lenovo-only explicit bindings.
+2. Display scale: the internal `eDP-2` is 3200×2000 at 60 Hz, scale 1.0. Agree a
+   comfortable scale with the user; no brightness/scale/refresh change was made.
+3. Lid closure: prepare internal-screen off/on behavior, not Suspend/Hibernate.
+   This is the assistant's interpretation of the request; confirm before applying
+   behavior. Logind currently ignores lid closure on battery/AC/docked, Hyprland
+   reports `Lid Switch`, and no lid bindings exist. Preserve external displays.
+4. Then return to remaining functional acceptance, including GPU/offload,
+   microphone and reliable Hibernate, and separately settle UPower's complete
+   critical-battery policy. Preferred Hibernate is not automatic-action consent.
+
+BIOS, headphone connection/tuning and the rare Waybar reconnect crash remain
+explicitly deferred. Bluetooth reprobe/GP1, SPD5118/panel/ISH, WirePlumber Lua and
+other journal findings stay documented and visible; revisit for an actual symptom
+or verified upstream fix, not to eliminate messages. No SPD patch, firmware
+staging or live WirePlumber trace was configured. Fingerprint remains deferred;
+sudo stays unchanged. Working audio/VPN/drivers must not be disrupted.
 
 ## Apply and accept on Lenovo
 
@@ -462,7 +760,8 @@ is still disabled pending follow-up; no new activation is needed for this audit.
    The user has applied/rebooted; versions and startup error absence are observed.
    Real Bluetooth and portal-UI acceptance remain pending. This audit-only update
    requires no further activation or service restart.
-4. Continue open firmware/kernel/audio investigations separately. Brightness,
-   scaling, lid behavior and fingerprint login follow error work; sudo is unchanged.
+4. Follow the functional priority order above: brightness, scaling, lid behavior,
+   then remaining acceptance. Firmware/error investigations and fingerprint are
+   deferred; sudo is unchanged.
    The user confirms keyboard backlight switching already works via Fn+Space;
    no extra keyboard-backlight binding is needed.

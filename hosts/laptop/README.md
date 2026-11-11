@@ -9,6 +9,19 @@ nomacs viewer below also apply to existing Linux GUI profiles.
 [Installed boot errors](boot-errors.md) records the mDNS/environment corrections,
 the Lenovo-only pinned unstable BlueZ/core portal selections, checks and remaining
 firmware/kernel issues. The BlueZ/portal fixes are upstream, without local backports.
+The separate [Bluetooth PM backports](bluetooth-pm.md) now prepare two upstream
+kernel corrections for unnecessary pre-poweroff resets/stale D-state checks.
+The user built/applied them with 7.3.4; device/Hibernate acceptance is pending and GP1
+mailbox handling remains open. The NixOS cleanup
+reminder and unpatched-source test define when to explicitly remove the backports.
+The prepared kernel now selects released stable **7.3.4** from the separate
+`nixpkgs-kernel` input; installed 7.3.1 and live USB 7.3.3 were different sources.
+The reviewed result is now running after reboot; startup GP1/ISH errors remain.
+One manual Hibernate returned but repeated reprobe/GP1/SPD5118/panel/ISH errors;
+initial headphone connection trouble remains unclassified despite a later active
+A2DP/aptX connection. See the boot audit for scoped evidence, not full acceptance.
+See the [kernel update audit](../../docs/laptop-audit/graphics.md#1111-released-stable-kernel-input)
+for package isolation, module compatibility checks and the update workflow.
 The separate [audio module](audio.nix) carries an upstream PipeWire X11
 shutdown-cleanup backport absent from both pinned channels. The user applied it;
 one subsequent shutdown exercised repeated X11 callbacks without the old SIGSEGV.
@@ -40,16 +53,19 @@ See the boot audit for evidence, remaining errors and future apply/check steps.
   [Lenovo-only Waybar extension](../../home/linux/laptop/waybar/README.md)
   names both destinations in the tooltip using the actual available profile list.
   Its algorithm/patch checks passed; the full binary/UI remain unbuilt and untested.
-- [Lenovo-only graphics module](graphics.nix): unstable `linuxPackages_latest`,
-  NVIDIA `latest` from that kernel's package set with open modules and linux-firmware.
+- [Lenovo-only graphics module](graphics.nix): released `linux_latest` from the
+  kernel-only input, with the existing unstable module recipes instantiated for
+  that kernel via `linuxPackagesFor`. NVIDIA `latest` stays on the same version,
+  with open modules and the existing unstable linux-firmware.
   Stable Mesa 64/32-bit follows the stable userspace libc: mixing unstable Mesa
   with stable Hyprland caused an installed `GLIBC_2.43` loader failure.
   No testing kernel, NVIDIA beta/bleeding_edge or manually
-  pinned version. An isolated unfree-enabled package import is passed only to
-  Lenovo; only its NixOS firmware input is overlaid, leaving other firmware and
+  pinned version in the module. Isolated unfree-enabled graphics/kernel imports
+  are passed only to Lenovo; only its NixOS firmware input is overlaid, leaving other firmware and
   existing hosts intact. The rest of NixOS/HM remains on its existing sources.
-  The updated lock selects kernel **7.3.1**, NVIDIA **615.78.08**, Mesa
-  **26.1.8** and firmware **20261019**, not today's upstream head. Input updates plus later
+  The updated lock selects kernel **7.3.4**, NVIDIA **615.78.08**, Mesa
+  **26.1.8** and firmware **20261019**. The kernel package follows Nixpkgs master,
+  but explicitly selects the released kernel, not `linux_testing`/RC. Input updates plus later
    NixOS activation advance the stack; there is no background updater. Live PCI
    inventory confirms Intel `00:02.0` and NVIDIA `02:00.0`, with the built-in panel
    active on Intel. The user selected PRIME render offload with `nvidia-offload`,

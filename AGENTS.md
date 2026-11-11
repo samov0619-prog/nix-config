@@ -9,6 +9,9 @@ NixOS и HM управляются раздельно: NixOS через `nixosCo
 ### Flake
 
 - Каналы: `nixpkgs` + `home-manager` = 26.05; `nixpkgs-unstable` передаётся через `specialArgs`.
+- `nixpkgs-kernel` follows Nixpkgs master only for Lenovo's released `linux_latest`,
+  never testing/RC. Only Lenovo receives its isolated package import; existing
+  unstable module recipes are instantiated for that kernel with `linuxPackagesFor`.
 - Системы: `x86_64-linux`, `aarch64-darwin`.
 - Хелперы: `pkgsFor`, `pkgsUnstableFor`, `mkHM`, `mkNixos`.
 - Overlays: `filemanager1-common` + `freesm` — только для desktop/laptop-old/laptop HM;
@@ -134,7 +137,8 @@ startup Lua error did not reproduce in the short private dummy-sink policy probe
 no speculative audio fix. UPower is absent, not just late: enabling it also adds
 a critical-battery action, so needs a separate policy decision. Do not silence
 remaining ACPI/xe/ISH/WMI/audio messages with unverified workarounds. Fn+Space
-keyboard backlight works per user; brightness/scale/lid/fingerprint remain deferred.
+keyboard backlight works per user; fingerprint remains deferred. The latest
+functional priority order below supersedes the earlier error-first plan.
 The user subsequently observed a restored session after manual Hibernate; UPower
 with Hibernate is preferred but not enabled. The boot audit records private
 resume evidence and remaining SPD5118/Bluetooth/panel/ISH errors. Amnezia 5.0.1.5
@@ -164,10 +168,68 @@ The latest Hibernate kernel window also repeats Bluetooth reprobe/four gp1
 mailbox errors (then successful firmware/DDC/MGMT initialization), SPD5118 -6,
 panel double-unprepare and three ISH cmd-2 failures. They remain open despite
 successful session/VPN restoration; buffered printk receipt times do not prove
-entry-versus-exit placement. Bluetooth is the next diagnostic priority.
+entry-versus-exit placement. Bluetooth was the next diagnostic priority at that
+checkpoint; the latest functional order below supersedes it.
 No delay or restart hook was added; do not disrupt the working tunnel.
+Lenovo's `bluetooth.nix` now separately prepares two named kernel PM backports
+(`12997a385f71`, `2926eb396711`). After the user stopped the switch plan over the
+live-7.3.3/installed-7.3.1 mismatch, a separate approved `nixpkgs-kernel` input
+now selects released 7.3.4, preserving every existing lock node and NVIDIA/firmware.
+The new input follows master, with revision fixed normally by flake.lock until
+update; no unattended updates. Both PM backports still apply unchanged to 7.3.4.
+They avoid unnecessary thaw reset and refresh stale D-state fallback;
+true restore FLR remains. Twelve actual-function/table contract cases pass with
+mock hardware/reset dependencies, not native kernel/device/Hibernate coverage.
+The user built NixOS successfully; reviewed result has both current patch bytes
+in its kernel derivation and matching 7.3.4 NVIDIA/Bluetooth module vermagic.
+No code/lock review fixes; documentation only. The user subsequently applied/rebooted:
+boot `3d979c37...` confirms running/current/booted 7.3.4, loaded NVIDIA 615.78.08
+and btintel_pcie binding. Startup firmware/DDC/MGMT succeeds with the adapter powered,
+but four GP1 messages, three ISH failures and four WirePlumber Lua errors remain.
+The successful private journal export is in the boot audit; the preceding failed
+hyphenated-boot-ID capture's zero counts are invalid. One subsequent manual Hibernate
+at 17:16:57–17:17:53 returns but repeats one reprobe error, four GP1 messages,
+SPD5118 -6, panel double-unprepare and three ISH failures. The adapter re-registers
+as hci1; never hardcode hci0 in later diagnostics. Initial headphone connection
+trouble is user-reported; later private snapshots show connected/resolved and
+running A2DP/aptX. The user confirms audible output after manual reconnect/remove/add
+attempts, explicitly deferring headphone connection investigation and tuning.
+Automatic reconnection remains unaccepted. A2DP Canceled
+and Trusted=false do not establish the cause or authorize policy/trust changes.
+Real GPU and reliable Bluetooth recovery remain unaccepted; see the boot audit.
+Exact 7.3.4 driver-core review supports PM probe deferral followed by retry as a
+reprobe-warning hypothesis, not a measured errno; positive attach success is
+normalized to zero. No live tracing or broader core-helper backport was enabled.
+SPD5118 now has a concrete startup match: i801 reports SPD Write Disable set.
+Merged upstream `bf31dd72f0d5` gates SPD instantiation; its exact patch dry-runs
+without fuzz/offset on 7.3.4 with existing SMBus helpers. It removes this host's
+SPD5118 hwmon interface, so preparation awaits an explicit user decision; nothing
+is configured/built/applied. Do not bypass write protection or hide regcache errors:
+the maintainer rejects read-only mode because BIOS can change the register page.
+BIOS TRCN23WW research is explicitly deferred, not approved for flashing. The
+original EXE, extraction, web-source snapshots/checksums and resume plan are saved
+outside Git/tmp at `~/.local/state/nix-config/firmware/lenovo-trcn23ww-2026-11-11/`.
+See the boot audit; live ESRT matching needs read-only root access, image signatures
+and exact-model Windows-free update compatibility remain unverified. No staging,
+trust-policy change or firmware/boot write was performed.
+GP1 mailbox handling and the exact saved reprobe errno remain
+open; stable 7.3.4 still has both old paths. `BTINTEL PM CLEANUP` and
+`hosts/laptop/bluetooth-pm.md` require unpatched-source `--check-upstream` tests
+before explicitly removing fixes on update; a conflict/version is not proof.
+Preserve the harness/scenarios after removal. Only header context differs from
+upstream; all added/removed source lines match. No driver disable/log suppression.
 The user also reports removing the reviewed installation leftovers; the scoped
 cleanup record and deferred rare Waybar reconnect crash are in the boot audit.
+The user subsequently paused journal-error chasing without established functional
+impact and prioritized screen brightness, display scale, then lid screen-off,
+followed by remaining functional acceptance. Preserve applied fixes and their
+regression/removal checks; do not claim residual messages are harmless or fixed.
+BIOS/headphone investigation and WirePlumber startup tracing remain deferred.
+Read-only display inspection found eDP-2 at 3200×2000/60 Hz, scale 1.0, and default
+brightnessctl selecting nvidia_0 instead of intel_backlight (496/496). No display
+settings changed; test visible backlight control and agree scale before persisting.
+Screen-only lid behavior without sleep is an interpretation to confirm, not yet
+implemented. Preserve external displays, audio/VPN/drivers and unchanged sudo.
 
 Disko is imported directly by fresh `server`, `laptop`, and `desktop-next`
 targets. It runs only through an explicit Disko/nixos-anywhere command, never
@@ -191,8 +253,15 @@ local Waybar override for dynamic previous/current/next tooltip labels, sharing
 one cycle helper with clicks; stock Waybar has no such placeholders. See
 `home/linux/laptop/waybar/README.md` for checks and update obligations.
 Only the helper/patch/declarations are checked, not the full binary or live UI.
-Lenovo graphics uses `hosts/laptop/graphics.nix`: unstable latest kernel, matching
-NVIDIA latest/open and linux-firmware. Mesa 64/32-bit stays with stable host
+Lenovo graphics uses `hosts/laptop/graphics.nix`: released `linux_latest` from the
+kernel-only input, existing unstable `linuxPackagesFor` recipes for matching
+NVIDIA latest/open, and unchanged unstable linux-firmware. Selected declarations
+check the NVIDIA open module's actual kernel header paths and matching compiler;
+the user built the new 7.3.4/NVIDIA 615.78.08 combination. Existing result's kernel,
+patch inputs and module metadata are reviewed, not module loading/live behavior.
+It is now applied/booted on 7.3.4 with NVIDIA loaded; GPU/offload/Hibernate functional
+acceptance remains pending. See the graphics audit's latest section.
+Mesa 64/32-bit stays with stable host
 userspace/glibc: installed stable Hyprland aborted loading unstable Mesa with
 `GLIBC_2.43 not found` (stable glibc 2.42). The user approved Mesa-only correction;
 kernel/NVIDIA/firmware and lock stay unchanged. Focused declaration checks pass;
@@ -783,12 +852,16 @@ Backup OpenCode-сессий для этой операции не нужен: u
 nix-flake-update-verify --hosts laptop-old --input nixpkgs
 ```
 
-- Inputs: `nixpkgs`, `nixpkgs-unstable`, `home-manager`, `browser-previews`,
+- Inputs: `nixpkgs`, `nixpkgs-unstable`, `nixpkgs-kernel`, `home-manager`, `browser-previews`,
   `disko`, `freesm`, `nix-gc-env`, `xremap-flake`; `all` доступен только
   явно через `--input all`.
 - Hosts: `laptop`, `laptop-old`, `desktop`, `server`, `server-installer`, `mac`; `--hosts
 all` проверяет все hosts, поддерживаемые текущей платформой: Linux hosts на
   Linux и `mac` на macOS.
+- Kernel-only Lenovo update: `nix-flake-update-verify --hosts laptop --input nixpkgs-kernel`
+  after HM installs the updated helper. Before that, direct `nix flake update nixpkgs-kernel`
+  works; a normal `nix flake update` includes it too. Updating only `nixpkgs-unstable`
+  does not advance this independent pin. No automatically scheduled updates.
 - Linux hosts `laptop`, `laptop-old`, `desktop` и `server` строят свои NixOS и Home Manager
   outputs; `server-installer` строит только NixOS ISO output; `mac` строит
   только свой Home Manager output на macOS.

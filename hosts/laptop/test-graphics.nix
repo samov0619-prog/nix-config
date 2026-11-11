@@ -8,6 +8,7 @@ let
     inherit system;
     config.allowUnfree = true;
   };
+  kernelSource = flake.inputs.nixpkgs-kernel.legacyPackages.${system}.linux_latest;
   stable = import flake.inputs.nixpkgs {
     inherit system;
     config.allowUnfree = true;
@@ -30,9 +31,9 @@ let
     package.version
   );
 in
-assert cfg.boot.kernelPackages.kernel.version == unstable.linuxPackages_latest.kernel.version;
-assert
-  cfg.boot.kernelPackages.kernel.src.outPath == unstable.linuxPackages_latest.kernel.src.outPath;
+assert cfg.boot.kernelPackages.kernel.version == kernelSource.version;
+assert cfg.boot.kernelPackages.kernel.src.outPath == kernelSource.src.outPath;
+assert cfg.boot.kernelPackages.stdenv.drvPath == cfg.boot.kernelPackages.kernel.stdenv.drvPath;
 assert cfg.hardware.nvidia.package.drvPath == cfg.boot.kernelPackages.nvidiaPackages.latest.drvPath;
 assert
   cfg.hardware.nvidia.package.version == unstable.linuxPackages_latest.nvidiaPackages.latest.version;
@@ -84,6 +85,7 @@ assert lib.all (a: a.assertion) cfg.assertions;
   firmware = (lib.head linuxFirmware).version;
   inherit existingFirmware;
   selectedMergedGraphicsAttributes = true;
+  isolatedReleasedKernelInputWithMatchingModuleCompiler = true;
   openModuleDerivationEvaluates = true;
   primeOffloadWithExplicitCommandAndNoGlobalGpuSelection = true;
   nativeNvidiaPowerDefaultsWithoutForcedRtd3OrLegacySuspendUnits = true;
