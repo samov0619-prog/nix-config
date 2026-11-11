@@ -52,6 +52,7 @@ in
 
       "text/plain" = [ "nvim-xdg.desktop" ];
       "inode/directory" = [ "yazi-xdg.desktop" ];
+      "inode/mount-point" = [ "yazi-xdg.desktop" ];
 
       "x-scheme-handler/tg" = [ "google-chrome.desktop" ];
       "x-scheme-handler/tonsite" = [ "google-chrome.desktop" ];
@@ -75,6 +76,10 @@ in
     terminal = false;
     exec = "kitty -- yazi %f";
     type = "Application";
-    mimeType = [ "inode/directory" ] ++ archiveMimeTypes;
+    mimeType = [
+      "inode/directory"
+      "inode/mount-point"
+    ]
+    ++ archiveMimeTypes;
   };
 }

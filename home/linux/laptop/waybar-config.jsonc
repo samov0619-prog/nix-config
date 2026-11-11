@@ -35,7 +35,7 @@
   "battery": {
     // Discover the target battery rather than inheriting Acer's BAT1.
     "interval": 30,
-    "states": { "warning": 30, "critical": 15 },
+    "states": { "warning": 15, "critical": 2 },
     "events": {
       "on-discharging-warning": "notify-send -u normal 'Low Battery'",
       "on-discharging-critical": "notify-send -u critical 'Very Low Battery'",

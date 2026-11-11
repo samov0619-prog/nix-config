@@ -7,6 +7,7 @@
 {
   imports = [
     ./audio.nix
+    ./battery.nix
     ./bluetooth.nix
     ./disko.nix
     ./graphics.nix

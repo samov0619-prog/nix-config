@@ -53,6 +53,11 @@ See the boot audit for evidence, remaining errors and future apply/check steps.
   [Lenovo-only Waybar extension](../../home/linux/laptop/waybar/README.md)
   names both destinations in the tooltip using the actual available profile list.
   Its algorithm/patch checks passed; the full binary/UI remain unbuilt and untested.
+- Native UPower battery protection is user-applied: Hibernate action at 2%, with
+  separate Lenovo Waybar notifications at 15%/2%. Read-only inspection confirms
+  the active daemon, selected Hibernate and installed thresholds; actual low-battery
+  action is untested and 2% is not a guaranteed reserve. See the
+  [policy, native delay/fallback and safe checks](../../docs/laptop-audit/battery.md).
 - [Lenovo-only graphics module](graphics.nix): released `linux_latest` from the
   kernel-only input, with the existing unstable module recipes instantiated for
   that kernel via `linuxPackagesFor`. NVIDIA `latest` stays on the same version,

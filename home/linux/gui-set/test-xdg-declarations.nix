@@ -33,6 +33,7 @@ let
         && config.xdg.desktopEntries.yazi-xdg.exec == "kitty -- yazi %f"
         && config.xdg.desktopEntries.yazi-xdg.terminal == false
         && config.xdg.mimeApps.defaultApplications."inode/directory" == [ "yazi-xdg.desktop" ]
+        && config.xdg.mimeApps.defaultApplications."inode/mount-point" == [ "yazi-xdg.desktop" ]
         && udiskie.automount
         && udiskie.notify
         && udiskie.tray == "auto"
@@ -41,13 +42,25 @@ let
       else
         entry == null
         && !(config.xdg.mimeApps.defaultApplications ? "text/plain")
-        && !(config.xdg.mimeApps.defaultApplications ? "inode/directory");
+        && !(config.xdg.mimeApps.defaultApplications ? "inode/directory")
+        && !(config.xdg.mimeApps.defaultApplications ? "inode/mount-point");
     {
       textHandler = gui;
       upstreamNeovimEntryUnchanged = true;
       # makeDesktopItem/writeTextFile text is available without realizing output.
       desktopText = if gui then (builtins.head handlers).text else null;
       directoryDesktopText = if gui then (builtins.head directoryHandlers).text else null;
+      directoryDefaults =
+        if gui then
+          lib.filterAttrs (
+            name: _:
+            builtins.elem name [
+              "inode/directory"
+              "inode/mount-point"
+            ]
+          ) config.xdg.mimeApps.defaultApplications
+        else
+          null;
       udiskieSettings = if gui then udiskie.settings else null;
     };
 in
