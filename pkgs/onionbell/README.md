@@ -11,9 +11,9 @@ a busy loop that grows the event buffer. `ipc-eof.patch` changes both reads to
 `read_exact()`: EOF becomes `UnexpectedEof`, the process exits with failure,
 and the existing `Restart=on-failure` service policy handles reconnection.
 
-The independent `ipc-test-harness.patch` makes the existing reader callable
+The independent `tests/ipc-test-harness.patch` makes the existing reader callable
 without constructing audio state and accepts a `Read` implementation.
-`ipc-tests.rs` exercises real Unix sockets: complete frames and UTF-8, immediate
+`tests/ipc-tests.rs` exercises real Unix sockets: complete frames and UTF-8, immediate
 EOF, a truncated event, and a truncated UTF-8 character. Its reader guard fails
 on a second read after EOF, so the unfixed reader cannot hang or exhaust memory.
 Socket reads also have a one-second timeout.

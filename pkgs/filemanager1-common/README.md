@@ -18,8 +18,8 @@ D-Bus activation, source pin and dependencies are unchanged.
 
 ```fish
 set fm_source (nix eval --raw .#homeConfigurations.samov-laptop-old.config.services.filemanager1-common.package.src.outPath)
-python3 -B pkgs/filemanager1-common/test_localhost_uri.py --source "$fm_source"
-nix eval --impure --offline --json --option allow-import-from-derivation false --file pkgs/filemanager1-common/test-declarations.nix
+python3 -B pkgs/filemanager1-common/tests/test_localhost_uri.py --source "$fm_source"
+nix eval --impure --offline --json --option allow-import-from-derivation false --file pkgs/filemanager1-common/tests/test-declarations.nix
 ```
 
 The source path must already exist, for example after the user's package/HM build;

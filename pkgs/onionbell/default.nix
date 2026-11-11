@@ -27,7 +27,7 @@ rustPlatform.buildRustPackage {
   patches = [
     ./ogg-first-span.patch
     # Tests stay separate so an upstream update can be checked without the fix.
-    ./ipc-test-harness.patch
+    ./tests/ipc-test-harness.patch
     # Drop only when the EOF tests pass without this patch; see README.md.
     ./ipc-eof.patch
   ];
@@ -40,7 +40,7 @@ rustPlatform.buildRustPackage {
   # Current Hyprland omits this client field. Retain compatibility with older
   # JSON while allowing the current schema (otherwise every bell logs a warning).
   postPatch = ''
-    cp ${./ipc-tests.rs} src/ipc-tests.rs
+    cp ${./tests/ipc-tests.rs} src/ipc-tests.rs
     substituteInPlace src/hypr.rs \
       --replace-fail '    pub pseudo: bool,' '    #[serde(default)]
         pub pseudo: bool,'

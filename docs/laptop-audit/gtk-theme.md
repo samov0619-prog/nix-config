@@ -46,10 +46,10 @@ GSettings/Settings portal и уведомления об изменениях; �
 ## Проверки и применение
 
 ```fish
-python3 -B home/linux/modules/qt-theme/test_apply.py
-python3 -B home/linux/modules/ardour/test_launch.py
-python3 -B home/linux/modules/qt-theme/test_native_gtk.py
-nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/modules/qt-theme/test-declarations.nix
+python3 -B home/linux/modules/qt-theme/tests/test_apply.py
+python3 -B home/linux/modules/ardour/tests/test_launch.py
+python3 -B home/linux/modules/qt-theme/tests/test_native_gtk.py
+nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/modules/qt-theme/tests/test-declarations.nix
 ```
 
 Пройдены 12 appearance/F11 тестов и 15 Ardour regression tests. В пяти fixture

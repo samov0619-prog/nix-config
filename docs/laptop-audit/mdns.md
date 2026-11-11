@@ -32,7 +32,7 @@ mDNS обычно работает внутри одного локальног�
 Выборочная offline evaluation без сборок:
 
 ```fish
-nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/profiles/test-mdns.nix
+nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/profiles/tests/test-mdns.nix
 ```
 
 Проверены merged Avahi/NSS/firewall/autostart attributes и отключение второго

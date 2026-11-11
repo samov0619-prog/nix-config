@@ -1,5 +1,11 @@
 # Аудит ноутбука: Acer → Lenovo
 
+Lenovo уже установлен. Текущие входы:
+[гайд установки/обслуживания](../../hosts/laptop/README.md),
+[приёмка и отложенные проверки](lenovo-checklist.md),
+[история подготовки 10–12.11](lenovo-history.md).
+Исходный аудит ниже сохраняет свои даты и не является инструкцией повторить установку.
+
 ## Состояние и границы
 
 Срез от **08.11.2026**, текущая машина — **Acer**. Имена `laptop` и
@@ -48,8 +54,12 @@ Acer после backup/lifecycle fixes; это не проверка Minecraft r
 - [Защита батареи Lenovo](battery.md): предупреждение на 15%, штатный UPower Hibernate на 2%, ограничения и отдельное применение NixOS/HM.
 - [Графика Lenovo](graphics.md): поддержка Panther Lake/RTX 5060 в locked stack и границы до живой проверки.
 - [Источники пакетов](package-sources.md): история исключений unstable и сравнение со свежим stable.
-- [Lenovo: живые проверки](lenovo-checklist.md): короткий todo после установки,
-  включая ранний сон/resume и отложенную проверку Minecraft/backup только на новом ПК.
+- [Lenovo: гайд](../../hosts/laptop/README.md): актуальный порядок fresh install,
+  bootstrap сети/Git/HM, целевой store и обычное раздельное применение.
+- [Lenovo: приёмка](lenovo-checklist.md): принятые сценарии, наблюдение в обычной работе
+  и явно отложенные задачи; Minecraft/backup имеют отдельный preflight.
+- [Lenovo: история](lenovo-history.md): прежние планы, hardware inventory и этапы 10–12.11,
+  а не действия для повторного выполнения.
 - [Источник композиции](../../flake.nix): два независимых output — NixOS и standalone Home Manager.
 
 Рабочий план и исходные JSON остаются вне Git. Здесь нет содержимого авторизации,
@@ -121,10 +131,11 @@ GC, input updates, переименования хостов и действий
 `laptop` / `samov-laptop`. Переименованы каталоги, outputs, hostname, helpers,
 completions, тесты и актуальные команды документации. Старые laptop-next outputs
 удалены, не оставлены aliases. Исторические записи сохраняют прежние имена.
-[Целевой конфиг Lenovo](../../hosts/laptop/README.md) включает live hardware scan,
-PRIME offload без принудительного Steam и проверенный путь SSD. Явный install
-guard остаётся до полного update inputs, GPU power/resume и final install review.
-Acer NixOS/HM применены пользователем; [результаты и границы проверки](host-renaming.md).
+[Конфиг и гайд Lenovo](../../hosts/laptop/README.md) включают live hardware scan,
+PRIME offload без принудительного Steam и проверяемый перед стиранием путь SSD.
+Install guard снят после review 11.11; Lenovo установлен, RTD3/offload и один
+Hibernate-цикл приняты в оговорённом объёме. Это не разрешение повторять Disko.
+Acer NixOS/HM также применены пользователем; [границы rename-проверки](host-renaming.md).
 
 Три поколения NixOS/HM и weekly GC на Acer — компромисс из-за недостатка места на
 SSD. Для Lenovo согласованы 10 поколений NixOS + 10 HM и weekly GC через общий

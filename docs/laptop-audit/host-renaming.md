@@ -49,13 +49,14 @@ were unavailable, so no replacement formatter was used for Markdown/Python.
 
 1. Review `flake.nix`, the moved leaves and the selected SSD in `hosts/laptop/disko.nix`.
 2. Run the lightweight ownership/composition check, without building closures:
-   `nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/profiles/test-laptop-roles.nix`.
+   `nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/profiles/tests/test-laptop-roles.nix`.
    It covers selected declarations, not full builds or live boot/resume.
-3. Continue the [Lenovo installation checklist](lenovo-checklist.md): full input
-   update, compatibility review and the final Lenovo builds remain separate steps.
+3. For a fresh installation, use the current [Lenovo guide](../../hosts/laptop/README.md).
+   The original full-input update is historical, not a mandatory new update each time.
 4. Acer activation is complete; do not repeat it just for Lenovo preparation.
    Future Acer applications after personal review use
    `sudo nixos-rebuild switch --flake .#laptop-old` and separately
    `home-manager switch --flake .#samov-laptop-old`.
 5. Lenovo installation and later standalone HM use `laptop` / `samov-laptop` only
-   on Lenovo, after its guard is resolved. Documentation changes need no activation.
+   on Lenovo. Its guard was removed after review and installation is complete;
+   do not rerun destructive setup for this rename. Documentation needs no activation.

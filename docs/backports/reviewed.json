@@ -23,7 +23,7 @@
     "hosts/laptop/graphics.nix": "6dc8672d33afb5575a8dc9eda4096839b7a6510afd78ecbc29c9b6eb1a51b6d5",
     "hosts/laptop/nvidia-init-root.patch": "a6b25746cbaa9193e8aebd39debe93190e1ca111d9549650ca1a0871e9e0ccd0",
     "hosts/laptop/pipewire-x11-idempotent.patch": "7475a4b9f28747b555332491148540d19028f25cd3ec34c388ee290a0d8afeb7",
-    "pkgs/amnezia-vpn/default.nix": "d7b16ccc432822d2f13ee55978b319a9f47e4589315b44337325655f6e0c050a",
+    "pkgs/amnezia-vpn/default.nix": "65bf259477924ce77eabd61a77c598d9e8e8795b7634dac604811bb19354f9ed",
     "pkgs/amnezia-vpn/linux-connection-state.h": "590d68c8190cfdcfca4046a61a260cd8bfbd0367a9c428209469ae48efd1130c",
     "pkgs/amnezia-vpn/linux-default-route.h": "1322c295352a1bb099873c87424294eec36c5e8df8f2bdb86844e498262b3981",
     "pkgs/amnezia-vpn/linux-network-readiness.patch": "0b52173171ad070870f83fe7722540f39239c53f256d4939dc6093c69b616b0f",
@@ -33,10 +33,10 @@
     "pkgs/blueman-polkit/default.nix": "ecce8a6fb0af0b118f72d91d807c24c27bc6567557783120426603f452b39bb7",
     "pkgs/filemanager1-common/default.nix": "7f27f70fcdf3d67d35980887e7675429c77e66597117b1853ed7451480cb1709",
     "pkgs/filemanager1-common/localhost-uri.patch": "4d0873bc70d964b9b21d09030c58ff2cfc6115709d3acccf4c13f1da3a51907d",
-    "pkgs/onionbell/default.nix": "61daa6d848e07265efb945b7e4e8b1baebad3cd7990e86951937a83378b23f99",
+    "pkgs/onionbell/default.nix": "f526ea901928d4b2921840757295fc8915c7bda3dcf2660daf9c180768fe3a94",
     "pkgs/onionbell/ipc-eof.patch": "8313d8ff2afb1cbdf3f7fad705b9ba4a63e755adfb9a47809ce2dbab3edcfd8a",
-    "pkgs/onionbell/ipc-test-harness.patch": "31b10f74dd3568d22db976c0122a6101da2cb4ae4ebdae94c2b473a622beda4e",
-    "pkgs/onionbell/ipc-tests.rs": "fe6438b84db3dcf2729fd090d0943f231f6a109c44ca2c7f940ba556fc87c37e",
+    "pkgs/onionbell/tests/ipc-test-harness.patch": "31b10f74dd3568d22db976c0122a6101da2cb4ae4ebdae94c2b473a622beda4e",
+    "pkgs/onionbell/tests/ipc-tests.rs": "fe6438b84db3dcf2729fd090d0943f231f6a109c44ca2c7f940ba556fc87c37e",
     "pkgs/onionbell/ogg-first-span.patch": "522a6e892e9eff9eeaf4cf188778031925b263637c5355486433f208c62a53a5"
   },
   "inputs": {

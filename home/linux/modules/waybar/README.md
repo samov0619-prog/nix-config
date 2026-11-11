@@ -48,8 +48,8 @@ Contracts: [Waybar 0.15 custom JSON stream](https://github.com/Alexays/Waybar/bl
 ## Checks and application
 
 ```fish
-python3 -B home/linux/modules/waybar/test_disk_status.py
-nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/modules/waybar/test-disk.nix
+python3 -B home/linux/modules/waybar/tests/test_disk_status.py
+nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/modules/waybar/tests/test-disk.nix
 ```
 
 Fixtures exercise the real helper: partition/whole-disk/NVMe discovery, counter
@@ -109,7 +109,7 @@ Lenovo follows the same procedure after its installation blockers are resolved.
   a socket loss. No real window inventory/layout changes or live reconnect test.
 
 ```fish
-python3 -B home/linux/modules/waybar/test_panel_helpers.py
+python3 -B home/linux/modules/waybar/tests/test_panel_helpers.py
 ```
 
 Eight test methods exercise the actual scripts, with subcases for cache validity,

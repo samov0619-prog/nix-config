@@ -162,7 +162,7 @@ manifest указывает FTB Backups 2 `1.0.29` для Fabric 1.21.4; зап�
 
 После пользовательского «го» добавлен
 [backup-sync.py](../../home/modules/minecraft/server/backup-sync.py) и
-[26 локальных тестов](../../home/modules/minecraft/server/test_backup_sync.py).
+[26 локальных тестов](../../home/modules/minecraft/server/tests/test_backup_sync.py).
 Контракт подтверждён исходниками FTB Backups 2 **1.0.29**:
 [BackupHandler.java](https://github.com/FTBTeam/FTB-Backups-2/blob/0f9c4ff652c57c2f8d3e6b5c78687f8c48623800/common/src/main/java/net/creeperhost/ftbbackups/BackupHandler.java#L224-L227)
 пишет incomplete до архивации, после неё задаёт SHA‑1/размер/complete
@@ -217,9 +217,9 @@ VPS generic import с null не создаёт units; NixOS rebuild для эт�
   proxy обходится явно, `.curlrc` игнорируется. Restart=always сохранён, задержка повторного старта serve 5s.
   `After` учитывает ExecStartPost по
   [systemd.service(5)](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html#ExecStartPre=).
-- Reusable [module fixtures](../../home/modules/minecraft/server/test_module.nix)
+- Reusable [module fixtures](../../home/modules/minecraft/server/tests/test_module.nix)
   проверяют null/manual/opt-in, PartOf/order/Requires/RemainAfterExit/readiness
-  и прежнюю независимость backup. [Lifecycle tests](../../home/modules/minecraft/server/test_lifecycle.py)
+  и прежнюю независимость backup. [Lifecycle tests](../../home/modules/minecraft/server/tests/test_lifecycle.py)
   прошли: fixture unit graph через systemd-analyze verify и настоящая curl-команда
   на loopback HTTP: 200 без proxy/влияния `.curlrc`, 503→200 retry и ограниченный отказ 404 с production
   retry-параметрами (4 теста). Все 26 backup-тестов также повторно прошли. Это лёгкие

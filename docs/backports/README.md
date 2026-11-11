@@ -104,8 +104,8 @@ python3 -B scripts/backport-review.py --only btintel-pm --source kernel=/path/to
 python3 -B scripts/backport-review.py --all --cached --contracts
 
 # Synthetic tests: no real updates/builds/network.
-python3 -B scripts/test_backport_review.py
-python3 -B home/core-set/test_flake_update_verify.py
+python3 -B scripts/tests/test_backport_review.py
+python3 -B home/core-set/tests/test_flake_update_verify.py
 ```
 
 `reviewed.json` records initial inventory fingerprints, **not** new functional
@@ -147,6 +147,31 @@ checkout checker and post-build cached/contracts hook, and installed Bash syntax
 passes. Direct checker output is `unchanged=26`, not fresh upstream verification.
 A real update/build cycle through this installed hook has not been exercised by
 the agent; the generated-updater/mock tests remain the end-to-end flow coverage.
+
+### Local test layout review, 12.11.2026
+
+Seventy test/harness files now live in eighteen owner-local `tests/` directories;
+existing test directories and archives were left alone. Commands, imports,
+relative Nix paths and package test delivery follow the new locations. The old
+host-role fixture now requires all Lenovo assertions to pass after the reviewed
+install-guard removal; the lightweight fixture includes the accepted touchpad/GPU
+helpers instead of omitting them from its package mocks.
+
+Only the Amnezia/onionbell recipe fingerprints were renewed for reviewed test-path
+changes, not upstream acceptance. The moved onionbell harness keys retain their
+original hashes, and every active patch keeps its exact bytes. Amnezia Qt/QtRO
+and routing ASan/UBSan contracts pass both from the checkout and from the copied
+package-check layout, with mocked networking. No package was built. The prior
+`hosts/laptop/default.nix` fingerprint mismatch from the battery-module import is
+deliberately retained: checker output is `review-required=1; unchanged=25`, not
+fresh upstream verification or a blanket acknowledgement of pending reviews.
+
+The exercised unit/mock suites, NVIDIA/Bluetooth/PipeWire/BlueZ/portal source contracts,
+selected battery/NVIDIA/hotkey/GPU/MIME declarations and host-role assertions pass.
+The aggregate Nix check hit its short timeout; focused checks then passed, with
+separate approval for a 60-second host-role evaluation. Nixfmt 1.5.0 was used;
+Prettier/Ruff remain unavailable. Full builds, installed package test delivery,
+new installation and live hardware/UI regression checks were not performed.
 
 ## Applying these changes
 

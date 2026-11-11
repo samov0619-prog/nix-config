@@ -131,8 +131,8 @@ missing dependency errors, сохранение UID/EUID/cwd и синтетич
 
 ```fish
 # Use an existing GLib library; this does not build or open a menu.
-python3 -B home/linux/modules/tofi/test_launch.py --glib /path/to/libglib-2.0.so.0
-nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/modules/tofi/test-declarations.nix --apply 'profiles: profiles.samov-laptop-old'
+python3 -B home/linux/modules/tofi/tests/test_launch.py --glib /path/to/libglib-2.0.so.0
+nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/modules/tofi/tests/test-declarations.nix --apply 'profiles: profiles.samov-laptop-old'
 ```
 
 Выбранные merged declarations Acer проверены: ровно один launcher, точный wrapper
@@ -149,8 +149,8 @@ Ruff/Prettier отсутствуют; Python/Markdown не форматиров�
 
 ```fish
 set desktop_file (mktemp /tmp/opencode/nvim-xdg.XXXXXX.desktop)
-nix eval --impure --offline --raw --option allow-import-from-derivation false --file home/linux/gui-set/test-xdg-declarations.nix --apply 'profiles: profiles.samov-laptop-old.desktopText' > "$desktop_file"
-python3 -B home/linux/gui-set/test_xdg_text.py --desktop-file "$desktop_file"
+nix eval --impure --offline --raw --option allow-import-from-derivation false --file home/linux/gui-set/tests/test-xdg-declarations.nix --apply 'profiles: profiles.samov-laptop-old.desktopText' > "$desktop_file"
+python3 -B home/linux/gui-set/tests/test_xdg_text.py --desktop-file "$desktop_file"
 ```
 
 Nix evaluation проверяет выбранные merged declarations пяти HM-профилей и

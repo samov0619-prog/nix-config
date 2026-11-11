@@ -22,7 +22,7 @@ playerctl не гарантирует выбор нужного приложен
 Из корня репозитория, без builds/IFD:
 
 ```fish
-nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/gui-set/test-media-declarations.nix
+nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/gui-set/tests/test-media-declarations.nix
 ```
 
 Selected merged declarations проверяют наличие playerctl, единственный MPV MPRIS
@@ -34,8 +34,8 @@ playerctld и явных audio/video defaults, отсутствие добавл
 двумя отдельными evaluation — три GUI profiles и Mac/server:
 
 ```fish
-nix eval --impure --offline --json --option allow-import-from-derivation false --expr 'let c = import ./home/linux/gui-set/test-media-declarations.nix; in { desktop = c.samov-desktop; acer = c.samov-laptop-old; lenovo = c.samov-laptop; }'
-nix eval --impure --offline --json --option allow-import-from-derivation false --expr 'let c = import ./home/linux/gui-set/test-media-declarations.nix; in { mac = c.samov-mac; server = c.samov-server; }'
+nix eval --impure --offline --json --option allow-import-from-derivation false --expr 'let c = import ./home/linux/gui-set/tests/test-media-declarations.nix; in { desktop = c.samov-desktop; acer = c.samov-laptop-old; lenovo = c.samov-laptop; }'
+nix eval --impure --offline --json --option allow-import-from-derivation false --expr 'let c = import ./home/linux/gui-set/tests/test-media-declarations.nix; in { mac = c.samov-mac; server = c.samov-server; }'
 ```
 
 Механически сверены восемь audio bindings каждого GUI host, включая прежний

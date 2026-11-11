@@ -58,8 +58,8 @@ grey hover highlight. No other module's colors are changed.
 Small tests use fake GPU commands and real local IPC/subprocesses, never the GPU:
 
 ```fish
-python3 -B home/linux/laptop/waybar/test_gpu_status.py
-nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/laptop/waybar/test-gpu.nix
+python3 -B home/linux/laptop/waybar/tests/test_gpu_status.py
+nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/laptop/waybar/tests/test-gpu.nix
 ```
 
 They cover startup/expired-window silence, renewal, stale/error data, malformed
@@ -127,7 +127,7 @@ the full Waybar module or exercise GTK, D-Bus permissions or the live tooltip.
 Reproduce the small unit test from the repository root:
 
 ```fish
-c++ -std=c++17 -Wall -Wextra -Werror -pedantic home/linux/laptop/waybar/test-cycle.cpp -o /tmp/opencode/lenovo-waybar-cycle-test
+c++ -std=c++17 -Wall -Wextra -Werror -pedantic home/linux/laptop/waybar/tests/test-cycle.cpp -o /tmp/opencode/lenovo-waybar-cycle-test
 /tmp/opencode/lenovo-waybar-cycle-test
 ```
 

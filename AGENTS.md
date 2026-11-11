@@ -100,7 +100,7 @@ Workstation mDNS lives in `hosts/profiles/mdns.nix`, explicitly imported by lapt
 laptop, desktop and desktop-next, not server/installer. Avahi + IPv4 NSS resolve
 LAN devices such as the Zynthian Pi via `*.local`; UDP 5353 is open, own-service
 publishing is disabled. Selected merged declarations/composition are checked by
-`hosts/profiles/test-mdns.nix`; real Pi connectivity is not yet checked.
+`hosts/profiles/tests/test-mdns.nix`; real Pi connectivity is not yet checked.
 Avahi exclusively owns workstation mDNS: resolved's global MulticastDNS is false,
 without disabling its ordinary/VPN DNS. Lenovo's first installed boot exposed two
 concurrent stacks. Four-host merged checks pass; after user activation/reboot,
@@ -375,6 +375,20 @@ the hotkeys; this is not independent agent UI or every reload/login scenario
 coverage. No further build/activation was run by the agent.
 The user confirms camera, screen sharing and video calls work. See
 `home/linux/laptop/README.md` for checks, recovery and the HM-only apply procedure.
+
+Lenovo's native UPower battery protection and udiskie mount-point Browse fix are
+now user-applied and accepted as configuration/UI. Read-only checks confirm active
+UPower, GetCriticalAction=Hibernate, installed percentage policy 15/5/2 and
+inode/mount-point → yazi-xdg.desktop. Waybar notifies at 15%/2%; only UPower takes
+the 2% action, after its native ~20 s delay, with possible PowerOff fallback if
+Hibernate is unavailable. Real low-battery triggering and sufficient reserve are
+unverified; do not deliberately discharge or fake live battery state. Statistics
+remain deferred. The current installation/maintenance guide is
+`hosts/laptop/README.md`; `docs/laptop-audit/lenovo-checklist.md` tracks scoped
+acceptance, while `lenovo-history.md` preserves the old preparation timeline.
+Do not repeat historical failures, require both closures in RAM, or rerun Disko
+on the installed host. Native nixos-install builds into the mounted target store;
+first standalone HM follows installed boot, console/network setup and login as samov.
 
 Disko is imported directly by fresh `server`, `laptop`, and `desktop-next`
 targets. It runs only through an explicit Disko/nixos-anywhere command, never

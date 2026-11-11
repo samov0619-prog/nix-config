@@ -429,10 +429,10 @@ call or acceptance of Bluetooth devices, file chooser and screen sharing.
 No package/NixOS build was run by the agent.
 
 ```fish
-nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/laptop/test-bluetooth.nix
-nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/laptop/test-desktop-services.nix
-python3 -B hosts/laptop/test_bluez.py /external/bluez-5.87/src/adapter.c
-python3 -B hosts/laptop/test_portal_pidns.py /external/xdg-desktop-portal-1.22.1/src --baseline /external/xdg-desktop-portal-1.20.4/src
+nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/laptop/tests/test-bluetooth.nix
+nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/laptop/tests/test-desktop-services.nix
+python3 -B hosts/laptop/tests/test_bluez.py /external/bluez-5.87/src/adapter.c
+python3 -B hosts/laptop/tests/test_portal_pidns.py /external/xdg-desktop-portal-1.22.1/src --baseline /external/xdg-desktop-portal-1.20.4/src
 ```
 
 Use the selected packages' actual source on update; review function changes rather
@@ -456,7 +456,7 @@ upstream (SHA-256 `7475a4b9f28747b555332491148540d19028f25cd3ec34c388ee290a0d8af
 It applies to both sources without fuzz or offsets. No upstream log messages,
 X11 bell functionality, RT scheduling or audio features are disabled.
 
-`test_pipewire_x11.py` extracts the actual callback and uses explicit dependency
+`tests/test_pipewire_x11.py` extracts the actual callback and uses explicit dependency
 stubs. The baseline detects invalid NULL-source destruction; patched code passes
 single, repeated, already-detached and independent-module cases. This is callback
 contract coverage, **not a native SIGSEGV reproducer** or actual X11 teardown,
@@ -472,8 +472,8 @@ exercised repeated X11 callbacks without reproducing the SIGSEGV. Preserve the
 coverage limit: this is one cycle, not universal audio/teardown acceptance.
 
 ```fish
-nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/laptop/test-audio.nix
-python3 -B hosts/laptop/test_pipewire_x11.py /external/pipewire-1.6.6/src/modules/module-x11-bell.c
+nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/laptop/tests/test-audio.nix
+python3 -B hosts/laptop/tests/test_pipewire_x11.py /external/pipewire-1.6.6/src/modules/module-x11-bell.c
 ```
 
 On update, exercise the new source with `--check-upstream`. Remove the local patch

@@ -195,13 +195,14 @@ stdenv.mkDerivation (finalAttrs: {
   nativeCheckInputs = [ python3 ];
   checkPhase = ''
     runHook preCheck
-    cp ${./test_linux_routing.py} test_linux_routing.py
-    cp ${./test_linux_routing.cpp} test_linux_routing.cpp
-    python3 test_linux_routing.py --source "$NIX_BUILD_TOP/$sourceRoot" --build "$PWD"
-    cp ${./test_linux_network.py} test_linux_network.py
-    cp ${./test_linux_network.cpp} test_linux_network.cpp
+    mkdir -p tests
+    cp ${./tests/test_linux_routing.py} tests/test_linux_routing.py
+    cp ${./tests/test_linux_routing.cpp} tests/test_linux_routing.cpp
+    python3 tests/test_linux_routing.py --source "$NIX_BUILD_TOP/$sourceRoot" --build "$PWD"
+    cp ${./tests/test_linux_network.py} tests/test_linux_network.py
+    cp ${./tests/test_linux_network.cpp} tests/test_linux_network.cpp
     cp ${./linux-connection-state.h} linux-connection-state.h
-    python3 test_linux_network.py --source "$NIX_BUILD_TOP/$sourceRoot" --build "$PWD" \
+    python3 tests/test_linux_network.py --source "$NIX_BUILD_TOP/$sourceRoot" --build "$PWD" \
       --moc "${kdePackages.qtbase}/libexec/moc" \
       --repc "${kdePackages.qtremoteobjects}/libexec/repc"
     runHook postCheck

@@ -40,7 +40,7 @@ UPower 1.91.5 ставит действие в очередь примерно �
 Выбранные merged declarations проходят без сборки/IFD:
 
 ```fish
-nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/laptop/test-battery.nix
+nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/laptop/tests/test-battery.nix
 ```
 
 Проверены enable, пороги, generated UPower INI, Waybar thresholds и отсутствие

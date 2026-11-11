@@ -57,8 +57,8 @@ From the repository root, with unpatched source containing
 
 ```fish
 set linux_source /path/to/unpatched/linux-source
-python3 -B hosts/laptop/test_btintel_pm.py $linux_source
-nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/laptop/test-bluetooth-pm.nix
+python3 -B hosts/laptop/tests/test_btintel_pm.py $linux_source
+nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/laptop/tests/test-bluetooth-pm.nix
 ```
 
 The Python test extracts actual D-state functions, PM callbacks, callback table
@@ -139,7 +139,7 @@ unrelated refactor. Neither the version nor a conflict proves correctness.
 
    ```fish
    set linux_source /path/to/new/unpatched/linux-source
-   python3 -B hosts/laptop/test_btintel_pm.py $linux_source --check-upstream
+   python3 -B hosts/laptop/tests/test_btintel_pm.py $linux_source --check-upstream
    ```
 
    If upstream refactored the functions, the harness must be reviewed/adapted
@@ -150,7 +150,7 @@ unrelated refactor. Neither the version nor a conflict proves correctness.
 3. Once both fixes are upstream and the unpatched checks pass, remove the two
    named entries and the `BTINTEL PM CLEANUP` warning from `bluetooth.nix`, delete
    the two `.patch` files, and adjust declaration assertions to require their
-   absence. Retain `test_btintel_pm.py`, `btintel-pm-test.c` and the behavioral
+   absence. Retain `tests/test_btintel_pm.py`, `tests/btintel-pm-test.c` and the behavioral
    scenarios; use `--check-upstream` from then on. Update this document/audit.
 4. Review/build the affected Lenovo NixOS output, then apply/reboot and repeat the
    live Bluetooth/Hibernate checks. Do not remove the independent BlueZ selection

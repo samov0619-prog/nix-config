@@ -27,7 +27,7 @@ stdin-only контракт passmenu и не обещание скрыть па�
 
 ## Проверки и ограничения
 
-[Восемь тестов](../../home/core-set/test_yazi_compress.py) запускают настоящий
+[Восемь тестов](../../home/core-set/tests/test_yazi_compress.py) запускают настоящий
 Lua-код плагина, подменяя только Yazi APIs/FS/Command. Проверяют отмену имени,
 отмену/пустой пароль, отказ TAR в password mode, обычный ZIP, selected/hovered
 filename с пробелами/Unicode/кавычкой и отсутствие переноса пароля между вызовами.
@@ -46,7 +46,7 @@ filename с пробелами/Unicode/кавычкой и отсутствие 
 и 7zz; пути заменить на свои, ничего автоматически не устанавливается:
 
 ```fish
-python3 -B home/core-set/test_yazi_compress.py \
+python3 -B home/core-set/tests/test_yazi_compress.py \
     ~/.config/yazi/plugins/compress.yazi/main.lua \
     --patch home/core-set/yazi-compress-password.patch \
     --lua /path/to/lua --seven-zip /path/to/7zz

@@ -32,8 +32,8 @@ pipeline распознавания, не является гарантией у
 его backend остаётся отдельной живой проверкой.
 
 ```fish
-python3 -B home/modules/voice-dictate/test_voice_dictate.py
-nix eval --impure --offline --json --option allow-import-from-derivation false --file home/modules/voice-dictate/test-declarations.nix
+python3 -B home/modules/voice-dictate/tests/test_voice_dictate.py
+nix eval --impure --offline --json --option allow-import-from-derivation false --file home/modules/voice-dictate/tests/test-declarations.nix
 ```
 
 Восемь fixtures исполняют production shell body с strict mode: ошибка Whisper,

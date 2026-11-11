@@ -12,7 +12,7 @@
       "watch": ["hosts/laptop/bluetooth.nix"],
       "patches": ["hosts/laptop/btintel-pcie-refresh-dstate.patch", "hosts/laptop/btintel-pcie-pm-flow.patch"],
       "source": "kernel",
-      "contract": ["hosts/laptop/test_btintel_pm.py", "{source}", "--check-upstream"],
+      "contract": ["hosts/laptop/tests/test_btintel_pm.py", "{source}", "--check-upstream"],
       "upstream": ["12997a385f71", "2926eb396711"],
       "removeWhen": "All unpatched-source PM/D-state contracts pass; retain harness and verify real Hibernate/Bluetooth separately.",
       "details": "hosts/laptop/bluetooth-pm.md"
@@ -24,7 +24,7 @@
       "watch": ["hosts/laptop/audio.nix"],
       "patches": ["hosts/laptop/pipewire-x11-idempotent.patch"],
       "source": "pipewire",
-      "contract": ["hosts/laptop/test_pipewire_x11.py", "{source}/src/modules/module-x11-bell.c", "--check-upstream"],
+      "contract": ["hosts/laptop/tests/test_pipewire_x11.py", "{source}/src/modules/module-x11-bell.c", "--check-upstream"],
       "upstream": ["c2fec6c037a1"],
       "removeWhen": "All four idempotent-disconnect contracts pass without the patch; preserve shutdown/audio acceptance checks.",
       "details": "hosts/laptop/boot-errors.md"
@@ -36,7 +36,7 @@
       "watch": ["hosts/laptop/graphics.nix"],
       "patches": ["hosts/laptop/nvidia-init-root.patch"],
       "source": "nvidia",
-      "contract": ["hosts/laptop/test_nvidia_init_root.py", "{source}", "--check-upstream"],
+      "contract": ["hosts/laptop/tests/test_nvidia_init_root.py", "{source}", "--check-upstream"],
       "upstream": ["https://github.com/NVIDIA/open-gpu-kernel-modules/issues/1507", "https://github.com/NVIDIA/open-gpu-kernel-modules/pull/1512", "369378dc1552ae46f7f95a598a085c0025e464b3"],
       "removeWhen": "Unpatched config-open/probe contracts and conftest checks pass; review alternate upstream fixes rather than requiring identical text, then test real idle/wake/Hibernate.",
       "details": "docs/laptop-audit/graphics.md"
@@ -140,8 +140,8 @@
       "id": "onionbell-tests",
       "kind": "test-only",
       "inputs": ["nixpkgs"],
-      "watch": ["pkgs/onionbell/default.nix", "pkgs/onionbell/ipc-tests.rs"],
-      "patches": ["pkgs/onionbell/ipc-test-harness.patch"],
+      "watch": ["pkgs/onionbell/default.nix", "pkgs/onionbell/tests/ipc-tests.rs"],
+      "patches": ["pkgs/onionbell/tests/ipc-test-harness.patch"],
       "upstream": [],
       "removeWhen": "Retain regression coverage after fixes are removed; adapt harness on upstream API changes rather than deleting tests.",
       "details": "pkgs/onionbell/README.md"
@@ -250,7 +250,7 @@
       "patches": [],
       "source": "bluez-stable",
       "sourceFiles": ["src/adapter.c"],
-      "contract": ["hosts/laptop/test_bluez.py", "{source}/src/adapter.c"],
+      "contract": ["hosts/laptop/tests/test_bluez.py", "{source}/src/adapter.c"],
       "upstream": [],
       "removeWhen": "Stable source passes all seven empty-default/request/cleanup cases in test_bluez.py and real Bluetooth behavior is accepted; former 5.86 backport is already removed.",
       "details": "hosts/laptop/boot-errors.md"
@@ -264,7 +264,7 @@
       "source": "portal-stable",
       "sourceFiles": ["src/xdp-utils.c", "src/xdp-app-info.c"],
       "platform": "linux",
-      "contract": ["hosts/laptop/test_portal_pidns.py", "{source}/src"],
+      "contract": ["hosts/laptop/tests/test_portal_pidns.py", "{source}/src"],
       "upstream": [],
       "removeWhen": "Stable core portal passes real-pidfd/proc-dirfd cases in test_portal_pidns.py; preserve stable GTK/Hyprland backends and test real portal UI.",
       "details": "hosts/laptop/boot-errors.md"

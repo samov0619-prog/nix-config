@@ -44,9 +44,9 @@ XML-настройки и комментарии сохраняются; XML ser
 ## Проверки и применение
 
 ```fish
-python3 -B home/linux/modules/ardour/test_launch.py
-python3 -B home/linux/modules/qt-theme/test_apply.py
-nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/modules/ardour/test-declarations.nix
+python3 -B home/linux/modules/ardour/tests/test_launch.py
+python3 -B home/linux/modules/qt-theme/tests/test_apply.py
+nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/modules/ardour/tests/test-declarations.nix
 ```
 
 15 изолированных тестов выполняют реальный Python helper и Nix-generated launcher

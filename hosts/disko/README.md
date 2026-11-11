@@ -54,25 +54,13 @@ ISO workflow.
 Boot a NixOS installer USB on the target machine. No IP address and no SSH are
 required, though the user may operate the live system over SSH. Lenovo now uses
 `laptop`; Acer is `laptop-old` and does not import Disko. Run from the reviewed
-repository checkout, not from the Acer profile. First complete the
-[Lenovo checklist](../../docs/laptop-audit/lenovo-checklist.md), update/review the
-inputs (Lenovo's deliberate guard was removed after review on 11.11.2026).
-Resolve live-store capacity/build placement first. Recheck the target disk against model,
-capacity and mounts immediately before the explicitly approved destructive step.
+repository checkout, not from the Acer profile. Follow the single
+[Lenovo installation guide](../laptop/README.md) for identity checks, explicit
+destructive-stage consent, locked Disko invocation, target-store placement,
+`nixos-install` and separate standalone HM bootstrap. Guard removal/evaluation is
+not permission to erase a disk; the already installed Lenovo needs no Disko run.
+
 The configured Lenovo path is a live-observed PCI topology path, not a disk serial.
-
-The commands below still require **explicit destructive-stage consent and the
-storage-aware installation plan**; passing evaluation is not permission to run them.
-`--inputs-from .` resolves `disko` from this checkout's updated lock instead of
-selecting an independent upstream revision; `--no-write-lock-file` prevents a
-silent lock change during this installation step.
-
-```fish
-sudo nix --extra-experimental-features "nix-command flakes" run --inputs-from . --no-write-lock-file disko -- \
-  --mode destroy,format,mount ./hosts/laptop/disko.nix
-sudo nixos-install --flake .#laptop
-```
-
-For a future desktop, complete `hosts/desktop-next/disko.nix` first and replace
-`laptop` with `desktop-next`. `destroy,format,mount` erases the selected
-disk completely.
+`destroy,format,mount` erases the selected disk completely. For a future desktop,
+complete and review `hosts/desktop-next/disko.nix` and its actual hardware/UEFI
+requirements separately; the Lenovo guide is not approval for that template.

@@ -112,7 +112,7 @@ guard полностью не защищает. Drive trash занимает к�
 1. Безопасные локальные фикстуры, только fake rclone, без сети:
 
    ```bash
-   python3 -B home/modules/minecraft/server/test_backup_sync.py
+   python3 -B home/modules/minecraft/server/tests/test_backup_sync.py
    ```
 
 2. Необязательно: отдельно собрать нужный HM output без activation, например Acer.
@@ -150,8 +150,8 @@ Unit fixtures не проверяют настоящий systemd watcher, Drive/
 
 ```fish
 nix eval --impure --json --offline --option allow-import-from-derivation false \
-  --expr 'let f = builtins.getFlake (toString ./.); in import ./home/modules/minecraft/server/test_module.nix { lib = f.inputs.nixpkgs.lib; }' \
-  | python3 -B home/modules/minecraft/server/test_lifecycle.py /dev/stdin
+  --expr 'let f = builtins.getFlake (toString ./.); in import ./home/modules/minecraft/server/tests/test_module.nix { lib = f.inputs.nixpkgs.lib; }' \
+  | python3 -B home/modules/minecraft/server/tests/test_lifecycle.py /dev/stdin
 ```
 
 Нужны локально доступные flake inputs, Python, curl и systemd-analyze. Nix fixtures

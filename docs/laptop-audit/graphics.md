@@ -139,7 +139,7 @@ MUX не переключали; внешний экран и порты с NVID
 Declaration fixtures проверяют выбор aliases/архитектур, только одну firmware
 подмену, PRIME IDs/offload command и отсутствие Steam/global GPU overrides;
 power-management settings пока не меняются. Отдельный
-[test-graphics.nix](../../hosts/laptop/test-graphics.nix) проверяет выбранные
+[test-graphics.nix](../../hosts/laptop/tests/test-graphics.nix) проверяет выбранные
 merged NixOS attributes, соответствие package paths unstable snapshot, evaluation
 NVIDIA/open derivations, один linux-firmware input при сохранении SOF/regdb и
 неизменённые Acer/desktop firmware. Это не полная evaluation всех attributes или
@@ -181,7 +181,7 @@ Unstable Amnezia всё ещё `5.0.3.0`: оснований автоматич�
 `5.0.1.5` override нет. OpenCode по-прежнему pinned на `v2.1.4`; обновление остальных
 inputs не меняет эту upstream-версию и не доказывает совместимость patches.
 
-`hosts/laptop/test-draft.nix` прошёл на обновлённых inputs. Selected merged
+`hosts/laptop/tests/test-draft.nix` прошёл на обновлённых inputs. Selected merged
 `test-graphics.nix` сначала был остановлен по таймаутам 20 и 90 s. После bounded
 диагностики и восстановления кешированных sources повторная проверка завершилась
 успешно в прежнем лимите 90 s: обе Mesa, NVIDIA/open derivation, native power policy,
@@ -519,8 +519,8 @@ restart hook. The setting is prepared, not yet built/applied or hardware-accepte
 ### Focused RTD3 declaration regression
 
 ```fish
-nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/laptop/test-nvidia-runtime-pm.nix
-nix eval --offline --json --file hosts/laptop/test-draft.nix
+nix eval --impure --offline --json --option allow-import-from-derivation false --file hosts/laptop/tests/test-nvidia-runtime-pm.nix
+nix eval --offline --json --file hosts/laptop/tests/test-draft.nix
 ```
 
 Both pass. The new selected merged check compares the real Lenovo configuration

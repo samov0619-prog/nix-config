@@ -79,9 +79,9 @@ are not inadvertently discarded.
 Small, source-only checks from the repository root:
 
 ```fish
-python3 home/linux/modules/qt-theme/test_apply.py
-nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/modules/qt-theme/test-declarations.nix
-nix eval --offline --raw --option allow-import-from-derivation false '.#homeConfigurations.samov-laptop.config.xdg.configFile."environment.d/10-home-manager.conf".text' | python3 -B home/linux/modules/qt-theme/test_environment.py
+python3 home/linux/modules/qt-theme/tests/test_apply.py
+nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/modules/qt-theme/tests/test-declarations.nix
+nix eval --offline --raw --option allow-import-from-derivation false '.#homeConfigurations.samov-laptop.config.xdg.configFile."environment.d/10-home-manager.conf".text' | python3 -B home/linux/modules/qt-theme/tests/test_environment.py
 ```
 
 The 12 Python tests exercise the actual helper and actual F11 script with external
@@ -106,18 +106,18 @@ After the user applied Lenovo HM and rebooted, the corrected assignment was
 observed in the installed file and the generator error did not recur. This is
 installed-configuration evidence, not live Qt/F11/HiDPI acceptance.
 
-`python3 -B home/linux/modules/qt-theme/test_native_gtk.py` uses the already-installed
+`python3 -B home/linux/modules/qt-theme/tests/test_native_gtk.py` uses the already-installed
 Blueman GTK3/Python runtime, without starting Blueman or obtaining packages. It
 reproduces the light fallback when `Adwaita-dark` is missing, then installs the
 exact upstream alias as a temporary fixture and checks real GTK-resolved light/dark
 background colors and in-process theme changes. This is not a test of the built
 theme package, installed HM layout, portal events or visible Blueman window.
 
-`test_native.py` is a separate, explicitly authorized real nomacs/qt6ct test. It
+`tests/test_native.py` is a separate, explicitly authorized real nomacs/qt6ct test. It
 requires already-present package paths and ImageMagick; it obtains/builds nothing:
 
 ```fish
-python3 home/linux/modules/qt-theme/test_native.py --nomacs /nix/store/<nomacs>/bin/nomacs --qt6ct /nix/store/<qt6ct> --adwaita-qt6 /nix/store/<adwaita-qt6>
+python3 home/linux/modules/qt-theme/tests/test_native.py --nomacs '/nix/store/<nomacs>/bin/nomacs' --qt6ct '/nix/store/<qt6ct>' --adwaita-qt6 '/nix/store/<adwaita-qt6>'
 ```
 
 It uses isolated settings under `/tmp/opencode`, migrates a saved `adwaita-dark`

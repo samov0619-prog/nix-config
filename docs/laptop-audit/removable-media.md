@@ -44,9 +44,9 @@ Android/MTP остаётся отдельной отложенной задач�
 
 ```fish
 set declarations (mktemp /tmp/opencode/removable-declarations.XXXXXX.json)
-nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/gui-set/test-xdg-declarations.nix > "$declarations"
+nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/gui-set/tests/test-xdg-declarations.nix > "$declarations"
 set udiskie_package (nix eval --offline --raw .#homeConfigurations.samov-laptop-old.config.services.udiskie.package.outPath)
-python3 -B home/linux/gui-set/test_removable_launch.py --declarations "$declarations" --udiskie-package "$udiskie_package"
+python3 -B home/linux/gui-set/tests/test_removable_launch.py --declarations "$declarations" --udiskie-package "$udiskie_package"
 ```
 
 Пакет udiskie должен уже находиться в store, например после пользовательской

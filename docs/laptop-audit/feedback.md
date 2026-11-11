@@ -332,8 +332,8 @@ Builds/activation/диски не запускались; заготовку н�
   первая строка пароля, **без Enter**; отправка формы вручную. `tr` удаляет только
   LF после выбора первой строки, не пробелы или спецсимволы. Пароль остаётся в
   stdin-пайпе, не попадает в argv/clipboard; бинды и GPG/pass сохранены.
-- [Пять изолированных тестов](../../home/linux/modules/tofi/test_passmenu.py)
-  (`python3 -B home/linux/modules/tofi/test_passmenu.py`) проходят:
+- [Пять изолированных тестов](../../home/linux/modules/tofi/tests/test_passmenu.py)
+  (`python3 -B home/linux/modules/tofi/tests/test_passmenu.py`) проходят:
   выполняют реальное shell-тело из Nix с подставными pass/tofi/wtype: отсутствие
   Enter, отсечение metadata, сохранение пробелов/Unicode/спецсимволов, отсутствие
   завершающего LF в исходном пароле и отмена меню без расшифровки/ввода. Это не проверка

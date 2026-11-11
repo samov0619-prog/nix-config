@@ -46,7 +46,7 @@ Upstream устанавливает четыре actions: `org.blueman.network.s
 
 ## Проверки и границы
 
-- `pkgs/blueman-polkit/test_verify.py`: девять небольших fixture tests настоящего
+- `pkgs/blueman-polkit/tests/test_verify.py`: девять небольших fixture tests настоящего
   install verifier, без импорта Blueman. Принимается включённая поддержка и
   неизменённая policy; отвергаются False, отсутствующий/non-boolean flag,
   отсутствующие/изменённые actions или rules.
@@ -62,7 +62,7 @@ Upstream устанавливает четыре actions: `org.blueman.network.s
   один пакет Blueman в system/D-Bus/systemd registration на обоих ноутбуках,
   прежние wheel admin identities и отсутствие собственных Blueman rules.
   Desktop и desktop-next сохраняют upstream package и отсутствие Blueman.
-- `home/linux/gui-set/test-polkit-declarations.nix` проверяет три GUI HM:
+- `home/linux/gui-set/tests/test-polkit-declarations.nix` проверяет три GUI HM:
   единственный ExecStart, WantedBy/PartOf/After graphical-session, отсутствие
   конкурирующего polkit-gnome и второго HM compositor start. Mac/server — без
   этого агента. Это declarations/recipe evidence, не запуск UI или authentication.
@@ -74,12 +74,12 @@ Upstream устанавливает четыре actions: `org.blueman.network.s
 Из корня репозитория, Fish, без builds/IFD:
 
 ```fish
-python3 -B pkgs/blueman-polkit/test_verify.py
+python3 -B pkgs/blueman-polkit/tests/test_verify.py
 for host in laptop-old laptop desktop desktopTemplate
-    nix eval --impure --offline --json --option allow-import-from-derivation false --expr "(import ./pkgs/blueman-polkit/test-declarations.nix).$host"
+    nix eval --impure --offline --json --option allow-import-from-derivation false --expr "(import ./pkgs/blueman-polkit/tests/test-declarations.nix).$host"
 end
 for profile in samov-laptop-old samov-desktop samov-laptop samov-mac samov-server
-    nix eval --impure --offline --json --option allow-import-from-derivation false --expr "(import ./home/linux/gui-set/test-polkit-declarations.nix).$profile"
+    nix eval --impure --offline --json --option allow-import-from-derivation false --expr "(import ./home/linux/gui-set/tests/test-polkit-declarations.nix).$profile"
 end
 ```
 

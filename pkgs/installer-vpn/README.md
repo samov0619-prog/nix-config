@@ -18,7 +18,7 @@ and reproducible from the reviewed checkout and lock.
 - Obtain a reviewed Git checkout on the live machine. Push/clone are user actions;
   do not copy an Acer-only SSH alias or private key into the installer. If Git is
   absent, `nix-shell -p git` can provide it temporarily. See the
-  [installation checklist](../../docs/laptop-audit/lenovo-checklist.md) for delivery.
+  [installation guide](../../hosts/laptop/README.md) for delivery.
 - The helper's files must be tracked/committed before using a Git flake reference
   or cloning it elsewhere. Do not work around this by putting a secret profile
   inside a `path:` flake source.
@@ -74,9 +74,8 @@ does not have working IPv6 egress. This is not a leak-tested kill switch or a
 benchmark; a working VPN does not guarantee a higher download rate.
 
 Check that a second SSH connection from Acer to Lenovo's LAN address still works.
-Then continue the existing Lenovo checklist and the specifically reviewed builds
-or installation. VPN setup is not authorization to remove the install guard or
-erase the SSD.
+Then continue the Lenovo installation guide and its specifically reviewed
+target-store installation order. VPN setup is not authorization to erase the SSD.
 
 Disconnect with the same unchanged profile and checkout:
 
@@ -135,7 +134,7 @@ do not also leave the installer tunnel running.
    DNS before reconnecting; do not flush all routes/firewall rules or stop networking.
 5. A live reboot is a last-resort reset of transient network state, **not** a fix
    for a bad profile. It also loses the RAM checkout/profile; preserve reviewed
-   work and follow the installation checklist before rebooting.
+    work and follow the installation guide before rebooting.
 
 ## Checks and current limitations
 
@@ -172,8 +171,8 @@ use that same final locked revision for Disko and the installed configuration.
 Lightweight declarations, with no builds/IFD:
 
 ```fish
-nix eval --impure --offline --json --option allow-import-from-derivation false --file pkgs/installer-vpn/test-declarations.nix
-python3 -B pkgs/installer-vpn/test_installer_vpn.py
+nix eval --impure --offline --json --option allow-import-from-derivation false --file pkgs/installer-vpn/tests/test-declarations.nix
+python3 -B pkgs/installer-vpn/tests/test_installer_vpn.py
 ```
 
 Wrapper fixtures cover private external profiles, rejection of hooks/routing
@@ -187,7 +186,7 @@ DNS teardown and link deletion, not a real AWG handshake or native C parser.
 Provide an already available pinned source (do not build the project to obtain it):
 
 ```fish
-python3 -B pkgs/installer-vpn/test_installer_vpn.py --quick-source /path/to/amneziawg-tools/src/wg-quick/linux.bash
+python3 -B pkgs/installer-vpn/tests/test_installer_vpn.py --quick-source /path/to/amneziawg-tools/src/wg-quick/linux.bash
 ```
 
 Without `--quick-source` this extra test is explicitly skipped. On a tools update,

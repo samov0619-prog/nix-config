@@ -142,7 +142,7 @@ review: `home-manager switch --flake .#samov-laptop-old`, затем новый 
 Узкая проверка общего module с locked Linux/macOS package sets, без сборки:
 
 ```fish
-nix eval --impure --json --offline --option allow-import-from-derivation false --file home/core-set/test-node.nix
+nix eval --impure --json --offline --option allow-import-from-derivation false --file home/core-set/tests/test-node.nix
 ```
 
 Она проверяет одну ветку latest и отсутствие package option, но не полный HM

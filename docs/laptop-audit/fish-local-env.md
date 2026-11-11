@@ -68,8 +68,8 @@ entry или activation migration. Содержимое хранится вру�
 ## Проверки и границы
 
 ```fish
-python3 -B home/core-set/test_fish_local_env.py
-nix eval --impure --offline --json --option allow-import-from-derivation false --file home/core-set/test-fish-local-env.nix
+python3 -B home/core-set/tests/test_fish_local_env.py
+nix eval --impure --offline --json --option allow-import-from-derivation false --file home/core-set/tests/test-fish-local-env.nix
 ```
 
 Семь тестов запускают реальный Fish `--no-config` с hook, извлечённым из настоящего

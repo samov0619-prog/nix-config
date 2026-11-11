@@ -24,7 +24,7 @@ Recheck the fixes and tests against upstream when changing the client pin.
 
 ## Automated checks
 
-The package's `checkPhase` runs `test_linux_routing.py`. It compiles the real
+The package's `checkPhase` runs `tests/test_linux_routing.py`. It compiles the real
 gateway helper and extracts `buildAllowedIp()` verbatim from the patched
 source, using the real upstream `IPAddress` implementation. ASan/UBSan cover
 IPv4/IPv6 prefix conversion and the former temporary-string lifetime bug.
@@ -46,7 +46,7 @@ nix build --no-link .#nixosConfigurations.laptop.pkgs.amnezia-vpn
 An optional standalone read-only kernel check requires a C++ compiler:
 
 ```fish
-g++ -std=c++17 -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined -fno-omit-frame-pointer -I pkgs/amnezia-vpn pkgs/amnezia-vpn/test_linux_routing.cpp -o /tmp/amnezia-routing-tests
+g++ -std=c++17 -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined -fno-omit-frame-pointer -I pkgs/amnezia-vpn pkgs/amnezia-vpn/tests/test_linux_routing.cpp -o /tmp/amnezia-routing-tests
 /tmp/amnezia-routing-tests --live
 ```
 
@@ -90,7 +90,7 @@ every possible route/address change while NM remains continuously ready, or prov
 server reachability. Kill-switch enforcement/leak protection still requires real
 integration acceptance; these tests do not establish it.
 
-The package also runs `test_linux_network.py` in `checkPhase`. It compiles actual
+The package also runs `tests/test_linux_network.py` in `checkPhase`. It compiles actual
 patched watcher/connection methods with real Qt events and native local QtRO
 readiness RPC/signals. Protocol/backend operations, DNS, repository access and
 route side effects are doubles; it is not the complete GUI/helper. Fixtures cover
@@ -113,7 +113,7 @@ journal references are in [the boot audit](../../hosts/laptop/boot-errors.md).
 Selected package declarations for all three hosts pass without a build:
 
 ```fish
-nix eval --impure --offline --json --option allow-import-from-derivation false --file pkgs/amnezia-vpn/test-network-declarations.nix
+nix eval --impure --offline --json --option allow-import-from-derivation false --file pkgs/amnezia-vpn/tests/test-network-declarations.nix
 ```
 
 On pin updates, retain the event scenarios and review equivalent upstream behavior

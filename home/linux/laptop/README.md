@@ -44,9 +44,9 @@ polling, disk-persistent toggle or suspend hook.
 Small implementation-path fixtures (hyprctl mocked, not a real input device):
 
 ```fish
-python3 -B home/linux/laptop/test_touchpad.py
+python3 -B home/linux/laptop/tests/test_touchpad.py
 python3 -B home/linux/modules/hyprland/tests/test_screenshot.py
-nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/laptop/test-hotkeys.nix
+nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/laptop/tests/test-hotkeys.nix
 ```
 
 These checks do not establish installed helper discovery, native compositor
