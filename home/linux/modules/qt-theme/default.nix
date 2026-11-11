@@ -25,7 +25,9 @@ in
 
   # Clear the old F11 override when a new login/session imports HM variables.
   home.sessionVariables.QT_STYLE_OVERRIDE = "";
-  systemd.user.sessionVariables.QT_STYLE_OVERRIDE = "";
+  # environment.d rejects literal empty values, even quoted ones. Its native
+  # expansion below always yields empty, including with an inherited override.
+  systemd.user.sessionVariables.QT_STYLE_OVERRIDE = "\${QT_STYLE_OVERRIDE:+}";
   home.packages = [ applyTheme ];
 
   # Mutable qtct files are intentional: its native directory watcher reloads

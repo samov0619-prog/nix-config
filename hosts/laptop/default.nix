@@ -6,6 +6,8 @@
 }:
 {
   imports = [
+    ./audio.nix
+    ./bluetooth.nix
     ./disko.nix
     ./graphics.nix
     ./hardware-configuration.nix
@@ -23,6 +25,19 @@
     enable = true;
     withUWSM = true;
   };
+  # The stable NixOS portal module has no package option. Replace only the main
+  # daemon with pinned unstable's pidfd fix; keep stable GTK/Hyprland backends
+  # and their native routing. See boot-errors.md; no global library overrides.
+  nixpkgs.overlays = [
+    (_final: prev: {
+      xdg-desktop-portal = pkgsUnstable.xdg-desktop-portal;
+      # GTK uses the core portal at build time. Keep its stable dependency too,
+      # rather than rebuilding the stable backend against unstable's package.
+      xdg-desktop-portal-gtk = prev.xdg-desktop-portal-gtk.override {
+        xdg-desktop-portal = prev.xdg-desktop-portal;
+      };
+    })
+  ];
   # Same initial login workflow as Acer: one autologin on tty1 per boot -> UWSM.
   services.getty = {
     autologinUser = "samov";

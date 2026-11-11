@@ -6,6 +6,21 @@ outputs on Acer and confirmed operation after correcting its transient hostname.
 Lenovo-specific settings stay isolated; explicitly shared changes such as the
 nomacs viewer below also apply to existing Linux GUI profiles.
 
+[Installed boot errors](boot-errors.md) records the mDNS/environment corrections,
+the Lenovo-only pinned unstable BlueZ/core portal selections, checks and remaining
+firmware/kernel issues. The BlueZ/portal fixes are upstream, without local backports.
+The separate [audio module](audio.nix) carries an upstream PipeWire X11
+shutdown-cleanup backport absent from both pinned channels. The user applied it;
+one subsequent shutdown exercised repeated X11 callbacks without the old SIGSEGV.
+The shared [Amnezia package](../../pkgs/amnezia-vpn/README.md) now gates connection
+intent/recovery on NetworkManager readiness. The user accepted Lenovo autoconnect
+after reboot and quick recovery after Hibernate; matching new GUI/helper paths
+are checked. Split routing, kill-switch/leaks and other hosts remain separate.
+The boot audit also records user-confirmed installer cleanup and the deliberately
+deferred rare Waybar/Pulse reconnect crash. Documentation needs no activation;
+the applied runtime changes are NixOS except the earlier HM environment fix.
+See the boot audit for evidence, remaining errors and future apply/check steps.
+
 ## Already represented in configuration
 
 - NixOS/HM stateVersion 26.05; standalone HM stays separate from NixOS activation.

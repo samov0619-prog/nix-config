@@ -11,6 +11,10 @@ extra daemon, polling or custom application UI is needed.
   qt6ct also accepts that name. There is **no fixed `QT_STYLE_OVERRIDE`**: it would
   bypass the proxy and prevent live updates. Login and systemd session variables
   clear the old override, and UWSM no longer sources the old `uwsm/env-toggle` file.
+  For systemd's `environment.d`, `${QT_STYLE_OVERRIDE:+}` deliberately expands to
+  empty even when an old override was inherited. Literal empty assignments,
+  including quoted ones, are rejected by the installed generator. HM serializes
+  this option verbatim; the shell session variable remains a normal empty string.
 - HM activation reads the existing dconf `color-scheme`; `prefer-dark` selects
   `Adwaita-Dark`, while light/default/unset selects `Adwaita`. F11 uses the same
   helper after changing dconf. Changes made directly through another dconf tool
@@ -77,6 +81,7 @@ Small, source-only checks from the repository root:
 ```fish
 python3 home/linux/modules/qt-theme/test_apply.py
 nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/modules/qt-theme/test-declarations.nix
+nix eval --offline --raw --option allow-import-from-derivation false '.#homeConfigurations.samov-laptop.config.xdg.configFile."environment.d/10-home-manager.conf".text' | python3 -B home/linux/modules/qt-theme/test_environment.py
 ```
 
 The 12 Python tests exercise the actual helper and actual F11 script with external
@@ -89,6 +94,17 @@ for all five HM profiles: shared Qt policy, stable nomacs 3.22.1, Yazi/MIME and
 preserved Swappy on the three GUI profiles; no added viewer/qtct on server/Mac.
 It also checks `gnome-themes-extra` on exactly the three GUI profiles.
 It does not realize packages or evaluate a complete activation closure.
+
+The environment regression check feeds the evaluated Lenovo HM file into the
+installed native systemd generator with isolated HOME/XDG and inherited variables.
+It reproduces rejection of the previous literal empty assignment and checks that
+the corrected text clears absent, light and dark overrides without parser errors,
+while retaining `QT_QPA_PLATFORMTHEME=qt5ct`. System-wide environment.d defaults
+are still read. It does not reload the live manager, activate HM or render Qt.
+
+After the user applied Lenovo HM and rebooted, the corrected assignment was
+observed in the installed file and the generator error did not recur. This is
+installed-configuration evidence, not live Qt/F11/HiDPI acceptance.
 
 `python3 -B home/linux/modules/qt-theme/test_native_gtk.py` uses the already-installed
 Blueman GTK3/Python runtime, without starting Blueman or obtaining packages. It

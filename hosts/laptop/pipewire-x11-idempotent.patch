@@ -1,0 +1,31 @@
+From c2fec6c037a191d535319f99d7720232d03f315b Mon Sep 17 00:00:00 2001
+From: Reilly Brogan <reilly@reillybrogan.com>
+Date: Mon, 19 Oct 2026 12:09:23 -0500
+Subject: [PATCH] module-x11-bell: make the X11 I/O error handler idempotent
+
+This fixes a (harmless) crash that was observed on aerynOS during GDM teardown.
+
+Signed-off-by: Reilly Brogan <reilly@reillybrogan.com>
+---
+ src/modules/module-x11-bell.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/modules/module-x11-bell.c b/src/modules/module-x11-bell.c
+index 3e36607756..493e217028 100644
+--- a/src/modules/module-x11-bell.c
++++ b/src/modules/module-x11-bell.c
+@@ -161,8 +161,12 @@ static void x11_io_error_exit_handler(Display *display, void *data)
+ 
+ 	pw_log_warn("X11 display (%s) has encountered a fatal I/O error", DisplayString(display));
+ 
+-	pw_loop_destroy_source(impl->loop, impl->source);
+-	impl->source = NULL;
++	/* _XIOError() can be entered more than once for the same dead
++	 * connection, so only destroy the source while it is still valid */
++	if (impl->source) {
++		pw_loop_destroy_source(impl->loop, impl->source);
++		impl->source = NULL;
++	}
+ 
+ 	pw_impl_module_schedule_destroy(impl->module);
+ }

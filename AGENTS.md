@@ -98,6 +98,76 @@ laptop, desktop and desktop-next, not server/installer. Avahi + IPv4 NSS resolve
 LAN devices such as the Zynthian Pi via `*.local`; UDP 5353 is open, own-service
 publishing is disabled. Selected merged declarations/composition are checked by
 `hosts/profiles/test-mdns.nix`; real Pi connectivity is not yet checked.
+Avahi exclusively owns workstation mDNS: resolved's global MulticastDNS is false,
+without disabling its ordinary/VPN DNS. Lenovo's first installed boot exposed two
+concurrent stacks. Four-host merged checks pass; after user activation/reboot,
+Lenovo's global/link mDNS is off in resolved, Avahi is active and the duplicate-stack
+warning is absent. Actual corrected LAN discovery and ordinary/VPN DNS remain unverified.
+Lenovo's installed-boot findings are in `hosts/laptop/boot-errors.md`. Its local
+`bluetooth.nix` now selects pinned unstable BlueZ 5.87: its actual source passes
+all seven empty-default/request/cleanup cases without the removed 5.86 backport.
+The user also approved pinned unstable core xdg-desktop-portal 1.22.1 for the
+confirmed real-pidfd/proc-dirfd bug, not a portal-routing workaround. A Lenovo-only
+overlay preserves exact stable GTK/Hyprland backends (including GTK's build-time
+core dependency), stable Mesa/GLib, other hosts and lock. Selected declarations
+and extracted upstream portal functions with native Linux descriptors/ioctl pass;
+the old function reproduces ENOTDIR. Earlier 5.86/mDNS/environment fixes were
+user-applied and observed after reboot. The new package selections are now also
+user-applied: latest boot confirms BlueZ 5.87/core portal 1.22.1, no pidns error
+and priority-20 RT data-loop threads including onionbell. Real Bluetooth/portal UI
+acceptance is pending. Exact shutdown/startup exports are private outside Git;
+the previous shutdown exposed PipeWire 1.6.6 SIGSEGV after X11 I/O errors, with
+coredump delivery failing. No stored core does not prove no crash. See the audit
+for exact timestamps and the journal's late-shutdown coverage limit. No speculative
+audio workaround or watchdog suppression. `hosts/laptop/audio.nix` now prepares
+stable PipeWire with exact upstream c2fec6c037a1 for repeated X11 disconnect
+cleanup; neither pinned 1.6.6 nor 1.6.9 has it. Actual-callback contract tests
+detect baseline NULL-source destruction and pass four patched cases; selected
+declarations preserve clients, WirePlumber, audio features and other hosts.
+This is not a native crash/X11/audio integration test. After user application, the
+13:55:53 shutdown exercised both X11 callbacks and stopped PipeWire normally,
+without SEGV/core-dump in the selected unit journal. This is one observed cycle,
+not universal teardown coverage or evidence about unrecorded late shutdown.
+Retain source harnesses on updates. WirePlumber's
+startup Lua error did not reproduce in the short private dummy-sink policy probe
+(pre-existing sink/stream and two resulting native links are now explicitly checked);
+no speculative audio fix. UPower is absent, not just late: enabling it also adds
+a critical-battery action, so needs a separate policy decision. Do not silence
+remaining ACPI/xe/ISH/WMI/audio messages with unverified workarounds. Fn+Space
+keyboard backlight works per user; brightness/scale/lid/fingerprint remain deferred.
+The user subsequently observed a restored session after manual Hibernate; UPower
+with Hibernate is preferred but not enabled. The boot audit records private
+resume evidence and remaining SPD5118/Bluetooth/panel/ISH errors. Amnezia 5.0.1.5
+emits wakeup on NM ASLEEP and starts reconnecting before freezing; after resume,
+route lookup fails and the network-ready trigger is ignored while Reconnecting.
+The two affected files are identical in 5.0.3.0. Latest saved startup connected,
+but further inspection of the previous startup found default-route discovery and
+handshake-send failures before NM became ready; its ready trigger was ignored
+while Connecting, with successful connection only after a later Disconnected.
+The user confirms intermittent trouble after laptop boot, not manual Connect.
+This supports a cold-start readiness race too; the cause of later recovery is
+unproven. Desktop autostart has no network-readiness ordering; the helper's
+network.target does not guarantee routes. Do not substitute a fixed boot delay.
+A shared package readiness patch is now prepared with user approval:
+NM state/initial query over existing IPC, pending connection intent, no reconnect
+on ASLEEP or SITE/GLOBAL-only changes, recovery while Connecting/Reconnecting and
+explicit cancellation. Native Qt events/local QtRO tests exercise actual methods
+with protocol/DNS/routes mocked; existing routing tests and three-host declarations
+pass. After user application the initial mixed old-GUI/new-helper state was
+resolved by reboot: the latest boot `bd1645b2...` confirms matching new store paths.
+The user accepts immediate boot autoconnect and quick automatic recovery after
+Hibernate, without manual Connect. This is scoped Lenovo acceptance, not repeated
+cycles, other hosts, DNS/egress/split-routing/cancellation or kill-switch/leak
+testing. The latest private selected-journal export is referenced in the boot audit;
+WirePlumber's four startup Lua errors and UPower absence still reproduce.
+The latest Hibernate kernel window also repeats Bluetooth reprobe/four gp1
+mailbox errors (then successful firmware/DDC/MGMT initialization), SPD5118 -6,
+panel double-unprepare and three ISH cmd-2 failures. They remain open despite
+successful session/VPN restoration; buffered printk receipt times do not prove
+entry-versus-exit placement. Bluetooth is the next diagnostic priority.
+No delay or restart hook was added; do not disrupt the working tunnel.
+The user also reports removing the reviewed installation leftovers; the scoped
+cleanup record and deferred rare Waybar reconnect crash are in the boot audit.
 
 Disko is imported directly by fresh `server`, `laptop`, and `desktop-next`
 targets. It runs only through an explicit Disko/nixos-anywhere command, never
@@ -476,8 +546,15 @@ live SSH does not persist and the target does not enable an SSH server.
   read-only helper smoke pass; installed panel/GTK/other hardware not verified.
   See `home/linux/modules/waybar/README.md`; apply HM and reload Waybar via USR2.
 - Qt appearance — shared `home/linux/modules/qt-theme` on Acer/desktop/Lenovo only:
-  native qt5ct/qt6ct proxies with Adwaita, no fixed `QT_STYLE_OVERRIDE`. F11 updates
-  mutable appearance-only INI keys; native plugin watchers reload open Qt Widgets
+  native qt5ct/qt6ct proxies with Adwaita, no fixed `QT_STYLE_OVERRIDE`.
+  The systemd session override uses native
+  `${QT_STYLE_OVERRIDE:+}` to clear inherited values: literal empty assignments,
+  even quoted, are rejected by the installed environment.d generator. Evaluated
+  Lenovo HM text passes native isolated-generator regression checks and five
+  profiles' selected declaration checks. The user applied the corrected Lenovo
+  HM and rebooted; the assignment is installed without the generator error.
+  This does not establish installed Qt appearance/live F11 acceptance.
+  F11 updates mutable appearance-only INI keys; native plugin watchers reload open Qt Widgets
   apps (qt6ct debounce ~3 seconds), no daemon/polling. HM activation also migrates
   nomacs to `System.css` + `qt6ct-style`, with one-time backups and unrelated
   preferences preserved. Close Qt apps before activation and start a fresh session
@@ -628,6 +705,19 @@ wipe-history`: Nix не предоставляет API "keep N", а его histo
 - Overlay подключён только к NixOS desktop/laptop-old/laptop в `flake.nix`; эти хосты
   используют `pkgs.amnezia-vpn`, а daemon PATH содержит `iptables`,
   `ip6tables` и `gawk`.
+- Shared `linux-network-readiness.patch` and `linux-connection-state.h` prepare
+  event-driven NM readiness/recovery on all three hosts, not just Lenovo. The pin,
+  AWG backend, routing/DNS/address fixes and lock stay unchanged. Both patches apply
+  to the exact source without fuzz; native Qt/local QtRO actual-method fixtures
+  (mock protocols/DNS/routes), routing ASan/UBSan and selected declarations pass.
+  The user applied the changes and accepted Lenovo boot autoconnect and quick
+  Hibernate recovery. A subsequent reboot resolved the initial old-GUI/new-helper
+  mismatch; matching new paths are checked. DNS/egress, split routing, cancellation,
+  kill-switch/leaks, repeated cycles and other hosts remain separate acceptance.
+  No boot sleeps, extra services or blanket
+  VPN restart hooks. See the package README for limitations and acceptance.
+  Its changed IPC requires matching GUI/helper and a full GUI exit/reopen after
+  NixOS application; no HM change. Retain scenarios when reviewing upstream fixes.
 - При обновлении `nixpkgs-unstable` NixOS warning появляется только если его
   официальный `amnezia-vpn` новее нерабочего upstream 5.0.3.0. Этот release
   завершает AWG3.1 handshake, но не назначает `amn0` VPN IPv4 из dual-stack
@@ -652,7 +742,7 @@ Neovim-конфигурация не меняется. Новые конфиги
 
 | Файлы                                | Инструмент и источник правил                                                                                                                         | Команда из корня репозитория                                                         |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Nix                                  | nixfmt 1.3.1, defaults (100 columns, 2 spaces), как nixd → `nixfmt`; flake pin                                                                       | `nix fmt -- file.nix`                                                                |
+| Nix                                  | nixfmt из flake.lock (текущий pin 1.5.0), defaults (100 columns, 2 spaces), как nixd → `nixfmt`                                                      | `nix fmt -- file.nix`                                                                |
 | TS/JS/MJS, JSON/JSONC, CSS, Markdown | Prettier, `.prettierrc.json` + `.prettierignore`; defaults текущего Neovim Prettier 3.9.5                                                            | `prettier --write path/to/file`                                                      |
 | Python                               | Ruff, `[tool.ruff]` / `[tool.ruff.format]` в `pyproject.toml`; defaults текущего Neovim Ruff 0.17.2 (88 columns, 4 spaces, Python 3.11, без preview) | `ruff format path/to/file.py`                                                        |
 | Shell                                | Beautysh 6.4.3, `[tool.beautysh]` в `pyproject.toml`: 4 spaces, `paronly`, как в Conform                                                             | `beautysh path/to/file.sh`                                                           |
@@ -791,7 +881,7 @@ nix eval .#nixosConfigurations.laptop-old.config.system.build.toplevel --no-buil
 ## Текущее состояние хостов
 
 - **laptop-old**: текущий Acer с Intel/NVIDIA, ext4, GRUB EFI, Hibernate/zram. Пользователь успешно применил NixOS/HM под новыми именами и подтвердил работу; оставшееся transient hostname обновлено отдельно. Повторная загрузка/resume этим не проверены. Снимок stable inputs требует актуализации; короткий GC-retention обусловлен нехваткой места на SSD Acer.
-- **laptop**: Lenovo ThinkBook 16 G8+ IPD (21VJ), Core Ultra 7 356H + RTX 5060 Mobile. Live inventory получен, аппаратный scan/PRIME offload и путь UMIS 1 TB SSD заданы. Полный input update и финальный configuration review выполнены, native NVIDIA baseline согласован; install guard снят 11.11. NixOS toplevel/HM activation derivation evaluations прошли без builds/IFD. Build placement для RAM-backed live store ещё согласовать; builds, installation и живые idle/resume проверки не выполнены.
+- **laptop**: Lenovo ThinkBook 16 G8+ IPD (21VJ), Core Ultra 7 356H + RTX 5060 Mobile. Пользователь установил NixOS и standalone HM, применил boot fixes и подтвердил cleanup. После reboot Amnezia подключается автоматически, после Hibernate быстро восстанавливается; matching GUI/helper проверены. Один post-fix shutdown PipeWire завершился без прежнего SIGSEGV. WirePlumber Lua/UPower и аппаратные ошибки остаются; это не полная приёмка графики, RTD3, Bluetooth, DNS/split routing/kill-switch или battery policy. Актуальное состояние — `hosts/laptop/boot-errors.md`; install-stage описания выше исторические, не разрешение повторять установку.
 - **desktop**: старше laptop. AMD + NVIDIA, два монитора (DVI 1680x1050 + HDMI 3840x2160@3x). Нет Bluetooth/uinput/xremap/hibernate.
 - **server**: модульный VPS stack без Docker, Disko и generic virtio hardware modules. Preflight пишет внешний settings input по данным rescue environment; в Git остаётся только пример.
 - **mac**: только standalone HM (users + core-set). Без nix-darwin, без GUI, без проверки совместимости Linux-пакетов.

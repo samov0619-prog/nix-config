@@ -27,7 +27,10 @@ let
         && config.qt.qt6ctSettings == null
         && config.home.sessionVariables.QT_QPA_PLATFORMTHEME == "qt5ct"
         && config.home.sessionVariables.QT_STYLE_OVERRIDE == ""
-        && config.systemd.user.sessionVariables.QT_STYLE_OVERRIDE == ""
+        && config.systemd.user.sessionVariables.QT_STYLE_OVERRIDE == "\${QT_STYLE_OVERRIDE:+}"
+        &&
+          lib.hasInfix "QT_STYLE_OVERRIDE=\${QT_STYLE_OVERRIDE:+}\n"
+            config.xdg.configFile."environment.d/10-home-manager.conf".text
         && lib.hasInfix "--mode system --initialize-nomacs" config.home.activation.qtAppearance.data
         && !(config.xdg.configFile ? "qt5ct/qt5ct.conf")
         && !(config.xdg.configFile ? "qt6ct/qt6ct.conf")

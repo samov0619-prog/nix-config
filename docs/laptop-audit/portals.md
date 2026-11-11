@@ -28,6 +28,21 @@ per-interface config, `GTK_USE_PORTAL`, другой chooser, capture permission
 
 ## Сообщение Polkit-агента
 
+Отдельный подтверждённый дефект Lenovo — Realtime pidns lookup в основном портале
+1.20.4, не выбор backend: настоящий pidfd ошибочно обрабатывался как dirfd
+`/proc/<pid>`. Пользователь одобрил основной portal 1.22.1 из уже pinned unstable,
+где есть upstream PR #1713, без локального backport и обновления lock. Lenovo-only
+overlay сохраняет точные stable GTK/Hyprland backends и native routing; для GTK
+явно сохраняется также stable build-time dependency на основной portal.
+Selected declarations и настоящие функции из upstream с native pidfd/ioctl
+проверены, в том числе воспроизведение старого ENOTDIR. Пользователь применил
+NixOS и перезагрузился: запущен portal 1.22.1, pidns error не повторился;
+у PipeWire/Pulse/WirePlumber/onionbell видны RT data-loop threads с приоритетом 20.
+Это native runtime evidence, но не трассировка D-Bus Realtime и не приёмка live
+portal UI. См.
+[boot-errors.md](../../hosts/laptop/boot-errors.md) для scope, тестов и применения.
+Это не исправляет описанную ниже отдельную app-ID регистрацию Qt.
+
 В журнале hyprpolkitagent было:
 
 ```text

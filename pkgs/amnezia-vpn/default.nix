@@ -83,7 +83,10 @@ stdenv.mkDerivation (finalAttrs: {
     '';
   };
 
-  patches = [ ./linux-routing.patch ];
+  patches = [
+    ./linux-routing.patch
+    ./linux-network-readiness.patch
+  ];
   patchFlags = [
     "-p1"
     "--fuzz=0"
@@ -91,6 +94,7 @@ stdenv.mkDerivation (finalAttrs: {
 
   postPatch = ''
     cp ${./linux-default-route.h} client/core/utils/linux-default-route.h
+    cp ${./linux-connection-state.h} client/linux-connection-state.h
 
     substituteInPlace CMakeLists.txt \
       --replace-fail "\''${CMAKE_SOURCE_DIR}/cmake/recipes_bootstrap.cmake" "" \
@@ -194,6 +198,12 @@ stdenv.mkDerivation (finalAttrs: {
     cp ${./test_linux_routing.py} test_linux_routing.py
     cp ${./test_linux_routing.cpp} test_linux_routing.cpp
     python3 test_linux_routing.py --source "$NIX_BUILD_TOP/$sourceRoot" --build "$PWD"
+    cp ${./test_linux_network.py} test_linux_network.py
+    cp ${./test_linux_network.cpp} test_linux_network.cpp
+    cp ${./linux-connection-state.h} linux-connection-state.h
+    python3 test_linux_network.py --source "$NIX_BUILD_TOP/$sourceRoot" --build "$PWD" \
+      --moc "${kdePackages.qtbase}/libexec/moc" \
+      --repc "${kdePackages.qtremoteobjects}/libexec/repc"
     runHook postCheck
   '';
 

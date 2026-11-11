@@ -29,6 +29,7 @@ let
     in
     assert builtins.elem ./mdns.nix composition.nixosConfigurations.${host}.modules;
     assert avahi.enable;
+    assert config.services.resolved.settings.Resolve.MulticastDNS == false;
     assert avahi.nssmdns4;
     assert !avahi.nssmdns6;
     assert avahi.openFirewall;
@@ -43,6 +44,7 @@ let
       ipv4LocalNameResolution = true;
       mdnsFirewallOpen = true;
       publishingDisabled = true;
+      singleMdnsStack = true;
     };
 in
 assert lib.all (host: !(builtins.elem ./mdns.nix composition.nixosConfigurations.${host}.modules)) [
