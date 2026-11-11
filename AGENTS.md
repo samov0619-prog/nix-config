@@ -248,6 +248,100 @@ Existing keyboard
 DPMS wake remains enabled: this is edge-triggered behavior, not a closed-lid lock
 against keyboard wake or login/reload while already closed. These are HM-only edits;
 logind policy, audio/VPN/drivers and sudo remain unchanged.
+The user subsequently ran pinned stable mesa-demos glxinfo -B: ordinary GLX uses
+Mesa Intel(R) Graphics (PTL)/Mesa 26.1.8, explicit nvidia-offload uses NVIDIA GeForce
+RTX 5060 Laptop GPU/615.78.08, both direct rendering and no llvmpipe. This accepts
+GL context creation/selection through XWayland only, not Vulkan/native Wayland
+presentation, sustained load, RTD3 or post-resume graphics. The user then ran
+nvidia-offload vkcube --wsi wayland --c 600 from pinned stable vulkan-tools: output
+selects RTX 5060 and returns to shell without supplied errors; visible rendering
+and auto-closure still await explicit confirmation. Plain Vulkan apps may choose
+dGPU themselves. Passive RTD3 inspection finds GPU power/control=on, active,
+suspended time 0 and NVIDIA Runtime D3 status Disabled by default with parameter 3;
+the NVIDIA audio function is already auto/suspended. Automatic RTD3 was an
+expectation, not observed behavior here. The user approved preparing Lenovo-only
+finegrained RTD3, superseding the old native-default RTD3 baseline. graphics.nix
+now enables the native option: 0x02 plus GPU auto/on udev rules, without old
+audio/USB removal on 7.3.4. test-nvidia-runtime-pm.nix passes selected merged checks
+against the same config with finegrained forced false: all other module parameters
+and suspend options match, with no legacy units or explicit VRAM/S0ix overrides.
+The lightweight declaration fixture also passes; the broader graphics fixture was
+updated but not rerun. The user then applied/rebooted: boot 89e38bd1... has matching
+current/booted system hxldrcjja..., 7.3.4/615.78.08, parameter 2 and GPU auto, but
+active/D0, suspended time 0 and Runtime D3 status Not supported. RTD3 acceptance
+failed. Driver source shows Disabled by default at parameter 3 can mask the same
+internal NEVER mode; explicit 0x02 alone was not proven sufficient. A strong exact-
+version candidate is NVIDIA issue #1507 (acknowledged internal bug 7039712): Linux
+7.3 kthread nullfs makes nv-probe's absolute sysfs config open fail, disabling RTD3.
+PR #1512 is open/unmerged, inspected head 369378dc1552ae46f7f95a598a085c0025e464b3.
+Source/PR snapshot and hashes are in /tmp/opencode/nvidia-rtd3-615.78.08/. No measured
+local open errno/live trace or native patch test exists; do not claim the cause
+proven on Lenovo. Explicit finegrained remains applied, not accepted as
+effective; no rebind hook, driver reload, firmware change or extra knob was added.
+The user then approved preparation without builds/application. The exact saved
+PR #1512 diff is now appended only to Lenovo's NVIDIA package.open; actual-function
+config-open/probe contracts reproduce baseline defects and pass eight patched
+compile variants with mock filesystem/workers. Selected merged tests confirm
+module delivery and unchanged kernel/userspace derivations and sleep policy.
+This is not native module compilation or hardware RTD3/resume acceptance. No build,
+dry-run, activation, reload/rebind or new knob was run. Existing missing build
+outputs may still require realization: user should inspect the module dry-run.
+The full active-fix inventory is docs/backports/registry.json and README.md:
+18 patch files plus inline companions/package selections, classified separately
+from customizations/test-only changes. scripts/backport-review.py validates
+coverage and compares initial inventory fingerprints (not new acceptance).
+The updated HM nix-flake-update-verify checks before builds, then performs bounded
+offline cached-source probes and available small unpatched contracts after builds.
+No automatic removal/review acceptance, timer or GitHub polling. Plain direct
+flake updates bypass the hook; use the script or helper --no-update afterwards.
+Conflicts/test failures are review-required, never proof of upstream inclusion;
+forward application is not proof the bug persists. Exact evidence, rollback and
+acceptance commands are in the graphics audit; apply NixOS for NVIDIA and HM only
+for the updated helper. Preserve regression/removal scenarios after fix removal.
+The user subsequently staged the patch, saw a module-only dry-run and successfully
+built result 73nyv4l2... . Read-only review confirms the unchanged gf6c6ilz... kernel,
+all four NVIDIA modules in new 7ib7jzzk... output with version 615.78.08/vermagic
+7.3.4, and unchanged NVIDIA userspace/lib32/bin/firmware and modprobe config.
+The module derivation differs only in out/patches; patch bytes match the recorded
+SHA256. The actual nvidia.ko imports userspace_init_fs, confirming the guarded
+branch compiled. Current/booted system remains hxldrcjja..., so application,
+module loading and RTD3/offload/Hibernate acceptance are still pending. The agent
+did not build, activate or touch the running driver. See the graphics audit.
+The user then applied/rebooted: boot 57375bf8... has matching current/booted
+73nyv4l2..., kernel 7.3.4 and NVIDIA 615.78.08 with srcversion matching the new
+module. User proc output confirms Enabled (fine-grained), Video Memory Off and
+suspended; independent read-only inspection confirms D3cold and suspended-time
+growth (78875 → 99805 ms), unchanged RTD3/VRAM/S0ix parameters and GPU auto.
+Idle RTD3 is now observed working on this boot. The user then repeated pinned
+stable native Wayland vkcube: RTX 5060 selected and shell returned without supplied
+errors; user reads showed active then suspending. A subsequent independent single
+snapshot confirms suspended/D3cold, runtime usage 0 and GPU auto: return to idle
+after this invocation is observed, not stuck suspending. Exact latency is not
+measured. The user explicitly confirmed visible cube and automatic closure:
+one native Wayland NVIDIA offload wake/render/exit/return-to-idle cycle is accepted,
+not independent agent UI observation. The user then confirmed the complete manual
+Hibernate/session-VPN recovery/cube/return-to-idle procedure: one patched-module
+Hibernate/offload/idle cycle is accepted by user report. A later read-only snapshot
+on the same boot/system/module confirms suspended/D3cold, usage 0 and suspended
+time 505617 ms; it is not independent observation of the entire PM/UI/VPN sequence.
+Repeated cycles, sustained load and battery-life measurement remain unverified.
+The user subsequently applied standalone HM: installed update-helper now resolves
+to qbm2l45z... and contains backport-review.py plus the post-build cached/contracts
+hook; installed Bash syntax passes. The user's direct checker reports unchanged=26,
+meaning matching inventory fingerprints, not fresh upstream/functional verification.
+No real updater/input-update/build cycle was run by the agent to test the hook.
+No extra knobs, nvidia-smi polling,
+rebind/reload or changes to working audio/VPN/power policy.
+At final review the user authorized a local commit and reported the missing Waybar
+GPU section. Installed/repository Lenovo config deliberately omits custom/gpu;
+the shared Acer/desktop gp.sh polls nvidia-smi every 10 seconds. No panel change
+is included in this batch. Treat a runtime-PM-safe GPU indicator as a separate
+follow-up; do not undo accepted D3cold by blindly restoring that polling path.
+Final lightweight reruns pass: 22 checker tests, four generated-updater mocks,
+eight baseline/eight patched NVIDIA compile variants, three selected Nix checks
+and pinned nixfmt. No new builds. Preserve exact upstream patch bytes: Git flags
+its two single-space blank context lines, which are valid unified-diff syntax;
+non-patch source whitespace checks pass. Prettier/Ruff are still unavailable.
 
 Disko is imported directly by fresh `server`, `laptop`, and `desktop-next`
 targets. It runs only through an explicit Disko/nixos-anywhere command, never
@@ -292,8 +386,9 @@ hardcoded version, lock update or automatic updater. User-provided live scan is
 imported without filesystem declarations. PRIME offload is selected, with Intel
 `PCI:0:2:0`, NVIDIA `PCI:2:0:0` and `nvidia-offload`; never force the whole Steam
 client or global GPU variables onto NVIDIA. Agreed power baseline keeps native
-NVIDIA 615/open VRAM/suspend handling and default RTD3 on supported notebooks;
-no forced RTD3/S0ix/deep, legacy suspend units or Dynamic Boost. Real idle/resume
+NVIDIA 615/open VRAM/suspend handling. The earlier default-only RTD3 plan is now
+superseded by the approved Lenovo finegrained opt-in above; still no forced
+S0ix/deep, legacy suspend units or Dynamic Boost. Real idle/resume
 remain unverified. Declaration fixtures and selected merged graphics checks pass
 with the updated inputs, including NVIDIA/open derivation evaluation.
 Initial 20/90 s timeouts were followed by bounded diagnostics and a successful

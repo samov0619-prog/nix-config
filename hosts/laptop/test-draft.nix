@@ -51,7 +51,10 @@ let
   pkgsGraphics = {
     linuxPackagesFor = kernel: {
       inherit kernel;
-      nvidiaPackages.latest = "matching-nvidia-latest";
+      nvidiaPackages.latest = {
+        outPath = "matching-nvidia-latest";
+        open.overrideAttrs = f: f { patches = [ "existing-module.patch" ]; };
+      };
     };
     mesa = "unstable-mesa-64";
     pkgsi686Linux.mesa = "unstable-mesa-32";
@@ -119,7 +122,7 @@ assert hardware.hardware.cpu.intel.updateMicrocode.content;
 assert !(hardware ? fileSystems);
 assert !(hardware ? swapDevices);
 assert !(hardware.boot ? resumeDevice);
-assert graphics.boot.kernelPackages == pkgsGraphics.linuxPackagesFor pkgsKernel.linux_latest;
+assert graphics.boot.kernelPackages.kernel == pkgsKernel.linux_latest;
 assert graphics.hardware.graphics.enable;
 assert graphics.hardware.graphics.enable32Bit;
 assert graphics.hardware.graphics.package == pkgs.mesa;
@@ -127,14 +130,19 @@ assert graphics.hardware.graphics.package32 == pkgs.pkgsi686Linux.mesa;
 assert graphics.hardware.nvidia.open;
 assert graphics.hardware.nvidia.modesetting.enable;
 assert graphics.services.xserver.videoDrivers == [ "nvidia" ];
-assert graphics.hardware.nvidia.package == graphics.boot.kernelPackages.nvidiaPackages.latest;
+assert graphics.hardware.nvidia.package.outPath == "matching-nvidia-latest";
+assert
+  graphics.hardware.nvidia.package.open.patches == [
+    "existing-module.patch"
+    ./nvidia-init-root.patch
+  ];
 assert graphics.hardware.nvidia.prime.intelBusId == "PCI:0:2:0";
 assert graphics.hardware.nvidia.prime.nvidiaBusId == "PCI:2:0:0";
 assert graphics.hardware.nvidia.prime.offload.enable;
 assert graphics.hardware.nvidia.prime.offload.enableOffloadCmd;
 assert !(graphics.hardware.nvidia.prime ? sync);
 assert !(graphics.hardware.nvidia.prime ? reverseSync);
-assert !(graphics.hardware.nvidia ? powerManagement);
+assert graphics.hardware.nvidia.powerManagement == { finegrained = true; };
 assert !(graphics.hardware.nvidia ? dynamicBoost);
 assert !(graphics ? boot.extraModprobeConfig);
 assert !(graphics ? boot.kernelParams);
@@ -223,7 +231,7 @@ assert !(viewer.xdg ? configFile);
   lenovoLidTargetsOnlyInternalPanelDpms = true;
   lenovoLiveHardwareScanWithoutStorageDeclarations = true;
   lenovoPrimeOffloadIsOptInWithoutSteamOverride = true;
-  lenovoNativeNvidiaPowerPolicyWithoutExtraHooks = true;
+  lenovoApprovedRtd3WithNativeSuspendPolicyAndNoExtraHooks = true;
   lenovoStableMesaWithIsolatedKernelAndPreservedNvidiaFirmware = true;
   noAcerHardwareOrExtraPrivileges = true;
   requestedBootstrapAutologinAndSudoDeclarations = true;

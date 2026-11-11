@@ -1,0 +1,293 @@
+{
+  "schema": 1,
+  "coverageExclusions": {
+    "pkgs/installer-vpn/default.nix": "Template substitution in our own wrapper, not an upstream source fix.",
+    "home/linux/modules/ardour/package.nix": "Native startup-theme wrapper/desktop entry customization, not an upstream source fix."
+  },
+  "entries": [
+    {
+      "id": "btintel-pm",
+      "kind": "upstream-backport",
+      "inputs": ["nixpkgs-kernel"],
+      "watch": ["hosts/laptop/bluetooth.nix"],
+      "patches": ["hosts/laptop/btintel-pcie-refresh-dstate.patch", "hosts/laptop/btintel-pcie-pm-flow.patch"],
+      "source": "kernel",
+      "contract": ["hosts/laptop/test_btintel_pm.py", "{source}", "--check-upstream"],
+      "upstream": ["12997a385f71", "2926eb396711"],
+      "removeWhen": "All unpatched-source PM/D-state contracts pass; retain harness and verify real Hibernate/Bluetooth separately.",
+      "details": "hosts/laptop/bluetooth-pm.md"
+    },
+    {
+      "id": "pipewire-x11",
+      "kind": "upstream-backport",
+      "inputs": ["nixpkgs"],
+      "watch": ["hosts/laptop/audio.nix"],
+      "patches": ["hosts/laptop/pipewire-x11-idempotent.patch"],
+      "source": "pipewire",
+      "contract": ["hosts/laptop/test_pipewire_x11.py", "{source}/src/modules/module-x11-bell.c", "--check-upstream"],
+      "upstream": ["c2fec6c037a1"],
+      "removeWhen": "All four idempotent-disconnect contracts pass without the patch; preserve shutdown/audio acceptance checks.",
+      "details": "hosts/laptop/boot-errors.md"
+    },
+    {
+      "id": "nvidia-init-root",
+      "kind": "unmerged-backport",
+      "inputs": ["nixpkgs-unstable", "nixpkgs-kernel"],
+      "watch": ["hosts/laptop/graphics.nix"],
+      "patches": ["hosts/laptop/nvidia-init-root.patch"],
+      "source": "nvidia",
+      "contract": ["hosts/laptop/test_nvidia_init_root.py", "{source}", "--check-upstream"],
+      "upstream": ["https://github.com/NVIDIA/open-gpu-kernel-modules/issues/1507", "https://github.com/NVIDIA/open-gpu-kernel-modules/pull/1512", "369378dc1552ae46f7f95a598a085c0025e464b3"],
+      "removeWhen": "Unpatched config-open/probe contracts and conftest checks pass; review alternate upstream fixes rather than requiring identical text, then test real idle/wake/Hibernate.",
+      "details": "docs/laptop-audit/graphics.md"
+    },
+    {
+      "id": "filemanager-localhost",
+      "kind": "local-bugfix",
+      "inputs": ["nixpkgs"],
+      "watch": ["pkgs/filemanager1-common/default.nix"],
+      "patches": ["pkgs/filemanager1-common/localhost-uri.patch"],
+      "source": "filemanager",
+      "upstream": ["https://github.com/boydaihungst/org.freedesktop.FileManager1.common"],
+      "removeWhen": "Run localhost/URI regressions on unpatched source, adapting test_localhost_uri.py; it is not yet an automatic removal harness.",
+      "details": "pkgs/filemanager1-common/README.md"
+    },
+    {
+      "id": "filemanager-wrappers",
+      "kind": "packaging-compatibility",
+      "inputs": ["nixpkgs"],
+      "watch": ["pkgs/filemanager1-common/default.nix"],
+      "patches": [],
+      "upstream": [],
+      "removeWhen": "Upstream wrappers support Nix executable lookup and terminal arguments; retain path/quoting tests.",
+      "details": "pkgs/filemanager1-common/README.md"
+    },
+    {
+      "id": "amnezia-routing",
+      "kind": "local-bugfix",
+      "inputs": ["nixpkgs", "nixpkgs-unstable"],
+      "watch": ["pkgs/amnezia-vpn/default.nix", "pkgs/amnezia-vpn/linux-default-route.h"],
+      "patches": ["pkgs/amnezia-vpn/linux-routing.patch"],
+      "source": "amnezia",
+      "upstream": ["https://github.com/amnezia-vpn/amnezia-client/pull/3231"],
+      "removeWhen": "Unpatched netlink dump/address lifetime/AllowedIPs regressions pass, then accept both split-routing modes; PR inclusion alone is insufficient.",
+      "details": "pkgs/amnezia-vpn/README.md"
+    },
+    {
+      "id": "amnezia-readiness",
+      "kind": "local-bugfix",
+      "inputs": ["nixpkgs", "nixpkgs-unstable"],
+      "watch": ["pkgs/amnezia-vpn/default.nix", "pkgs/amnezia-vpn/linux-connection-state.h"],
+      "patches": ["pkgs/amnezia-vpn/linux-network-readiness.patch"],
+      "source": "amnezia",
+      "upstream": ["https://github.com/amnezia-vpn/amnezia-client"],
+      "removeWhen": "Actual-method Qt/QtRO readiness, pending intent and cancellation scenarios pass without this fix, with boot/resume acceptance and matching GUI/helper IPC.",
+      "details": "pkgs/amnezia-vpn/README.md"
+    },
+    {
+      "id": "amnezia-inline-address-dns",
+      "kind": "local-bugfix",
+      "inputs": ["nixpkgs", "nixpkgs-unstable"],
+      "watch": ["pkgs/amnezia-vpn/default.nix"],
+      "patches": [],
+      "upstream": ["https://github.com/amnezia-vpn/amnezia-client/pull/2840"],
+      "removeWhen": "Unmodified dual-stack deviceIpv4Address is IPv4-only and empty/duplicate DNS is filtered before AllowedIPs; test address assignment and DNS on real AWG3.1.",
+      "details": "pkgs/amnezia-vpn/README.md"
+    },
+    {
+      "id": "amnezia-packaging-ui",
+      "kind": "packaging-compatibility",
+      "inputs": ["nixpkgs", "nixpkgs-unstable"],
+      "watch": ["pkgs/amnezia-vpn/default.nix"],
+      "patches": [],
+      "upstream": [],
+      "removeWhen": "Review Conan/CMake, git metadata, executable/data paths, desktop/autostart, icon and tray substitutions individually against upstream packaging; not one removable backport.",
+      "details": "pkgs/amnezia-vpn/README.md"
+    },
+    {
+      "id": "amnezia-awg31-selection",
+      "kind": "temporary-selection",
+      "inputs": ["nixpkgs", "nixpkgs-unstable"],
+      "watch": ["pkgs/amnezia-vpn/default.nix", "pkgs/amneziawg-3.1/go.nix", "pkgs/amneziawg-3.1/tools.nix", "flake.nix"],
+      "patches": [],
+      "upstream": ["https://github.com/amnezia-vpn/amnezia-client/pull/2840", "https://github.com/amnezia-vpn/amnezia-client/pull/3231"],
+      "removeWhen": "Official client newer than broken 5.0.3.0 includes address/routes fixes, compatible AWG3.1 backend and daemon PATH, and passes live connection/split-routing checks. Installer/server shared backend pins are a separate compatibility obligation.",
+      "details": "pkgs/amnezia-vpn/README.md"
+    },
+    {
+      "id": "onionbell-ogg",
+      "kind": "local-bugfix",
+      "inputs": ["nixpkgs"],
+      "watch": ["pkgs/onionbell/default.nix"],
+      "patches": ["pkgs/onionbell/ogg-first-span.patch"],
+      "source": "onionbell",
+      "upstream": ["https://github.com/onion108/onionbell"],
+      "removeWhen": "Real freedesktop bell.oga reaches the output mixer without this patch; requires the documented Rust package test, not a text match.",
+      "details": "pkgs/onionbell/README.md"
+    },
+    {
+      "id": "onionbell-eof",
+      "kind": "local-bugfix",
+      "inputs": ["nixpkgs"],
+      "watch": ["pkgs/onionbell/default.nix"],
+      "patches": ["pkgs/onionbell/ipc-eof.patch"],
+      "source": "onionbell",
+      "upstream": ["https://github.com/onion108/onionbell"],
+      "removeWhen": "All real Unix-socket EOF tests pass with only ipc-eof.patch omitted; keep the harness and tests. This is a user-run Rust build, not an automatic lightweight contract.",
+      "details": "pkgs/onionbell/README.md"
+    },
+    {
+      "id": "onionbell-tests",
+      "kind": "test-only",
+      "inputs": ["nixpkgs"],
+      "watch": ["pkgs/onionbell/default.nix", "pkgs/onionbell/ipc-tests.rs"],
+      "patches": ["pkgs/onionbell/ipc-test-harness.patch"],
+      "upstream": [],
+      "removeWhen": "Retain regression coverage after fixes are removed; adapt harness on upstream API changes rather than deleting tests.",
+      "details": "pkgs/onionbell/README.md"
+    },
+    {
+      "id": "onionbell-api",
+      "kind": "packaging-compatibility",
+      "inputs": ["nixpkgs"],
+      "watch": ["pkgs/onionbell/default.nix"],
+      "patches": [],
+      "upstream": [],
+      "removeWhen": "Pinned hyprland Rust client no longer requires removal of clients.pseudo; compile and verify event handling separately from audio/EOF fixes.",
+      "details": "pkgs/onionbell/README.md"
+    },
+    {
+      "id": "onionbell-native-replacement",
+      "kind": "temporary-selection",
+      "inputs": ["nixpkgs", "home-manager"],
+      "watch": ["home/linux/modules/hyprland/default.nix"],
+      "patches": [],
+      "upstream": ["https://github.com/hyprwm/Hyprland/pull/15502"],
+      "removeWhen": "Existing dependency-based libcanberra warning fires, then user accepts native bell with onionbell stopped in a new Hyprland session; remove the service/package/reminder together.",
+      "details": "pkgs/onionbell/README.md"
+    },
+    {
+      "id": "yazi-password",
+      "kind": "local-bugfix",
+      "inputs": ["nixpkgs-unstable"],
+      "watch": ["home/core-set/shell.nix"],
+      "patches": ["home/core-set/yazi-compress-password.patch"],
+      "source": "yazi-compress",
+      "upstream": [],
+      "removeWhen": "Same cancellation/empty/unsupported-format/repeated-invocation Lua and 7zz scenarios pass without the password patch; review API substitutions independently.",
+      "details": "docs/laptop-audit/archives.md"
+    },
+    {
+      "id": "yazi-api",
+      "kind": "packaging-compatibility",
+      "inputs": ["nixpkgs-unstable"],
+      "watch": ["home/core-set/shell.nix"],
+      "patches": [],
+      "upstream": [],
+      "removeWhen": "Compress upstream uses u.url.parent and fs.unique with correct file/dir kinds; run actual plugin fixtures and real Yazi UI.",
+      "details": "docs/laptop-audit/archives.md"
+    },
+    {
+      "id": "opencode-routing",
+      "kind": "customization",
+      "inputs": ["opencode"],
+      "watch": ["home/apps/opencode/package.nix"],
+      "patches": ["home/apps/opencode/patches/session-routing.patch", "home/apps/opencode/patches/manual-model-routing.patch", "home/apps/opencode/patches/model-variants.patch"],
+      "source": "opencode",
+      "upstream": [],
+      "removeWhen": "Only replace after native session-family/helper/effort routing and legacy alias migration satisfy the documented policy through runtime and real TUI tests; not automatically obsolete on a release bump.",
+      "details": "home/apps/opencode/BENCHMARK.md"
+    },
+    {
+      "id": "opencode-attention",
+      "kind": "customization",
+      "inputs": ["opencode"],
+      "watch": ["home/apps/opencode/package.nix", "home/apps/opencode/patches/session-attention.ts"],
+      "patches": ["home/apps/opencode/patches/session-attention.patch"],
+      "source": "opencode",
+      "upstream": [],
+      "removeWhen": "Native sound/notifications/toasts and urgency all respect the open TUI session-family boundary; retain tests. Sound preference customization is independent.",
+      "details": "home/apps/opencode/BENCHMARK.md"
+    },
+    {
+      "id": "opencode-question-location",
+      "kind": "local-bugfix",
+      "inputs": ["opencode"],
+      "watch": ["home/apps/opencode/package.nix"],
+      "patches": ["home/apps/opencode/patches/question-location.patch"],
+      "source": "opencode",
+      "upstream": [],
+      "removeWhen": "Unpatched native nested question preserves Location and real TUI buttons are visible/usable, including Promise plugin calls; no fixture-only removal decision.",
+      "details": "home/apps/opencode/BENCHMARK.md"
+    },
+    {
+      "id": "opencode-theme-cache",
+      "kind": "local-bugfix",
+      "inputs": ["opencode"],
+      "watch": ["home/apps/opencode/package.nix"],
+      "patches": ["home/apps/opencode/patches/theme-mode-cache.patch"],
+      "source": "opencode",
+      "upstream": [],
+      "removeWhen": "Unpatched stale-cache/fresh-cache PTY controls follow fresh renderer appearance while explicit theme locks win; retain policy tests and user caches.",
+      "details": "home/apps/opencode/BENCHMARK.md"
+    },
+    {
+      "id": "waybar-profile-tooltip",
+      "kind": "customization",
+      "inputs": ["nixpkgs"],
+      "watch": ["home/linux/laptop/waybar/package.nix", "home/linux/laptop/waybar/power-profile-cycle.hpp"],
+      "patches": ["home/linux/laptop/waybar/power-profile-tooltip.patch"],
+      "source": "waybar",
+      "upstream": [],
+      "removeWhen": "Native Waybar supplies equivalent previous/current/next dynamic tooltip and shared click-cycle policy; keep helper tests and check live UI.",
+      "details": "home/linux/laptop/waybar/README.md"
+    },
+    {
+      "id": "bluez-selection",
+      "kind": "temporary-selection",
+      "inputs": ["nixpkgs", "nixpkgs-unstable"],
+      "watch": ["hosts/laptop/bluetooth.nix"],
+      "patches": [],
+      "source": "bluez-stable",
+      "sourceFiles": ["src/adapter.c"],
+      "contract": ["hosts/laptop/test_bluez.py", "{source}/src/adapter.c"],
+      "upstream": [],
+      "removeWhen": "Stable source passes all seven empty-default/request/cleanup cases in test_bluez.py and real Bluetooth behavior is accepted; former 5.86 backport is already removed.",
+      "details": "hosts/laptop/boot-errors.md"
+    },
+    {
+      "id": "portal-selection",
+      "kind": "temporary-selection",
+      "inputs": ["nixpkgs", "nixpkgs-unstable"],
+      "watch": ["hosts/laptop/default.nix"],
+      "patches": [],
+      "source": "portal-stable",
+      "sourceFiles": ["src/xdp-utils.c", "src/xdp-app-info.c"],
+      "platform": "linux",
+      "contract": ["hosts/laptop/test_portal_pidns.py", "{source}/src"],
+      "upstream": [],
+      "removeWhen": "Stable core portal passes real-pidfd/proc-dirfd cases in test_portal_pidns.py; preserve stable GTK/Hyprland backends and test real portal UI.",
+      "details": "hosts/laptop/boot-errors.md"
+    },
+    {
+      "id": "blueman-polkit",
+      "kind": "packaging-compatibility",
+      "inputs": ["nixpkgs"],
+      "watch": ["pkgs/blueman-polkit/default.nix"],
+      "patches": [],
+      "upstream": [],
+      "removeWhen": "Stock package builds with Polkit support and installs unchanged actions/wheel policy; keep declaration/package checks and live agent acceptance.",
+      "details": "docs/laptop-audit/polkit.md"
+    },
+    {
+      "id": "mesa-libc-boundary",
+      "kind": "packaging-compatibility",
+      "inputs": ["nixpkgs", "nixpkgs-unstable", "nixpkgs-kernel"],
+      "watch": ["hosts/laptop/graphics.nix", "flake.nix"],
+      "patches": [],
+      "upstream": [],
+      "removeWhen": "Keep Mesa 64/32-bit compatible with stable application libc. The isolated released-kernel/NVIDIA/firmware policy is intentional, not a backport to delete by version comparison.",
+      "details": "docs/laptop-audit/graphics.md"
+    }
+  ]
+}

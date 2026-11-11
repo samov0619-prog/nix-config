@@ -53,7 +53,7 @@ class UpdaterTest(unittest.TestCase):
             ["bash", "-n"], input=cls.generated["script"], text=True, check=True
         )
 
-    def exercise(self, arguments, update):
+    def exercise(self, arguments, update, review_failure=False):
         with tempfile.TemporaryDirectory(prefix="flake-updater-", dir="/tmp/opencode") as d:
             root = Path(d)
             bin_dir = root / "bin"
@@ -68,22 +68,36 @@ class UpdaterTest(unittest.TestCase):
                 "CALL_LOG": str(log),
                 "MOCK_REPO": str(root),
             }
+            checker = root / "scripts" / "backport-review.py"
+            checker.parent.mkdir()
+            checker.write_text(
+                "import json, os, sys\n"
+                "with open(os.environ['CALL_LOG'], 'a') as log:\n"
+                "    log.write(json.dumps(['backport-review', *sys.argv[1:]]) + '\\n')\n"
+                f"sys.exit({int(review_failure)})\n"
+            )
             script = root / "updater.sh"
             script.write_text(self.generated["script"])
-            subprocess.run(
+            result = subprocess.run(
                 ["bash", str(script), "--hosts", "laptop", *arguments],
                 env=environment,
-                check=True,
                 capture_output=True,
                 text=True,
                 timeout=10,
             )
             calls = [json.loads(line) for line in log.read_text().splitlines()]
             expected = [] if update is None else [["flake", "update", *update]]
-            expected += [
-                ["build", "--no-link", ".#nixosConfigurations.laptop.config.system.build.toplevel"],
-                ["build", "--no-link", ".#homeConfigurations.samov-laptop.activationPackage"],
-            ]
+            expected += [["backport-review"]]
+            if review_failure:
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("FAILED: phase=backports;", result.stderr)
+            else:
+                self.assertEqual(result.returncode, 0, result.stderr)
+                expected += [
+                    ["build", "--no-link", ".#nixosConfigurations.laptop.config.system.build.toplevel"],
+                    ["build", "--no-link", ".#homeConfigurations.samov-laptop.activationPackage"],
+                    ["backport-review", "--cached", "--contracts"],
+                ]
             self.assertEqual(calls, expected)
 
     def test_kernel_input(self):
@@ -96,6 +110,9 @@ class UpdaterTest(unittest.TestCase):
 
     def test_no_update(self):
         self.exercise(["--no-update"], None)
+
+    def test_inventory_error_stops_before_build(self):
+        self.exercise(["--no-update"], None, review_failure=True)
 
 
 if __name__ == "__main__":

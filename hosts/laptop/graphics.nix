@@ -5,6 +5,9 @@
   pkgsKernel,
   ...
 }:
+let
+  upstreamNvidia = config.boot.kernelPackages.nvidiaPackages.latest;
+in
 {
   # Latest packaged releases, not linux_testing or NVIDIA bleeding_edge/beta.
   # Kernel-only input follows released stable ahead of channel promotion.
@@ -23,7 +26,14 @@
   hardware.nvidia = {
     open = true; # Blackwell requires NVIDIA's open kernel modules, not Nouveau.
     modesetting.enable = true;
-    package = config.boot.kernelPackages.nvidiaPackages.latest;
+    # PR #1512, head 369378dc1552: Linux 7.3 kthreads resolve paths in nullfs.
+    # Replace only the open module, not the userspace derivation or kernel.
+    # Retain the removal harness; see docs/backports/README.md.
+    package = upstreamNvidia // {
+      open = upstreamNvidia.open.overrideAttrs (old: {
+        patches = (old.patches or [ ]) ++ [ ./nvidia-init-root.patch ];
+      });
+    };
     # Live PCI scan: Intel drives the active built-in panel; NVIDIA is opt-in.
     prime = {
       intelBusId = "PCI:0:2:0";
@@ -33,9 +43,11 @@
         enableOffloadCmd = true;
       };
     };
-    # Agreed baseline: keep NVIDIA 615/open's native suspend/VRAM handling and
-    # automatic RTD3 on supported notebooks. Do not force finegrained/legacy
-    # suspend services; real idle, offload and resume remain installed checks.
+    # Approved RTD3 opt-in; 0x03's wording can mask a failed support check.
+    # Native NixOS sets 0x02 and runtime-PM udev rules, without old device removals.
+    powerManagement.finegrained = true;
+    # Keep NVIDIA 615/open's native suspend/VRAM handling; no legacy suspend units
+    # or forced S0ix. Real idle, offload wake and resume still require acceptance.
     # Do not force Steam or global session variables onto NVIDIA.
   };
 

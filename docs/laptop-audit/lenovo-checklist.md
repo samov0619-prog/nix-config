@@ -25,7 +25,48 @@ running/current/booted — 7.3.4, NVIDIA 615.78.08 загружен, Bluetooth-�
 и running A2DP/aptX. Пользователь затем подтвердил слышимый звук после ручных
 переподключений/удалений/добавлений; разбор наушников и Bluetooth tuning явно отложен.
 Это не подтверждение автоматического переподключения.
-GPU/offload и надёжное Bluetooth-восстановление остаются непроверенными.
+Пользователь затем проверил `glxinfo -B`: обычный запуск использует Intel PTL /
+Mesa 26.1.8, `nvidia-offload` — RTX 5060 / NVIDIA 615.78.08; direct rendering есть,
+`llvmpipe` нет. Это OpenGL/XWayland smoke, не полная приёмка GPU. Затем `vkcube`
+с `--wsi wayland --c 600` через offload выбрал NVIDIA; визуальный результат ещё
+не подтверждён. Read-only RTD3 snapshot: GPU `control=on`, active и
+`Disabled by default`, тогда как NVIDIA audio уже auto/suspended. Пользователь
+одобрил подготовку finegrained: Lenovo NixOS теперь явно задаёт RTD3 0x02 и штатные
+udev auto/on rules, не меняя Hibernate/VRAM/S0ix. Узкие merged/baseline checks
+прошли. Пользователь затем применил/reboot: параметр действительно 2, GPU auto,
+но active/D0 и `Runtime D3 status: Not supported` — RTD3 не принят. Найден точный
+upstream-кандидат NVIDIA #1507 / открытый PR #1512: Linux 7.3 kthread nullfs мешает
+615.78.08 открыть PCI sysfs config. Локальный errno не измерен. Пользователь одобрил
+подготовку: точный PR-backport теперь добавлен только в Lenovo open-модуль;
+actual-function contract tests и проверка неизменных kernel/userspace derivations
+прошли. Пользователь затем успешно собрал NixOS: result содержит новый open-модуль
+с vermagic 7.3.4 и символом userspace_init_fs; ядро и NVIDIA userspace прежние.
+Пользователь затем применил/reboot: boot 57375bf8... имеет matching current/booted
+73nyv4l2..., загруженный srcversion совпадает с новым модулем. Proc сообщает
+Enabled (fine-grained), Video Memory Off; независимый snapshot подтверждает
+suspended/D3cold и рост suspended-time. Idle RTD3 теперь подтверждён на этой загрузке.
+Повторный native Wayland vkcube выбрал RTX 5060 и вернулся в shell; после active →
+suspending независимый snapshot подтвердил suspended/D3cold, runtime usage 0.
+Возврат в idle после этого запуска подтверждён, точная задержка не измерена.
+Пользователь явно подтвердил видимый cube и автозакрытие: один цикл native Wayland
+offload wake/render/выход/возврат в idle принят. Затем он подтвердил весь отдельный
+Hibernate-сценарий: восстановление сессии/VPN, cube и возврат RTD3 в sleep. Один
+Hibernate/offload/idle цикл с новым модулем принят по пользовательскому наблюдению;
+последующий read-only snapshot подтверждает D3cold/runtime usage 0 с тем же модулем.
+Это не независимое agent UI/PM/VPN наблюдение; повторные циклы, sustained load и
+измерение автономности остаются отдельными проверками.
+Никаких rebind hooks, driver reload или новых power-настроек.
+Подробности и следующий согласуемый шаг — в конце [graphics audit](graphics.md).
+Надёжность повторных GPU/RTD3/Hibernate циклов, длительная нагрузка и надёжное
+Bluetooth-восстановление ещё открыты. Пользователь затем применил HM: установленный
+update-helper содержит новый backport-review hook и post-build cached contracts;
+его Bash syntax проверен. Ручной checker сообщает unchanged=26 — это совпадение
+fingerprints, не новая upstream/функциональная проверка. Реальный update/build
+цикл через новый helper агент не запускал.
+Пользователь также отметил отсутствие GPU-блока Waybar. Это намеренное отсутствие
+custom/gpu в Lenovo config, подтверждённое и в установленном файле: старый shared
+gp.sh вызывает nvidia-smi каждые 10 секунд. Панель в этом batch не менялась;
+отдельный следующий шаг — индикатор без пробуждения спящей NVIDIA.
 Порядок update/reboot/приёмки — в
 [kernel audit](graphics.md#1111-released-stable-kernel-input) и
 [Bluetooth PM](../../hosts/laptop/bluetooth-pm.md). Старые userspace fixes сохраняются.

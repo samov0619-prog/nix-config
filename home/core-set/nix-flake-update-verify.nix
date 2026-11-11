@@ -6,6 +6,7 @@ let
       coreutils
       git
       nix
+      patch
       python3
     ];
     text = ''
@@ -140,6 +141,19 @@ let
         esac
       fi
 
+      # Run from the checkout, not an HM-copied registry that can lag behind it.
+      # No source realization, builds, removal or review writes by the checker.
+      review_backports() {
+        if python3 scripts/backport-review.py "$@"; then
+          :
+        else
+          status=$?
+          printf '%s\n' "FAILED: phase=backports; input=$input; host=$host; output=registry; exit=$status" >&2
+          exit "$status"
+        fi
+      }
+      review_backports
+
       build_target() {
         target_host="$1"
         output="$2"
@@ -173,6 +187,9 @@ let
             ;;
         esac
       done
+
+      # Builds may have populated source caches unavailable before the update.
+      review_backports --cached --contracts
 
       printf '%s\n' "Verified host: $host"
       printf '%s\n' "Lock input: $input"
