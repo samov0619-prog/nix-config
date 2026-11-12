@@ -664,10 +664,17 @@ live SSH does not persist and the target does not enable an SSH server.
   notifications/mute plugins не устанавливаются. `quiet-urgency.ts` независимо
   от mute вызывает только `silent-attention.py`, без BEL/второго player.
   `session-attention.patch` + общий `session-attention.ts` изолируют native
-  звук/notifications/error-toasts и local urgency по открытой сессии TUI и её
-  потомкам; не по cwd/global tabs. Home/plugin routes и неизвестная ancestry
-  молчат. Native события подагентов/остановки внутри этой области сохраняются.
-  Это не single-owner election для одной сессии в нескольких TUI. После замены
+  sound/notifications/error-toasts and local urgency through one last-selected
+  live TUI per root-session family, including inactive internal tabs. Shared tab
+  membership cannot claim ownership; home/plugin/workspace navigation retains
+  still-open claimed tabs. Closing releases a claim; stale PID/start-time records
+  are ignored. Private runtime IPC freezes an owner per event and deduplicates
+  native/urgency channels separately; no player, BEL, service or idle polling.
+  The user reports the revision works live; this is scoped user acceptance, not
+  independent agent observation of the full multi-window/focus/crash/mute matrix.
+  Six policy/actual-handler/two-process tests and three silent urgency fixtures
+  pass; no agent build/activation. The updated PTY harness is not run.
+  Unknown ancestry/sessionless forms stay silent. После замены
   binary переоткрыть TUI (не только `/reload`); общий server менять не нужно.
   Самостоятельный Mac archive с официальным binary не содержит этот patch.
   Quiet urgency устанавливается одним store-каталогом с TS helper и Python kitten;

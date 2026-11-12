@@ -4,6 +4,58 @@ Pinned upstream: 2.1.4, `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`.
 Historical model-quality experiments and V1 behavior are retained in
 [archive/v1/BENCHMARK.md](archive/v1/BENCHMARK.md). They do not measure V2 quality.
 
+## Background-tab attention ownership (2026-11-12)
+
+The user isolated missing audio/outer urgency to inactive internal OpenCode tabs.
+Installed helper and binary patch inputs match the old route-only policy; an
+in-memory call reproduces its rejection of an inactive tab and its children.
+The user heard both direct playback of the configured completion file and the
+native question-form sound. This is not evidence that completion audio was broken.
+
+The replacement policy retains open background session families and assigns one
+live owner by last explicit route/terminal focus selection. Native sound remains
+native; the existing silent Kitty helper remains separate from mute. Shared tab
+membership alone never claims ownership. Private Linux runtime records use atomic
+publication and PID/start-time validation; per-event decisions/receipts prevent
+cross-window/channel races from duplicating output. Output can be lost on a crash
+after consuming a receipt; this is not an exactly-once transport.
+
+Lightweight checks execute the actual helper, apply the actual notification patch
+to pinned 2.1.4 without fuzz, and run native handler/quiet-urgency fixtures. The
+fixture replaces only the plugin wrapper, Solid effect scheduling and audio/Kitty
+sinks. A separate two-process Linux test exercises real atomic IPC, concurrent
+event delivery, owner transfer and abrupt owner death. Neither is a real TUI test.
+The PTY harness now includes background-tab/home retention and ownership transfer;
+only its Python syntax was checked, not execution. No build, activation, service
+restart, installed-plugin reload or live audio/Waybar/Kitty acceptance was run.
+Prettier and Ruff are unavailable; no substitute formatter was used.
+
+The user subsequently reports that the revision works live and authorizes a
+local commit after final review. This accepts the reported background-tab
+notification scenario, not independent agent UI observation or the full
+multi-window/focus/close/crash/mute matrix. Final read-only review found no known
+commit blockers; all six policy/actual-handler/two-process tests and three silent
+urgency fixtures pass again, as do PTY-harness Python syntax, backport inventory
+coverage and non-patch whitespace checks. The agent did not rebuild/reactivate
+or run the opt-in PTY suite. Exact unified-diff context whitespace is retained.
+
+After user review:
+
+1. Build only the affected HM output:
+   `nix build .#homeConfigurations.samov-laptop.activationPackage`.
+2. A separately approved PTY run can use
+   `OPENCODE_TEST_HM_GENERATION=(realpath result) python3 home/apps/opencode/tests/test_attention_tui.py (realpath result/home-path/bin/opencode)`
+   in Fish. It uses a private server/mock provider and no actual sound; it also
+   exercises the existing todo scenarios. Do not run it automatically.
+3. Apply HM with `home-manager switch --flake .#samov-laptop`, then close/reopen
+   every TUI to load the changed built-in code. Do not restart the shared server.
+4. In two Kitty windows, test inactive-tab completion/question/permission/error,
+   another workspace, transfer by selection/focus, closing the owner, mute/unmute
+   and children. Expect one native sound plus silent outer urgency in the owner,
+   no output in the other window, unchanged internal unread indicators. Revert
+   the HM generation and reopen TUI if delivery/ownership regresses. Other home
+   hosts and the official-binary corporate Mac are not established by this test.
+
 ## Latest review status (2026-11-02)
 
 The manual-selection helper-stack redesign below is a subsequent change. All

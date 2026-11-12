@@ -218,7 +218,7 @@
       "patches": ["home/apps/opencode/patches/session-attention.patch"],
       "source": "opencode",
       "upstream": [],
-      "removeWhen": "Native sound/notifications/toasts and urgency all respect the open TUI session-family boundary; retain tests. Sound preference customization is independent.",
+      "removeWhen": "Native sound/notifications/toasts and urgency route foreground and background session families to one last-selected live TUI owner, without duplicate output across windows; retain tests. Sound preference customization is independent.",
       "details": "home/apps/opencode/BENCHMARK.md"
     },
     {

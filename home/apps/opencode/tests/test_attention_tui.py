@@ -295,6 +295,20 @@ def main(binary):
                 print(
                     "PASS: two real TUI clients/global tabs receive both sessions' events; only the owning window requests native sound and Kitty urgency"
                 )
+                background = api("session", {"title": "Background A"})["data"]["id"]
+                for target in [background, a]:
+                    (root / "state/attention-101.route").write_text(target)
+                    wait(
+                        lambda: route("101").get("sessionID") == target,
+                        "Did not select background tab and return",
+                    )
+                before_a = urgency("101")
+                before_b = urgency("202")
+                prompt(background)
+                assert sounds("101") == ["done", "done"]
+                assert sounds("202") == ["done"]
+                assert urgency("101") > before_a and urgency("202") == before_b
+                print("PASS: inactive internal tab notifies its owner, not the other global-tab client")
                 before_b = urgency("202")
                 permission = api(
                     f"session/{a}/permission",
@@ -782,11 +796,26 @@ def main(binary):
                 for pane in clients:
                     (root / f"state/attention-{pane}.jsonl").write_text("")
                 prompt(a)
-                assert sounds("101") == [] and sounds("202") == []
-                assert urgency("101") == before_a
+                assert sounds("101") == ["done"] and sounds("202") == []
+                assert urgency("101") > before_a
                 print(
-                    "PASS: failed session does not affect the other window; home/global navigation revokes prior ownership"
+                    "PASS: failed session is isolated; home navigation retains open background-tab ownership"
                 )
+                (root / "state/attention-202.route").write_text(a)
+                wait(
+                    lambda: route("202").get("sessionID") == a,
+                    "Did not transfer session to the second client",
+                )
+                prompt(a)
+                assert sounds("101") == ["done"] and sounds("202") == ["done"]
+                (root / "state/attention-202.route").write_text(b)
+                wait(
+                    lambda: route("202").get("sessionID") == b,
+                    "Did not make the transferred session a background tab",
+                )
+                prompt(a)
+                assert sounds("101") == ["done"] and sounds("202") == ["done", "done"]
+                print("PASS: last explicit selection transfers ownership, which survives switching away")
                 # Reload disposes the test attention monkeypatch too, so run it
                 # only after attention assertions; it must still cancel consent.
                 (root / "state/attention-101.route").write_text(a)

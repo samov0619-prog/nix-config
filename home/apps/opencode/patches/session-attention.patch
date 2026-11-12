@@ -1,27 +1,108 @@
 diff --git a/packages/tui/src/feature-plugins/system/notifications.ts b/packages/tui/src/feature-plugins/system/notifications.ts
 --- a/packages/tui/src/feature-plugins/system/notifications.ts
 +++ b/packages/tui/src/feature-plugins/system/notifications.ts
-@@ -1,5 +1,6 @@
+@@ -1,3 +1,5 @@
++import { createEffect } from "solid-js"
++import { sessionAttention, trackSessionAttention } from "../../session-attention"
  import { Plugin } from "@opencode/plugin/tui"
  import type { AttentionSoundName } from "@opencode/plugin/tui/context"
-+import { sessionAttention } from "../../session-attention"
  
- function notify(
-   context: Plugin.Context,
-@@ -8,6 +9,7 @@ function notify(
+@@ -6,8 +8,10 @@
+   sessionID: string | undefined,
+   message: string,
    sound: AttentionSoundName,
++  event: { id: string },
    title?: string,
  ) {
-+  if (!sessionAttention(context, sessionID)) return
++  if (!sessionAttention(context, sessionID, event, "native")) return false
    const session = sessionID ? context.data.session.get(sessionID) : undefined
    const isSubagent = session?.parentID !== undefined
    void context.attention.notify({
-@@ -66,7 +68,7 @@ export default Plugin.define({
+@@ -16,11 +20,16 @@
+     notification: isSubagent ? false : { when: "blurred" },
+     sound: { name: sound, when: "always" },
+   })
++  return true
+ }
+ 
+ export default Plugin.define({
+   id: "opencode.notifications",
+   setup(context) {
++    const tracking = trackSessionAttention(context)
++    createEffect(() => tracking.update())
++    const focused = () => tracking.update(true)
++    context.renderer.on("focus", focused)
+     const errored = new Set<string>()
+     const terminal = new Set<string>()
+     const forms = new Set<string>()
+@@ -30,7 +39,7 @@
+       errored.delete(sessionID)
+       terminal.delete(sessionID)
+     }
+-    const ended = (sessionID: string) => {
++    const ended = (sessionID: string, event: { id: string }) => {
+       if (terminal.has(sessionID)) return
+       terminal.add(sessionID)
+       if (errored.has(sessionID)) {
+@@ -38,36 +47,36 @@
+         return
+       }
+       const session = context.data.session.get(sessionID)
+-      notify(context, sessionID, "Session done", session?.parentID ? "subagent_done" : "done")
++      notify(context, sessionID, "Session done", session?.parentID ? "subagent_done" : "done", event)
+     }
+ 
+     const dispose = [
+       context.data.on("form.created", (event) => {
+         if (forms.has(event.data.form.id)) return
+         forms.add(event.data.form.id)
+-        notify(context, event.data.form.sessionID, "Input needs response", "question", event.data.form.title)
++        notify(context, event.data.form.sessionID, "Input needs response", "question", event, event.data.form.title)
+       }),
+       context.data.on("form.replied", (event) => forms.delete(event.data.id)),
+       context.data.on("form.cancelled", (event) => forms.delete(event.data.id)),
+       context.data.on("permission.asked", (event) => {
+         if (permissions.has(event.data.id)) return
+         permissions.add(event.data.id)
+-        notify(context, event.data.sessionID, "Permission needs input", "permission")
++        notify(context, event.data.sessionID, "Permission needs input", "permission", event)
+       }),
+       context.data.on("permission.replied", (event) => permissions.delete(event.data.requestID)),
+       context.data.on("session.execution.started", (event) => started(event.data.sessionID)),
+-      context.data.on("session.execution.succeeded", (event) => ended(event.data.sessionID)),
+-      context.data.on("session.execution.interrupted", (event) => ended(event.data.sessionID)),
++      context.data.on("session.execution.succeeded", (event) => ended(event.data.sessionID, event)),
++      context.data.on("session.execution.interrupted", (event) => ended(event.data.sessionID, event)),
+       context.data.on("session.execution.failed", (event) => {
+         const sessionID = event.data.sessionID
+         if (terminal.has(sessionID)) return
+         if (errored.has(sessionID)) {
+-          ended(sessionID)
++          ended(sessionID, event)
            return
          }
          errored.add(sessionID)
 -        if (event.data.error.type !== "provider.free-limit") {
-+        if (event.data.error.type !== "provider.free-limit" && sessionAttention(context, sessionID)) {
-           notify(context, sessionID, event.data.error.message, "error")
+-          notify(context, sessionID, event.data.error.message, "error")
++        if (event.data.error.type !== "provider.free-limit" &&
++            notify(context, sessionID, event.data.error.message, "error", event)) {
            context.ui.toast.show({
              sessionID,
+             title: "Session failed",
+@@ -75,10 +84,14 @@
+             variant: "error",
+           })
+         }
+-        ended(sessionID)
++        ended(sessionID, event)
+       }),
+     ]
+ 
+-    return () => dispose.reverse().forEach((cleanup) => cleanup())
++    return () => {
++      dispose.reverse().forEach((cleanup) => cleanup())
++      context.renderer.off("focus", focused)
++      tracking.dispose()
++    }
+   },
+ })

@@ -309,17 +309,43 @@ Symlinks в разные изолированные store-файлы ломаю�
 
 ### Изоляция уведомлений между TUI
 
-`patches/session-attention.patch` ограничивает native `opencode.notifications` текущей
-сессией TUI и её потомками; тот же `patches/session-attention.ts` используется для тихой
-Kitty urgency. Общий event stream, одинаковая директория и global tabs не дают
-чужой сессии права включать звук/подсветку/ошибку-toast в этом окне. На home и
-plugin routes session-уведомления молчат. Неизвестная ancestry и global forms
-без привязки к сессии не вызывают attention. Дедупликация и native sound settings
-сохраняются; второго аудиоплеера и BEL нет.
+`patches/session-attention.patch` and the shared `patches/session-attention.ts`
+route native sound/notifications/error toasts and quiet Kitty urgency to one
+responsible TUI per root-session family. Selecting a session (including a child)
+or focusing its terminal claims that family for this TUI. Switching to another
+internal tab, home/plugin route or compositor workspace does not release open
+background tabs. A more recent selection in another TUI transfers responsibility.
+Merely receiving a shared/global tab list cannot claim a session.
 
-Правило — «открытая сессия и её подагенты», не single-owner election: если одна
-сессия открыта сразу в двух TUI, она принадлежит обоим. При просмотре отдельного
-подагента родитель/соседи не уведомляют его окно. Смена route применяется сразу.
+Closing a tab releases that client's claim. With tabs disabled, only the current
+session family remains eligible. If the owner closes/exits, the most recent
+surviving client that previously selected the still-open session becomes eligible.
+If no such live client exists, selection in a new TUI is required; restoring the
+shared tab strip alone deliberately does not adopt every old session.
+Unknown ancestry and forms without a session remain silent. A delayed metadata
+hydration retains the original selection timestamp, rather than stealing ownership.
+
+Linux-only coordination uses private atomic client records and per-event receipts
+under `$XDG_RUNTIME_DIR/opencode-attention-v2`, not permanent preferences or session
+transcripts. PID/start-time checks exclude stale records after crashes/PID reuse.
+Selection changes and incoming events drive the policy; there is no idle polling,
+new service or player. Event ownership is frozen across both output channels;
+each channel consumes its own receipt, so route races/replayed event IDs cannot
+produce duplicate output. Receipts remain until the runtime directory is cleared
+when the user runtime directory is cleared; they contain only client identities,
+not prompts/audio. A crash
+after receipt consumption can lose output: this is at-most-once routing, not an
+exactly-once delivery guarantee. IPC failure suppresses output and warns once.
+Native mute/volume/sound files remain authoritative; quiet urgency ignores mute.
+No BEL is sent, avoiding a second audio bell through Kitty/onionbell.
+
+The user subsequently reports that the changed behavior works live. This is
+user acceptance of the reported scenario, not independent observation of every
+multi-window/focus/crash/mute case or an installed-derivation comparison. Lightweight policy,
+actual patched notification-handler fixtures and real two-process IPC tests pass;
+these do not test native Solid reactivity, actual audio, Kitty or compositor urgency.
+The updated opt-in PTY harness adds inactive-tab/home/ownership-transfer scenarios
+but has not been run on a newly built binary. See [BENCHMARK.md](BENCHMARK.md).
 
 Это исправление **домашнего pinned binary**, не официального Mac binary из
 самостоятельного архива. После HM switch нужно заново открыть работающие TUI,

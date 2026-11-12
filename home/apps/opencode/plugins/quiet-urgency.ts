@@ -1,7 +1,8 @@
 import { Plugin } from "@opencode/plugin/tui";
+import { createEffect } from "solid-js";
 import { open } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { sessionAttention } from "./session-attention.ts";
+import { sessionAttention, trackSessionAttention } from "./session-attention.ts";
 
 // Audio belongs exclusively to opencode.notifications / attention.sound.
 export async function requestAttention() {
@@ -35,6 +36,10 @@ export async function requestAttention() {
 export default Plugin.define({
   id: "local.quiet-urgency",
   setup(context) {
+    const tracking = trackSessionAttention(context);
+    createEffect(() => tracking.update());
+    const focused = () => tracking.update(true);
+    context.renderer.on("focus", focused);
     const dispose = [
       "permission.asked",
       "form.created",
@@ -47,9 +52,13 @@ export default Plugin.define({
           event.type === "form.created"
             ? event.data.form.sessionID
             : event.data.sessionID;
-        if (sessionAttention(context, sessionID)) void requestAttention();
+        if (sessionAttention(context, sessionID, event, "urgency")) void requestAttention();
       }),
     );
-    return () => dispose.forEach((cleanup) => cleanup());
+    return () => {
+      dispose.forEach((cleanup) => cleanup());
+      context.renderer.off("focus", focused);
+      tracking.dispose();
+    };
   },
 });
