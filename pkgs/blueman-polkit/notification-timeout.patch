@@ -1,0 +1,61 @@
+--- a/blueman/gui/Notification.py
++++ b/blueman/gui/Notification.py
+@@ -24,7 +24,7 @@
+ 
+ 
+ class _NotificationDialog(Gtk.MessageDialog):
+-    def __init__(self, summary: str, message: str, _timeout: int = -1, _transient: bool = False,
++    def __init__(self, summary: str, message: str, timeout: int = -1, _transient: bool = False,
+                  actions: Optional[Iterable[Tuple[str, str]]] = None,
+                  actions_cb: Optional[Callable[[str], None]] = None, icon_name: Optional[str] = None,
+                  image_data: Optional[GdkPixbuf.Pixbuf] = None) -> None:
+@@ -45,6 +45,10 @@
+                 self.add_button(action_name, i)
+                 i += 1
+ 
++        # Interactive requests and explicit timeout=0 must never auto-dismiss.
++        self._expire_after = 0 if self.actions or timeout == 0 else (3000 if timeout < 0 else timeout)
++        self._timeout_id = 0
++
+         self.actions[Gtk.ResponseType.DELETE_EVENT] = "close"
+ 
+         self.props.secondary_use_markup = True
+@@ -84,6 +88,8 @@
+ 
+         self.connect("enter-notify-event", on_enter)
+         self.connect("leave-notify-event", on_leave)
++        self.connect("hide", self._cancel_timeout)
++        self.connect("destroy", self._cancel_timeout)
+ 
+     def set_message(self, message: str) -> None:
+         self.props.secondary_text = message
+@@ -94,14 +100,28 @@
+     def dialog_response(self, _dialog: Gtk.Dialog, response: int) -> None:
+         if self.callback:
+             self.callback(self.actions[response])
+-        self.hide()
++        self.close()
+ 
+     def show(self) -> None:
++        self._cancel_timeout()
+         self.set_opacity(OPACITY_START)
+         self.present()
+         self.set_opacity(OPACITY_START)
++        if self._expire_after:
++            self._timeout_id = GLib.timeout_add(self._expire_after, self._expire)
++
++    def _cancel_timeout(self, *_args: object) -> None:
++        if self._timeout_id:
++            GLib.source_remove(self._timeout_id)
++            self._timeout_id = 0
++
++    def _expire(self) -> bool:
++        self._timeout_id = 0
++        self.close()
++        return GLib.SOURCE_REMOVE
+ 
+     def close(self) -> None:
++        self._cancel_timeout()
+         self.hide()
+ 
+     def add_action(self, _action_id: str, _label: str, _callback: Optional[Callable[[str], None]] = None) -> None:

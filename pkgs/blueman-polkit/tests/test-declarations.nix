@@ -24,6 +24,8 @@ let
         && lib.all (flag: builtins.elem flag package.configureFlags) upstream.configureFlags
         && package.doInstallCheck
         && lib.hasInfix "verify.py" package.installCheckPhase
+        && lib.hasInfix "test_notification_timeout.py" package.installCheckPhase
+        && lib.any (patch: baseNameOf (toString patch) == "notification-timeout.patch") package.patches
         && builtins.length installed == 1
         && (builtins.head installed).outPath == package.outPath
         && builtins.length dbus == 1

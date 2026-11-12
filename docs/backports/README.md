@@ -1,7 +1,7 @@
 # Backports and temporary fixes
 
 The machine-readable inventory is [registry.json](registry.json). It covers **all
-18 active patch files**, their inline companions and temporary package selections.
+19 active patch files**, their inline companions and temporary package selections.
 It distinguishes upstream backports, an unmerged proposed backport, local bug
 fixes, packaging compatibility, customizations and test-only instrumentation.
 
@@ -25,6 +25,7 @@ fixes, packaging compatibility, customizations and test-only instrumentation.
 | `waybar-profile-tooltip` | Lenovo tooltip/cycle customization | Equivalent native feature, helper regressions and live tooltip/click acceptance |
 | `bluez-selection`, `portal-selection` | Lenovo unstable package selections | Stable source passes retained BlueZ/pidfd tests; real Bluetooth/portal acceptance |
 | `blueman-polkit` | Build-support override on two laptops | Stock Polkit support and unchanged actions/policy; live agent checks |
+| `blueman-dialog-timeout` | Local native-dialog timeout fix/policy on two laptops | Unpatched actual-dialog timer/action/cleanup contracts, then live informational/pairing UI |
 | `mesa-libc-boundary` | Stable Mesa plus isolated released kernel/NVIDIA/firmware | Keep application/Mesa libc compatibility; intentional policy, not a temporary source patch |
 
 Per-entry references, owning files, audits and removal criteria live in the

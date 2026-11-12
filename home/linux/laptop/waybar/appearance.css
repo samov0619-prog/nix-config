@@ -1,0 +1,53 @@
+/* Lenovo-only overrides appended after the shared light/dark theme. */
+#network {
+  color: inherit;
+}
+
+#power-profiles-daemon.power-saver {
+  color: @lenovo_power_saver;
+}
+
+#power-profiles-daemon.balanced {
+  color: @lenovo_balanced;
+}
+
+#power-profiles-daemon.performance {
+  color: @lenovo_performance;
+}
+
+/* Each adjacent pair contributes one 12px gap, without textual separators. */
+.modules-center #custom-startup,
+.modules-center #cpu,
+.modules-center #memory,
+.modules-center #custom-disk,
+.modules-center #custom-gpu-manual,
+.modules-center #network,
+.modules-center #custom-nix-updates,
+.modules-right #power-profiles-daemon,
+.modules-right #battery,
+.modules-right #pulseaudio,
+.modules-right #language,
+.modules-right #clock {
+  padding: 0 6px;
+  margin: 0;
+}
+
+#custom-gpu-manual.active {
+  box-shadow: none;
+}
+
+#custom-startup.startup_grey {
+  color: @lenovo_startup_grey;
+}
+
+#custom-startup.startup_green {
+  color: @lenovo_startup_green;
+}
+
+#custom-startup.startup_yellow {
+  color: @lenovo_startup_yellow;
+}
+
+#custom-startup.startup_red {
+  color: @lenovo_startup_red;
+}

@@ -18,6 +18,11 @@ NixOS и HM управляются раздельно: NixOS через `nixosCo
   локальный `amnezia-vpn` — только для NixOS desktop/laptop-old/laptop.
 - `blueman-polkit` overlay — только NixOS laptop-old/laptop: прежний stable
   Blueman с Polkit build support и неизменёнными upstream actions/wheel rule.
+  It also prepares informational native-dialog expiry (default 3s), retaining
+  explicit zero timeouts and interactive requests. The user applied/accepted the
+  initial 15s behavior, then requested 3s; that revision is contract-tested but
+  not yet applied. No agent build/activation or full pairing UI acceptance.
+  See `pkgs/blueman-polkit/README.md` and the backport registry/removal contract.
 - `xremap-flake` передаётся в `extraSpecialArgs`.
 
 ### NixOS-хосты
@@ -802,7 +807,7 @@ live SSH does not persist and the target does not enable an SSH server.
 
 ### Window management policy
 
-- Не добавлять manual resize bindings или resize-by-mouse: workflow использует Dwindle без ручной подгонки размеров. Fullscreen и app maximize policy сохраняются.
+- На Lenovo пользователь разрешил штатный resize через `Super+Shift+ЛКМ` для floating и tiled; `Super+ЛКМ` сохраняется для перемещения. Нужен механизм сброса: `Super+Ctrl+T` возвращает текущее Dwindle-деление к 50/50 через `splitratio 1 exact`, не восстанавливает всё дерево раскладки или прежнюю геометрию floating. Это подготовка, не live-приёмка. Других keyboard resize bindings не добавлять; другие хосты, fullscreen и app maximize policy не менять.
 - Основные window controls: `Super+T` (Dwindle split), `Super+F`/`Super+Shift+F` (floating/tiled focus), `Super(+Shift)+HJKL`, workspaces и переносы между ними. `Super+N` открывает отдельное Kitty nvim window. Laptop: horizontal three-finger touchpad swipe переключает workspace. `Super+W` открывает semantic workspace/window switcher.
 - `F1` открывает read-only `hypr-controls` через Tofi; поддерживать его список в соответствии с фактическими bind-ами laptop/desktop.
 

@@ -1,0 +1,8 @@
+/* Muted foregrounds; PPD states never use a colored fill. */
+@define-color lenovo_power_saver #add0b3;
+@define-color lenovo_balanced #abbed8;
+@define-color lenovo_performance #d7bd99;
+@define-color lenovo_startup_grey #a7adb5;
+@define-color lenovo_startup_green #add0b3;
+@define-color lenovo_startup_yellow #d7c394;
+@define-color lenovo_startup_red #d59c9c;

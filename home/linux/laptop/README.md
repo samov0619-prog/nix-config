@@ -1,5 +1,9 @@
 # Lenovo Home Manager hotkeys
 
+For a manually launched 5-second NVIDIA/PPD table, see
+`home/linux/laptop/gpu-monitor.md`. It appends samples until Ctrl+C and does not
+change profiles or add a service; explicit polling can postpone GPU sleep.
+
 The top row sends hardware functions without Fn; Fn exposes ordinary F1–F12.
 Only the Lenovo leaf changes these bindings:
 
@@ -38,6 +42,26 @@ reload/login. Do not modify the same enabled setting independently behind the
 helper: it cannot detect external changes. Manual recovery is
 `lenovo-touchpad enable` from the active Hyprland session. There is no sudo,
 polling, disk-persistent toggle or suspend hook.
+
+## Mouse resize and local Dwindle reset
+
+Prepared on Lenovo only: **Super+Shift+LMB drag** uses Hyprland's native
+`resizewindow` for floating windows and tiled splits. Start near the side/corner
+you want to drag; visible borders are not required. **Super+LMB** still moves
+windows. No extra service, helper or global resize-on-border setting was added.
+
+**Super+Ctrl+T** runs `layoutmsg, splitratio 1 exact`: the active tiled window's
+parent split returns to **50/50**. This is a size reset for the two-window case,
+not restoration of an entire Dwindle tree, all ancestor ratios, window order or
+split orientations. It does not restore previous floating geometry. Floating
+windows can return to tiling with Super+G; that reinserts them, not undoing an old
+layout. This scope follows Hyprland 0.55.4's `CDwindleAlgorithm::layoutMsg`.
+No speculative full-workspace reconstruction is implemented.
+
+F1 help lists both shortcuts. Apply HM and reload Hyprland using the steps below,
+then test a floating terminal near multiple corners; test two ordinary tiled
+windows and the 50/50 reset separately. Fullscreen/maximize policy is unchanged.
+Live drag/reset acceptance is pending, not covered by selected declaration tests.
 
 ## Checks and application
 

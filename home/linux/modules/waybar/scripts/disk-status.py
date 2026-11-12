@@ -62,7 +62,7 @@ def rates(previous, current):
     )
 
 
-def collect(path, previous=None, *, sysfs=Path("/sys"), clock=time.monotonic):
+def collect(path, previous=None, *, sysfs=Path("/sys"), clock=time.monotonic, compact=False):
     try:
         device_number = os.stat(path).st_dev
         space = os.statvfs(path)
@@ -72,7 +72,7 @@ def collect(path, previous=None, *, sysfs=Path("/sys"), clock=time.monotonic):
             raise ValueError("filesystem capacity is unavailable")
     except (OSError, ValueError):
         return {
-            "text": "disk:—",
+            "text": "—" if compact else "disk:—",
             "tooltip": "Home filesystem capacity and I/O are unavailable.",
             "class": "unavailable",
         }, None
@@ -94,6 +94,13 @@ def collect(path, previous=None, *, sysfs=Path("/sys"), clock=time.monotonic):
     ]
     if current is not None:
         lines.append(f"Whole backing disk: {html.escape(current.device)}")
+        if compact:
+            try:
+                model = (Path(current.identity[0]) / "device/model").read_text().strip()
+                if model:
+                    lines.append(f"Model: {html.escape(model)}")
+            except OSError:
+                pass
     if activity is not None:
         busy, read, written = activity
         lines.extend([
@@ -104,7 +111,7 @@ def collect(path, previous=None, *, sysfs=Path("/sys"), clock=time.monotonic):
         lines.append(io_note)
     lines.append("Busy time is not a percentage of maximum speed (especially NVMe).")
     return {
-        "text": f"disk:{busy_text} · {available / GIB:.0f}/{total / GIB:.0f} GiB",
+        "text": busy_text if compact else f"disk:{busy_text} · {available / GIB:.0f}/{total / GIB:.0f} GiB",
         "tooltip": "\n".join(lines),
         "class": "ready" if activity is not None else "io-unavailable",
     }, current
@@ -115,6 +122,7 @@ def main():
     parser.add_argument("--path", type=Path, default=Path.home())
     parser.add_argument("--interval", type=float, default=5)
     parser.add_argument("--samples", type=int, help="Stop after N samples (diagnostics).")
+    parser.add_argument("--compact", action="store_true", help="Only I/O busy in the bar; capacity in tooltip.")
     args = parser.parse_args()
     if not math.isfinite(args.interval) or args.interval < 0.05:
         parser.error("--interval must be finite and at least 0.05 seconds")
@@ -124,7 +132,7 @@ def main():
     count = 0
     while True:
         started = time.monotonic()
-        output, previous = collect(args.path, previous)
+        output, previous = collect(args.path, previous, compact=args.compact)
         print(json.dumps(output, ensure_ascii=False), flush=True)
         count += 1
         if args.samples is not None and count >= args.samples:

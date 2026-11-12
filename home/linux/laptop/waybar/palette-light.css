@@ -1,0 +1,8 @@
+/* Darker pastel-family foregrounds retain contrast on the light bar. */
+@define-color lenovo_power_saver #57765f;
+@define-color lenovo_balanced #5d7593;
+@define-color lenovo_performance #8a6947;
+@define-color lenovo_startup_grey #69717b;
+@define-color lenovo_startup_green #57765f;
+@define-color lenovo_startup_yellow #8b7448;
+@define-color lenovo_startup_red #a05d65;

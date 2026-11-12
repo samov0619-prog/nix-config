@@ -17,6 +17,7 @@ let
     opencode = f.inputs.opencode;
     waybar = stable.waybar.src;
     bluez-stable = stable.bluez.src;
+    blueman = stable.blueman.src;
     portal-stable = stable.xdg-desktop-portal.src;
   };
 in

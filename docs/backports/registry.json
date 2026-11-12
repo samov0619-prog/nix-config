@@ -6,6 +6,18 @@
   },
   "entries": [
     {
+      "id": "blueman-dialog-timeout",
+      "kind": "local-bugfix",
+      "inputs": ["nixpkgs"],
+      "watch": ["pkgs/blueman-polkit/default.nix"],
+      "patches": ["pkgs/blueman-polkit/notification-timeout.patch"],
+      "source": "blueman",
+      "contract": ["pkgs/blueman-polkit/tests/test_notification_timeout.py", "{source}", "--check-upstream"],
+      "upstream": [],
+      "removeWhen": "Unpatched dialog contracts pass: 3s default informational expiry, explicit/zero timeouts, persistent actions and timer cleanup; retain real pairing/status UI acceptance.",
+      "details": "pkgs/blueman-polkit/README.md"
+    },
+    {
       "id": "btintel-pm",
       "kind": "upstream-backport",
       "inputs": ["nixpkgs-kernel"],

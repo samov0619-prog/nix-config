@@ -18,6 +18,7 @@ HERE = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("gpu_status", HERE / "gpu-status.py")
 gpu = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gpu)
+GPU_ICON = "<span font_family='NotoSansM Nerd Font Propo' size='x-large'>󰢮</span>"
 
 
 class GpuTests(unittest.TestCase):
@@ -30,7 +31,7 @@ class GpuTests(unittest.TestCase):
         self.assertEqual(gpu.WINDOW, 60)
         self.assertEqual(gpu.INTERVAL, 2)
         result = gpu.render(None, None)
-        self.assertEqual(result["text"], "GPU")
+        self.assertEqual(result["text"], GPU_ICON)
         self.assertEqual(result["class"], "idle")
         self.assertNotIn("--", result["text"])
 
@@ -38,7 +39,7 @@ class GpuTests(unittest.TestCase):
         sample = gpu.parse_metrics("12, 512, 8192\n")
         sample.update(time="12:34:56", at=100)
         idle = gpu.render(sample, None)
-        self.assertEqual(idle["text"], "GPU")
+        self.assertEqual(idle["text"], GPU_ICON)
         self.assertEqual(idle["class"], "idle")
         self.assertNotIn("VRAM", idle["tooltip"])
         self.assertNotIn("12:34:56", idle["tooltip"])
@@ -46,7 +47,10 @@ class GpuTests(unittest.TestCase):
             active = gpu.render(sample, 160)
             failure = gpu.render(sample, 160, error=True)
         self.assertEqual(active["class"], "active")
-        self.assertEqual(active["text"], "GPU:12%|0.5GiB")
+        self.assertEqual(active["text"], GPU_ICON + " 12%")
+        self.assertNotIn("|", active["text"])
+        self.assertNotIn("GiB", active["text"])
+        self.assertIn("RTX 5060", idle["tooltip"])
         self.assertIn("8.0 GiB", active["tooltip"])
         self.assertIn("12:34:56", active["tooltip"])
         self.assertEqual(failure["class"], "unavailable")
@@ -246,8 +250,8 @@ m.main()
         time.sleep(0.16)
         self.assertEqual(self.calls(), [])
         self.click()
-        self.assertEqual(self.until(process, "active")["text"], "GPU:12%|0.5GiB")
-        self.assertEqual(self.until(process, "idle")["text"], "GPU")
+        self.assertEqual(self.until(process, "active")["text"], GPU_ICON + " 12%")
+        self.assertEqual(self.until(process, "idle")["text"], GPU_ICON)
         count = len(self.calls())
         self.assertGreater(count, 1)
         time.sleep(0.2)
@@ -299,16 +303,16 @@ m.main()
         self.until(process, "active")
         self.mode.write_text("fail")
         error = self.until(process, "unavailable")
-        self.assertEqual(error["text"], "GPU:12%|0.5GiB")
+        self.assertEqual(error["text"], GPU_ICON + " 12%")
         self.assertIn("не текущие", error["tooltip"])
-        self.assertEqual(self.until(process, "idle")["text"], "GPU")
+        self.assertEqual(self.until(process, "idle")["text"], GPU_ICON)
         count = len(self.calls())
         time.sleep(0.2)
         self.assertEqual(len(self.calls()), count)
 
         # A new window must not resurrect the previous window's stale figures.
         self.click()
-        self.assertEqual(self.until(process, "unavailable")["text"], "GPU")
+        self.assertEqual(self.until(process, "unavailable")["text"], GPU_ICON)
         self.until(process, "idle")
 
     def test_timeout_reaps_fake_query_and_window_expires(self):

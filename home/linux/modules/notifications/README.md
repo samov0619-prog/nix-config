@@ -58,6 +58,14 @@ therefore not proof of completed pairing. Its installed `BluezAgent.py` and
 dialog, including pairing and service authorization, with no daemon restart.
 
 This changes **all Blueman notification presentation**, not just mouse pairing.
+For the two laptops, `pkgs/blueman-polkit/notification-timeout.patch` now prepares
+3-second expiry of informational GTK dialogs, because upstream ignores their
+timeout argument. Explicit positive/zero timeouts are honored; dialogs with
+buttons remain pending. This is a NixOS package change, not a Mako timeout rule.
+See `pkgs/blueman-polkit/README.md` for contracts, removal checks and application.
+The user applied and accepted the initial 15-second expiry, then requested three
+seconds; that final duration is not yet applied/live-accepted. Mako's general
+15-second default is unchanged. No new notification daemon route is added.
 Other apps still use Mako; no Bluetooth trust, device keys, driver, power or
 audio policy is changed. The user reports successful mouse setup after the manual
 equivalent, `dconf write /org/blueman/general/notification-daemon false`.

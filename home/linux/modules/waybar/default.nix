@@ -15,7 +15,7 @@ let
   '';
   diskStatus = pkgs.writeShellScriptBin "waybar-disk-status" ''
     exec ${pkgs.python3}/bin/python3 ${./scripts/disk-status.py} \
-      --path ${lib.escapeShellArg config.home.homeDirectory}
+      --path ${lib.escapeShellArg config.home.homeDirectory} "$@"
   '';
 in
 {
@@ -27,8 +27,8 @@ in
   };
 
   xdg.configFile = {
-    "waybar/style-dark.css".source = ./style-dark.css;
-    "waybar/style-light.css".source = ./style-light.css;
+    "waybar/style-dark.css".source = lib.mkDefault ./style-dark.css;
+    "waybar/style-light.css".source = lib.mkDefault ./style-light.css;
     "waybar/style.css".source = ./style.css;
     "waybar/scripts/disk-status".source = "${diskStatus}/bin/waybar-disk-status";
     "waybar/scripts/battery-notify".source = "${batteryNotify}/bin/waybar-battery-notify";

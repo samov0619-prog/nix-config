@@ -145,10 +145,10 @@ def collect(directory, deadline, command):
 
 
 def render(sample, deadline, error=False):
-    text = "GPU"
-    lines = []
+    text = "<span font_family='NotoSansM Nerd Font Propo' size='x-large'>󰢮</span>"
+    lines = ["NVIDIA GeForce RTX 5060 Laptop GPU"]
     if sample is not None and deadline is not None:
-        text += f":{sample['utilization']:.0f}%|{sample['used'] / 1024:.1f}GiB"
+        text += f" {sample['utilization']:.0f}%"
         lines.extend([
             f"Загрузка NVIDIA: {sample['utilization']:.0f}%",
             f"VRAM: {sample['used'] / 1024:.1f} / {sample['total'] / 1024:.1f} GiB",

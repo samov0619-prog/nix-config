@@ -46,7 +46,7 @@ class DiskStatusTests(unittest.TestCase):
             f"1 2 {read} 4 5 6 {written} 8 9 {busy} 11 12 13 14 15 16 17\n"
         )
 
-    def collect(self, previous=None, timestamp=10):
+    def collect(self, previous=None, timestamp=10, compact=False):
         real_stat = os.stat
 
         def stat(path, *args, **kwargs):
@@ -62,7 +62,8 @@ class DiskStatusTests(unittest.TestCase):
             disk.os, "statvfs", return_value=space
         ):
             return disk.collect(
-                "/fixture-home", previous, sysfs=self.sysfs, clock=lambda: timestamp
+                "/fixture-home", previous, sysfs=self.sysfs, clock=lambda: timestamp,
+                compact=compact,
             )
 
     def test_partition_uses_whole_device_and_kernel_fields(self):
@@ -108,6 +109,30 @@ class DiskStatusTests(unittest.TestCase):
         busy = disk.Counters("sda", old.identity, 15, 100, 200, 10300)
         self.assertEqual(disk.rates(old, idle), (0, 0, 0))
         self.assertEqual(disk.rates(old, busy), (100, 0, 0))
+
+    def test_compact_preserves_capacity_and_model_in_tooltip_only(self):
+        (self.device / "device").mkdir()
+        (self.device / "device/model").write_text("Fixture NVMe <1>\n")
+        first, previous = self.collect(compact=True)
+        self.assertEqual(first["text"], "—")
+        self.write_stats(10340, 20680, 2800)
+        output, _ = self.collect(previous, timestamp=15, compact=True)
+        self.assertEqual(output["text"], "50%")
+        self.assertIn("20.0 / 100.0 GiB", output["tooltip"])
+        self.assertIn("Model: Fixture NVMe &lt;1&gt;", output["tooltip"])
+        self.assertIn("Read: 1.0 MiB/s", output["tooltip"])
+        (self.device / "slaves/stacked").touch()
+        unavailable, _ = self.collect(compact=True)
+        self.assertEqual(unavailable["text"], "—")
+        self.assertIn("20.0 / 100.0 GiB", unavailable["tooltip"])
+
+    def test_compact_cli_reports_failure_without_fake_zero(self):
+        result = subprocess.run(
+            [sys.executable, "-B", str(ROOT / "scripts/disk-status.py"),
+             "--path", str(self.sysfs / "missing"), "--compact", "--samples", "1"],
+            check=True, capture_output=True, text=True, timeout=5,
+        )
+        self.assertEqual(json.loads(result.stdout)["text"], "—")
 
     def test_counter_reset_nonpositive_time_and_replacement_rebaseline(self):
         _, old = self.collect()
@@ -181,7 +206,8 @@ class DiskStatusTests(unittest.TestCase):
             self.assertNotIn("interval", custom)
             self.assertNotIn("signal", custom)
             self.assertNotIn("tooltip-format", custom)
-            self.assertEqual(custom["exec"], "~/.config/waybar/scripts/disk-status")
+            command = "~/.config/waybar/scripts/disk-status"
+            self.assertEqual(custom["exec"], command + (" --compact" if host == "laptop" else ""))
 
 
 if __name__ == "__main__":
