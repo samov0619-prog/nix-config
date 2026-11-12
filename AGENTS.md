@@ -515,6 +515,35 @@ live SSH does not persist and the target does not enable an SSH server.
   Закрывать все клиенты заранее не обязательно; restart прерывает серверные задачи.
   После замены binary переоткрыть TUI. Обычные config edits не требуют restart.
   Runtime smoke с HM generation проверяет загрузку ссылок в новом процессе.
+- `/delegated-review` is a portable Markdown command in `commands/`, declared for HM installation
+  without replacing built-in `/review`. The existing general-purpose `review`
+  agent reads `config/review-system.md`, retaining model routing and read-only
+  permissions. The command owns immutable scope/fingerprint, minimal independent
+  handoff and bounded same-child recovery: initial plus six shared continuations/
+  replacements/report repairs, transient-error waits 20/40/60/90/120/120s and a
+  10-minute no-progress recovery limit. Never duplicate a running child or infer
+  completion from a file read/native idle/text alone. Incomplete coverage has no
+  final verdict. Shared counters explicitly count report repairs (INCOMPLETE +
+  continuation = 1/6 additional used); provider retries only select backoff. Exact
+  canonical JSON `dr-scope-v1` plus executable hash recipe replaces ambiguous NUL
+  descriptions; never brute-force a missing recipe. No plugin/permanent checkpoints
+  or corporate edits. A user-run Big Pickle test and read-only audit confirm
+  same-child INCOMPLETE → COMPLETE, not provider recovery or perfect compliance.
+  Six settings/static/hash-recipe, two Git-offline and four fixture-unit tests
+  pass. The approved private native HTTP-429 fixture passes: one native retry;
+  eleven failures exhaust ten retries, then actual sleep 20 and same-child
+  continuation preserve one read without rereading. Scripted mock decisions do
+  not prove real-model compliance or full-budget/replacement recovery. A second
+  Big Pickle smoke confirms waiting, two-file scope/hash, 1/7 and complete report
+  preservation, but took 400s and wrote an external temporary helper. Follow-ups
+  clarify first-invocation-only initialization, forbid agent-created temporary
+  review artifacts (not native runtime storage), and explicitly bar all final
+  verdicts for incomplete coverage. These new guards are not new live acceptance.
+  Minimal Mac transfer can preserve corporate model/permissions without home
+  plugins/binary patches. A separate four-file package (including a Russian human
+  guide) is in `~/Downloads/delegated-review-mac-2026-11-12/`, outside Git; original
+  drafts and corporate config are untouched, no Mac acceptance yet. No agent build/
+  activation. See `home/apps/opencode/DELEGATED-REVIEW.md`.
 - Глобального formatter и его CLI-зависимостей в OpenCode нет. Короткое правило в
   `config/AGENTS.md` требует использовать объявленный проектом CLI только для
   изменённых файлов; без правил сохранять оформление, без global fallback или

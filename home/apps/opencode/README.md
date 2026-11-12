@@ -15,6 +15,7 @@ opencode/
 ├── default.nix              # Home Manager: подключение и установка файлов
 ├── package.nix              # pinned binary, patches и Linux runtime libraries
 ├── config/                  # native V2 settings и устанавливаемые глобальные AGENTS.md
+├── commands/                # переносимые Markdown-команды, без README внутри
 ├── plugins/                 # server plugins и TUI plugins
 │   └── model-routing/       # tui.ts, общая policy и единая таблица моделей
 ├── patches/                 # binary patches и общий session-attention.ts
@@ -409,6 +410,40 @@ Nix references. Для todo эта причина не установлена: �
 сессии и её directory в `$XDG_RUNTIME_DIR/hypr-spaces/apps/`, включая rename и
 route changes без prompt. PID/starttime/Kitty pane и cleanup сохранены.
 Модельных запросов и чтения message history нет.
+
+## Независимое /delegated-review
+
+HM устанавливает `commands/delegated-review.md`; `agents.review` читает общий
+`config/review-system.md`, сохраняя прежние model routing и permissions.
+Команда передаёт минимальный хэндофф отдельному ревьюеру, фиксирует scope/fingerprint
+и сначала продолжает того же ребёнка при terminal provider failure. До шести
+дополнительных вызовов делят один бюджет: паузы 20/40/60/90/120/120 с, предел
+10 минут без подтверждённого прогресса. Работающему ребёнку не отправляется
+дубликат; при недоказанном завершении или исчерпании бюджета — incomplete без
+выдуманного вердикта. Это инструкции для модели, не программный retry scheduler.
+Report repair тоже тратит дополнительный слот: INCOMPLETE + continuation = 2/7
+вызовов, 1/6 дополнительных использован, осталось 5, provider retries 0. Отдельный
+provider retry counter выбирает backoff, не увеличивая общий бюджет. Fingerprint
+имеет точный canonical JSON формат `dr-scope-v1` и Python-рецепт в самой команде;
+handoff передаёт JSON целиком, без угадывания shell/NUL-кодировки.
+
+`review` по-прежнему подходит для других независимых проверок changes/claims.
+Встроенная `/review` не заменяется, корпоративный конфиг не меняется. Лёгкие тесты
+вычисляют реальные Nix settings, исполняют hash-рецепт и статически проверяют
+command/wiring. Пользовательский тест подтвердил same-child INCOMPLETE → COMPLETE
+на Big Pickle, не provider recovery. Отдельный согласованный opt-in native mock
+успешно проверил HTTP 429/native retry и terminal failure → пауза 20 с → same-child
+recovery с сохранённым read result без повторного чтения. Скриптовые решения mock
+не проверяют реальную модельную политику или полный recovery budget. Применение — только HM,
+без binary patch или restart сервиса. Полный контракт, API evidence и порядок
+проверки — [DELEGATED-REVIEW.md](DELEGATED-REVIEW.md).
+
+Второй пользовательский Big Pickle smoke подтвердил ожидание команды, точный
+двухфайловый scope/hash, один вызов и правильные counters, без потери отчёта.
+Он занял 6 мин 40 с и создал временный helper вне проекта. Последующие правки
+запрещают такие artifacts у обоих агентов, уточняют однократную инициализацию
+ledger и явно запрещают APPROVE/REQUEST_CHANGES/BLOCKER при incomplete.
+Новые формулировки покрыты static guards, не новым real-model/Mac smoke.
 
 ## Permissions и отчёты
 

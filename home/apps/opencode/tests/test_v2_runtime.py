@@ -24,6 +24,7 @@ SOURCE = Path(__file__).resolve().parents[1]
 
 class MockResponses(BaseHTTPRequestHandler):
     requests = []
+    reply = "Mock response"
     paths = []
     fail_next = False
     fail_status = 400
@@ -47,7 +48,7 @@ class MockResponses(BaseHTTPRequestHandler):
                 b'{"error":{"type":"invalid_request_error","message":"fixture unavailable"}}'
             )
             return
-        reply = "Mock response"
+        reply = self.reply
         if "You MUST use this format for your response" in json.dumps(body):
             reply = "\n\n".join(
                 f"{heading}\n- Fixture"

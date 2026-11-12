@@ -4,6 +4,84 @@ Pinned upstream: 2.1.4, `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`.
 Historical model-quality experiments and V1 behavior are retained in
 [archive/v1/BENCHMARK.md](archive/v1/BENCHMARK.md). They do not measure V2 quality.
 
+## Delegated review configuration (2026-11-12)
+
+HM now declares `commands/delegated-review.md`; the existing `review` agent reads
+`config/review-system.md`, retaining its configured model route, subagent mode
+and edit/subagent/todowrite denials. No other agent, model table, binary patch,
+plugin or corporate configuration is changed. Original Downloads artifacts and
+the separate portable draft are preserved. See [DELEGATED-REVIEW.md](DELEGATED-REVIEW.md).
+
+Initially four lightweight tests in `tests/test_delegated_review.mjs` passed: actual standalone
+Nix settings evaluation validates the loaded prompt/model/permissions; text guards
+validate the command's orchestrator/no-model frontmatter, HM source declaration,
+bounded recovery and incomplete-report instructions. Text guards do NOT execute
+recovery or prove model compliance. The source-derived semantics are from pinned
+2.1.4, not a runtime concurrency experiment. Nixfmt 1.5.0 is available; Prettier is
+unavailable, with no substitute formatter. Both existing Git-offline fixtures
+also passed; command bytes and reviewer body then matched the separate portable
+draft (subsequent refinements are repository-only). At that initial stage no build,
+activation, native command discovery, model call, mock failure/recovery or live
+provider test was run.
+
+Subsequent user-run acceptance and read-only audit: parent session
+`ses_e2eec9478ffe7dZYLjivJYJUzY` and child `ses_e2ee8930affeXoIdg31nKcD8jM`
+show actual same-child INCOMPLETE → continuation → COMPLETE. All recorded HTTP
+responses were 200; transport records show Big Pickle for parent and reviewers,
+despite the child's stored configured model field showing Sol. A premature child
+was interrupted after user correction before the actual command. Tracked diff
+and the two relevant untracked-file hashes match the start of the test; no repo
+edits/commits/builds/activations appear in the complete inspected tool history.
+Two temporary files outside the project were written. This is not proof of a
+sandbox, provider-failure recovery or complete instruction compliance.
+
+The audit also found incorrect shared-budget reporting, an underspecified hash
+recipe and staged/untracked confusion. The revised command/profile now require
+canonical `dr-scope-v1` JSON plus exact recipe (no brute-force encodings), explicit
+invocation/additional/provider counters and no premature run on a preparation
+request. A partial-report continuation consumes one of six additional slots;
+provider retry count only selects backoff and never adds slots. Five settings/
+instruction/hash-recipe tests, two Git-offline tests and four cheap fixture-unit
+checks pass. These are not proof of revised model compliance. Prettier/Ruff are
+unavailable; no replacement formatter is used.
+
+After explicit approval, `tests/test_delegated_review_runtime.py` passed both
+native cases with the installed binary: private HOME/XDG/project/server and local
+Responses mock, actual command discovery/expansion and native subagent/read/shell
+tools. One HTTP 429 was absorbed within a single child invocation. Eleven HTTP
+429s exhausted the pinned ten native retries; the scripted parent received the
+terminal error, ran actual `sleep 20` and resumed the same child. Both cases have
+one child and one completed read, with the result preserved without rereading.
+The terminal case's invocation gap is 20.304s. All 5/17 HTTP requests respectively
+used the mock `big-pickle` model ID, not a live provider. Private artifacts:
+`/tmp/opencode/delegated-review-runtime-yjqaiucn/`; exact session IDs are in
+DELEGATED-REVIEW.md. Two earlier harness failures did not reach these cases:
+missing optional MCP (`_lpe8fpp`) and discovery before asynchronous activation
+(`8hk0s7oh`). Optional-key handling, bounded discovery waiting and setup cleanup
+are corrected; the latter also has a unit regression. Native phase remains bounded
+to 240s, plus short setup/cleanup. No builds, activation or shared-service changes.
+This tests transport/native mechanisms, not real-model orchestrator choices,
+completed review analysis, later backoff steps, missing-ID/replacement recovery or
+exhaustion of the seven-invocation/ten-minute command budget.
+
+A second user-run Big Pickle smoke (parent `ses_e2ecce9dbffeYUvXNihLTXgmdv`,
+child `ses_e2ecac52bffexPSz0g6i9k9QUd`) confirms waiting for the actual command,
+one reviewer invocation, exact two-file scope and reproducible fingerprint,
+correct 1/7, 0/6, six remaining, zero provider retries, and preservation of the
+complete report/findings. Transport logs show Big Pickle only, with 8/7 parent/
+child HTTP responses all 200. Runtime was 400.301s overall, 275.785s in the child:
+small scope did not mean short reasoning. The parent wrote a temporary helper
+script outside the repository; this was not strictly write-free. No project edits.
+Private audit: `/tmp/opencode/delegated-review-live-audit-kq76wlnx/`.
+
+User-authorized follow-ups now clarify initialization before the first invocation
+only, prohibit agent-created temporary review artifacts for parent/reviewer and
+explicitly forbid all three final verdicts for incomplete coverage. Six settings/
+instruction/hash tests, two Git-offline tests and four fixture-unit tests pass.
+These guards are not a new real-model run of the stricter artifact restriction.
+The previous native mock still covers unchanged transport mechanisms, not revised
+prompt compliance; it was not rerun. No build, activation or corporate Mac edits.
+
 ## Background-tab attention ownership (2026-11-12)
 
 The user isolated missing audio/outer urgency to inactive internal OpenCode tabs.

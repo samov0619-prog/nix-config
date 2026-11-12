@@ -133,14 +133,9 @@ in
     review = {
       model = model "review";
       mode = "subagent";
-      description = "Independent read-only review when a separate correctness or regression analysis is justified.";
+      description = "Independent read-only review of delegated changes or claims, with evidence and explicit coverage.";
       permissions = analysisPermissions;
-      system = ''
-        Review only the delegated change or claim. Do not edit files or delegate further.
-        Prioritize concrete correctness issues and regressions, with file:line evidence,
-        impact and a reproducible check where possible. Separate verified findings from
-        hypotheses; report coverage gaps and say explicitly when no issue was found.
-      '';
+      system = builtins.readFile ./review-system.md;
     };
     explore = {
       model = model "explore";
