@@ -38,6 +38,14 @@ Home Manager применены пользователем. Этот списо�
 - [x] [Конфигурация защиты батареи](battery.md) применена: Waybar 15%/2%, active
       UPower, `GetCriticalAction=Hibernate`, installed INI 15/5/2.
       **Фактическое действие на низком заряде не проверено**, достаточность 2% не гарантирована.
+- [x] Пользователь принял новые тайминги/поведение уведомлений: общий Mako 15 секунд,
+      persistent battery/recording и трёхсекундные full/transcribed notices.
+      Это не проверка всех battery/error/charging сценариев или других хостов.
+      Подробности: `home/linux/modules/notifications/README.md`.
+- [x] Мышь ThinkBook успешно сопряжена/подключена по сообщению пользователя после
+      ручного включения штатных диалогов Blueman вместо Mako. Та же настройка теперь
+      задана в HM для трёх GUI-профилей, её применение отдельно ещё не подтверждено.
+      Это не приёмка автоматического reconnect/resume или исправление всех Bluetooth errors.
 - [x] Обновлённый update-helper установлен. Inventory checker `unchanged=26`
       означал совпадение fingerprints, не свежую upstream/аппаратную проверку.
       Реальный полный update/build цикл с новым hook агент не запускал.

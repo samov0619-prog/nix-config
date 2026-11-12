@@ -50,7 +50,7 @@ class VoiceDictateTests(unittest.TestCase):
             )
             (root / "transcript.txt").write_text(text)
             # Limit PATH to mocks and explicit local text/file utilities.
-            for name in ("cat", "rm", "mkdir", "tr", "sed", "sleep"):
+            for name in ("cat", "rm", "mkdir", "tr", "sed", "sleep", "flock"):
                 (binaries / name).symlink_to(shutil.which(name))
             scripts = {
                 "whisper-cli": """
@@ -64,15 +64,29 @@ class VoiceDictateTests(unittest.TestCase):
                 """,
                 "wl-copy": """
                     import json
+                    import os
                     import sys
                     from pathlib import Path
+                    try:
+                        os.fstat(9)
+                    except OSError:
+                        pass
+                    else:
+                        raise SystemExit("clipboard must not inherit the toggle lock")
                     Path("clipboard-argv.json").write_text(json.dumps(sys.argv[1:]))
                     Path("copied.bin").write_bytes(sys.stdin.buffer.read())
                 """,
                 "wtype": """
                     import json
+                    import os
                     import sys
                     from pathlib import Path
+                    try:
+                        os.fstat(9)
+                    except OSError:
+                        pass
+                    else:
+                        raise SystemExit("input client must not inherit the toggle lock")
                     Path("wtype-argv.json").write_text(json.dumps(sys.argv[1:]))
                     Path("typed.bin").write_bytes(sys.stdin.buffer.read())
                 """,
@@ -81,6 +95,13 @@ class VoiceDictateTests(unittest.TestCase):
                     import sys
                     from pathlib import Path
                     with Path("notifications.jsonl").open("a") as stream:
+                        stream.write(json.dumps(sys.argv[1:]) + "\\n")
+                """,
+                "notification-close": """
+                    import json
+                    import sys
+                    from pathlib import Path
+                    with Path("closed.jsonl").open("a") as stream:
                         stream.write(json.dumps(sys.argv[1:]) + "\\n")
                 """,
                 "pw-record": """
@@ -115,6 +136,10 @@ class VoiceDictateTests(unittest.TestCase):
                 ["-0 424242", "-INT 424242", "-0 424242"],
             )
             notification_path = root / "notifications.jsonl"
+            self.assertEqual(
+                json.loads((root / "closed.jsonl").read_text()),
+                ["--app-name=Voice dictate", "--category=voice-dictate.recording.424242"],
+            )
             output = {
                 "exit": result.returncode,
                 "stderr": result.stderr,
@@ -138,7 +163,7 @@ class VoiceDictateTests(unittest.TestCase):
         self.assertIsNone(output["copied.bin"])
         self.assertIsNone(output["typed.bin"])
         self.assertEqual(
-            output["notifications"], [["Voice dictate", message, "-u", "critical"]]
+            output["notifications"], [["Voice dictate", message, "-u", "critical", "--expire-time=15000"]]
         )
 
     def test_whisper_failure_removes_audio_and_notifies(self):
@@ -161,7 +186,7 @@ class VoiceDictateTests(unittest.TestCase):
         self.assertFalse(output["audio_remains"])
         self.assertEqual(
             output["notifications"],
-            [["Voice dictate", "Transcribed and copied to clipboard"]],
+            [["Voice dictate", "Transcribed and copied to clipboard", "--expire-time=3000"]],
         )
 
     def test_literal_unicode_quotes_and_shell_characters(self):
@@ -188,7 +213,7 @@ class VoiceDictateTests(unittest.TestCase):
         self.assertIsNone(output["copied.bin"])
         self.assertEqual(
             output["notifications"],
-            [["Voice dictate", "No audio was recorded", "-u", "critical"]],
+            [["Voice dictate", "No audio was recorded", "-u", "critical", "--expire-time=15000"]],
         )
 
     def test_recognizer_options_are_unchanged(self):

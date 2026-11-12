@@ -14,6 +14,7 @@
     ../modules/ardour
     ../modules/tofi
     ../modules/waybar
+    ../modules/notifications
   ];
   home.packages = with pkgs; [
     rose-pine-hyprcursor
@@ -35,16 +36,16 @@
   # Existing media keys use playerctl/MPRIS; mpv needs this interface explicitly.
   programs.mpv.scripts = [ pkgs.mpvScripts.mpris ];
 
+  # Blueman's named Confirm/Deny actions have no default click action in Mako.
+  # Use its native dialogs instead, including pairing/service authorization.
+  dconf.settings."org/blueman/general".notification-daemon = false;
+
   # EasyEffects adds PipeWire effects (e.g. EQ/noise reduction), not basic audio.
   # Disabled until a specific effect is needed and configured deliberately.
   # services.easyeffects.enable = true;
   services.udiskie = {
     enable = true;
     settings.program_options.menu = "smart";
-  };
-  services.mako = {
-    enable = true;
-    settings.default-timeout = 60000;
   };
   services.filemanager1-common = {
     enable = true;

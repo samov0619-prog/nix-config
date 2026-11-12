@@ -34,7 +34,7 @@ assert lib.all (line: lib.hasInfix line ini) [
   "PercentageAction=2"
   "CriticalPowerAction=Hibernate"
 ];
-assert lib.hasInfix ''"states": { "warning": 15, "critical": 2 }'' bar;
+assert lib.hasInfix ''"states": { "warning": 15, "critical": 2, "normal": 99, "full": 100 }'' bar;
 assert !(lib.hasInfix "hibernate" bar);
 assert cfg.services.power-profiles-daemon == baseline.services.power-profiles-daemon;
 assert cfg.services.logind.settings == baseline.services.logind.settings;

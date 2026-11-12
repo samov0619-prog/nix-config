@@ -77,6 +77,11 @@ Lenovo follows the same procedure after its installation blockers are resolved.
 
 ## Other panel and menu helpers
 
+- `scripts/battery-notify.sh` is shared by Lenovo/Acer native battery events:
+  warning/critical remain until dismissal/charging, full lasts 3 seconds, and
+  warning sounds do not change volume/mute. Host thresholds stay 15/2 and 30/15.
+  Default Mako notices and dictation follow the shared lifecycle described in
+  `home/linux/modules/notifications/README.md`, including HM application/checks.
 - `nix-updates-view.sh` reads the local cache and compares its lock hash with
   `NIX_FLAKE/flake.lock`. A missing workspace/environment/lock means **unknown**,
   never a still-valid cached clean/pending result. It performs no network request.
