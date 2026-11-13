@@ -27,7 +27,7 @@ NixOS и HM управляются раздельно: NixOS через `nixosCo
 
 ### NixOS-хосты
 
-|              | laptop-old (Acer)                                   | desktop                         | server                                 |
+|              | laptop-old (Acer)                                  | desktop                         | server                                 |
 | ------------ | -------------------------------------------------- | ------------------------------- | -------------------------------------- |
 | CPU          | Intel                                              | AMD                             | VPS                                    |
 | GPU          | Intel iGPU + NVIDIA PRIME                          | NVIDIA only                     | —                                      |
@@ -723,13 +723,33 @@ live SSH does not persist and the target does not enable an SSH server.
   `/checkpoint` — явный reviewed handoff request, `/checkpoint-reset` — pending.
   `Checkpoint +/✓` всегда отображается и означает agent-reported смысловую готовность,
   не Git status. Review → fixes → repeat review до отсутствия blockers; Git commit
-  только при разрешении, без Git — связный код/текст и resume plan. Plan не обходит.
+  только по отдельному прямому запросу пользователя; `/checkpoint` больше не
+  разрешает его. Без запроса reviewed изменения остаются незакоммиченными с
+  перечислением в handoff, что не блокирует готовность. Native `git commit`
+  permission — Ask (не выдавать Always); остальные Git-команды без изменений.
+  Без Git — связный код/текст и resume plan. Plan не обходит.
   Checkpoint state — session metadata; private hashed account cache — XDG state.
   `Session.Info.metadata` необязательно: отсутствие означает pending; server hooks
   не должны ломать prompt/tool admission. `checkpoint_ready` — direct tool с
   `codemode: false`. Unit/mock и узкий native runtime `test_v2_runtime.py --limits`
   покрывают отсутствие metadata, prompt/tool и создание/сброс checkpoint; живой
   OAuth/quota, installed HM layout и настоящий TUI/PTY не проверены. См. README.
+  Prepared reconnect fix replaces the one-shot RPC subscription with the host's
+  reconnecting data stream and refreshes limits/checkpoint on server.connected.
+  Current Lenovo cache/RPC were fresh while the old TUI remained frozen after
+  the logged 00:55 UTC disconnect; pinned RPC/SharedEvents reproduce the failure
+  with mocked transport. The targeted 22 unit/declaration/TUI-fixture checks pass,
+  not live fixed UI acceptance. No restart, build, activation or commit by agent.
+  The changed store plugin directory needs the established post-HM service restart
+  and TUI reopen in a later user-chosen maintenance window, not now or via /reload.
+- `/permissions` is a prepared TUI-only saved-Always manager for the current native
+  project ID, not configured policy. Arrows select, Ctrl+D twice deletes by ID;
+  navigation disarms, q/Esc closes. Frozen scope, fresh pre-delete validation and
+  lifecycle guards cannot make the ID-only API atomic or undo dispatched DELETE.
+  Fourteen actual-controller/HM-declaration/TSX public-API fixture tests pass, not
+  native TUI/PTY/installed-generation acceptance. No live grants deleted, service
+  restart, build, activation or commit by agent. Apply HM/reopen TUI; the separate
+  limits/server changes still need their later maintenance window. See README.
 - Audio — только native notifications/OpenTUI; mutable `cli.json` seeded once,
   `attention.sound`/volume/custom permission/done/error sounds. Старые V1
   notifications/mute plugins не устанавливаются. `quiet-urgency.ts` независимо

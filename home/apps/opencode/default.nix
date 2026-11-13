@@ -33,6 +33,11 @@ let
     cp ${./plugins/limits/rpc.ts} "$out/rpc.ts"
     cp ${./plugins/limits/writer.ts} "$out/writer.ts"
   '';
+  permissionsPlugin = pkgs.runCommand "opencode-permissions-plugin" { } ''
+    mkdir -p "$out"
+    cp ${./plugins/permissions/tui.tsx} "$out/tui.tsx"
+    cp ${./plugins/permissions/state.ts} "$out/state.ts"
+  '';
   # Keep runtime imports/assets in the plugin closure, not in the flake's
   # temporary source snapshot (replaceVars does not retain those references).
   quietUrgencyPlugin = pkgs.runCommand "opencode-quiet-urgency-plugin" { } ''
@@ -124,6 +129,7 @@ in
       serverPlugin "permission-stats" ./plugins/permission-stats.ts;
     "opencode/plugins/model-calls-v2".source = serverPlugin "model-calls" ./plugins/model-calls.ts;
     "opencode/plugins/limits-v2".source = limitsPlugin;
+    "opencode/plugins/permissions".source = permissionsPlugin;
     "opencode/plugins/skill-stats-v2".source = serverPlugin "skill-stats" ./plugins/skill-stats.ts;
     "opencode/sounds/permission.wav".source = permissionSound;
     "opencode/sounds/completion.mp3".source = ./sounds/completion-sound.mp3;

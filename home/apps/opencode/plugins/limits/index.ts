@@ -545,7 +545,7 @@ export async function setup(ctx: Plugin.Context) {
           // The checkpoint instruction calls this tool directly, not via Code Mode.
           options: { codemode: false },
           description:
-            "Mark a requested handoff checkpoint ready only AFTER review → fixes → repeat review finds no known handoff blockers. With Git, commit authorized task changes first; without Git, finish a coherent code/text boundary. Provide checks/limitations and a resume plan. Never claim unrun checks passed. This does not authorize edits, builds, extra agents or commits in Plan mode. Then stop at the checkpoint.",
+            "Mark a requested handoff checkpoint ready only AFTER review → fixes → repeat review finds no known handoff blockers. Create a Git commit only if the user separately explicitly requested it; otherwise leave reviewed changes uncommitted and identify them in the handoff. Finish a coherent code/text boundary. Provide checks/limitations and a resume plan. Never claim unrun checks passed. This does not authorize edits, builds, extra agents or commits in Plan mode. Then stop at the checkpoint.",
           input: {
             type: "object",
             properties: {
@@ -558,7 +558,7 @@ export async function setup(ctx: Plugin.Context) {
                 type: "string",
                 maxLength: 200,
                 description:
-                  "Local commit ID, or why no commit applies (no Git, no changes, reviewed Plan).",
+                  "Local commit ID, or why no commit was made (not requested, no Git, no changes, reviewed Plan); identify any uncommitted task changes.",
               },
             },
             required: [

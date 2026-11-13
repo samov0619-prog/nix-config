@@ -465,7 +465,8 @@ test("server integration: shared TTL/cache, dynamic workers/waits, checkpoint re
         checks: "Unit checks passed; target UI not tested",
         resume: "Continue with integration validation",
         reviewPassed: true,
-        commit: "No Git: text handoff",
+        commit:
+          "Not requested: reviewed changes remain uncommitted in task.txt",
       },
       { sessionID: "ses_one" },
     );
@@ -474,6 +475,14 @@ test("server integration: shared TTL/cache, dynamic workers/waits, checkpoint re
       true,
     );
     assert.equal(one.sessions.get("ses_one").metadata.unrelated, "keep");
+    assert.match(
+      one.sessions.get("ses_one").metadata[checkpointKey].commit,
+      /Not requested: reviewed changes remain uncommitted/,
+    );
+    assert.match(
+      ready.description,
+      /only if the user separately explicitly requested it/,
+    );
     assert.equal(
       (await one.rpc.status({})).mode,
       "wrap",
@@ -514,6 +523,12 @@ test("server integration: shared TTL/cache, dynamic workers/waits, checkpoint re
     );
     assert.match(checkpointRequest, /review again/);
     assert.match(checkpointRequest, /Plan mode do not edit or commit/);
+    assert.match(
+      checkpointRequest,
+      /this checkpoint request does not authorize one/,
+    );
+    assert.match(checkpointRequest, /uncommitted.*does not block readiness/);
+    assert.doesNotMatch(checkpointRequest, /this request authorizes/);
     assert.ok(one.emitted > 0);
   } finally {
     await stopOne?.();

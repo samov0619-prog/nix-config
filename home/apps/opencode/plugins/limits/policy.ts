@@ -115,8 +115,8 @@ export const checkpointRequest =
   "Prepare a handoff checkpoint for the current task. Do not expand scope. " +
   "Review the work, fix blocking findings, then review again; repeat until there are no known handoff blockers. " +
   "Respect existing permissions: this does not authorize builds, deployment, or extra agents. " +
-  "If Git is available and there are task changes, create a local commit containing only those changes " +
-  "(this request authorizes that local checkpoint commit, but never a push). " +
+  "Create a Git commit only after a separate explicit user request to commit; this checkpoint request does not authorize one. " +
+  "If no commit was requested, leave reviewed changes uncommitted and identify them in the handoff; this does not block readiness. " +
   "Without Git, bring the code/text to a coherent stopping point. " +
   "Report completed checks, unrun checks, limitations, and where to resume. " +
   "In Plan mode do not edit or commit; hand off the reviewed plan instead. " +

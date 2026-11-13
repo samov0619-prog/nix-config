@@ -1,4 +1,4 @@
-{ lib }:
+{ ... }:
 let
   routes = builtins.fromJSON (builtins.readFile ../plugins/model-routing/routing-models.json);
   model =
@@ -39,6 +39,17 @@ in
   update = "disable";
   share = "disabled";
   model = model "*";
+  permissions =
+    map
+      (resource: {
+        action = "shell";
+        inherit resource;
+        effect = "ask";
+      })
+      [
+        "git commit *"
+        "git * commit *"
+      ];
   policies = [
     {
       action = "provider.use";
@@ -104,8 +115,8 @@ in
         "shell:git * remote show -n*"
         "shell:git * remote show * -n*"
       ];
-  # Other tools retain the native V2 permission baseline. The shell hook also
-  # disables Git transports and lazy fetch, independently of remembered Always.
+  # Apart from explicit commit approval, retain the native V2 permission baseline.
+  # The shell hook disables Git transports and lazy fetch, independently of remembered Always.
   providers.openai.models = {
     "gpt-6.1-sol" = reasoning [
       "high"

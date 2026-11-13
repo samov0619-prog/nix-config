@@ -92,6 +92,10 @@
 
 ## Git Workflow
 
+- Create Git commits ONLY after a separate explicit user request to commit the
+  current task changes. Review, completion and checkpoint requests do not authorize
+  a commit. Without that request, leave changes uncommitted and report their state.
+- Keep `git commit` permission at Ask; do not request or save Always approval for it.
 - Before creating a branch or commit, ALWAYS inspect the user's style with `git log --author="$(git config user.name)" --oneline --branches --remotes -n 15` and follow it.
 - ONLY ask for a task or ticket number when that history establishes it as the user's convention.
 - NEVER run Git operations against a remote, including `git push`, `git pull`, and `git fetch`. The user performs all remote operations, including those that require authentication. Ask the user to sync when remote state is required.

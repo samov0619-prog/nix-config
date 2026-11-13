@@ -14,6 +14,7 @@ export default Plugin.define({
     let again = false;
     const location = () => api.location ?? api.data.location.default();
     const sync = () => {
+      if (disposed) return Promise.resolve();
       if (pending) {
         again = true;
         return pending;
@@ -35,7 +36,9 @@ export default Plugin.define({
         });
       return pending;
     };
-    const stop = rpc.events.on("updated", () => {
+    // Use the host's reconnecting stream, not rpc.events.on's one-shot
+    // subscription, which ends permanently on a transport disconnect in 2.1.4.
+    const stop = api.data.on("rpc.local.limits.updated", () => {
       void sync();
     });
     void sync();
@@ -47,10 +50,20 @@ export default Plugin.define({
       const route = api.ui.router.current();
       return route.type === "session" ? route.sessionID : undefined;
     };
+    const syncCheckpoint = () => {
+      const id = sessionID();
+      if (!id || disposed) return;
+      api.data.session.invalidate(id);
+      void api.data.session.sync(id).catch(() => {});
+    };
     const stopMetadata = api.data.on("session.metadata.updated", (event) => {
-      if (event.data.sessionID !== sessionID()) return;
-      api.data.session.invalidate(event.data.sessionID);
-      void api.data.session.sync(event.data.sessionID).catch(() => {});
+      if (event.data.sessionID === sessionID()) syncCheckpoint();
+    });
+    const stopConnected = api.data.on("server.connected", () => {
+      // Events missed while disconnected are not replayed. Re-read both states
+      // once after reconnect, without introducing idle polling.
+      void sync();
+      syncCheckpoint();
     });
     const ready = () => {
       const id = sessionID();
@@ -203,6 +216,7 @@ export default Plugin.define({
       clearInterval(clock);
       stop();
       stopMetadata();
+      stopConnected();
       slots.forEach((remove) => remove());
     };
   },

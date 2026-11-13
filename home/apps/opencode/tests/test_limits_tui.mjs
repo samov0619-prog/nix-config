@@ -78,15 +78,20 @@ test(
       const { default: plugin } = await import(file);
       const commands = new Map();
       const slots = [];
+      const listeners = new Map();
       const metadata = {
         "local.checkpoint": { ready: false },
         unrelated: "keep",
       };
-      let callback,
-        metadataCallback,
-        confirmed = false,
+      let cachedMetadata = { ...metadata };
+      const callback = () => listeners.get("rpc.local.limits.updated")?.({});
+      const metadataCallback = (event) =>
+        listeners.get("session.metadata.updated")?.(event);
+      const connected = () => listeners.get("server.connected")?.({});
+      let confirmed = false,
         resets = 0,
         statusCalls = 0;
+      let metadataSyncs = 0;
       let prompts = [],
         stopped = 0,
         removed = 0;
@@ -110,11 +115,10 @@ test(
                 return { reset: true };
               },
               events: {
-                on(_name, fn) {
-                  callback = fn;
-                  return () => {
-                    stopped++;
-                  };
+                on() {
+                  assert.fail(
+                    "one-shot RPC subscriptions do not survive disconnects",
+                  );
                 },
               },
             };
@@ -134,14 +138,18 @@ test(
         data: {
           location: { default: () => ({ directory: "/no-git" }) },
           session: {
-            get: () => ({ metadata }),
+            get: () => ({ metadata: cachedMetadata }),
             invalidate() {},
-            async sync() {},
+            async sync() {
+              metadataSyncs++;
+              cachedMetadata = { ...metadata };
+            },
           },
-          on(_name, fn) {
-            metadataCallback = fn;
+          on(name, fn) {
+            listeners.set(name, fn);
             return () => {
               stopped++;
+              listeners.delete(name);
             };
           },
         },
@@ -203,6 +211,29 @@ test(
       assert.match(JSON.stringify(pending), /blue-muted/);
       assert.match(JSON.stringify(pending), /\+/);
       assert.doesNotMatch(JSON.stringify(pending), /⚠|\/checkpoint/);
+      const beforeReconnect = statusCalls;
+      // Simulate a transport gap: no updated/metadata event was delivered.
+      // The native host stream reconnects without re-running plugin setup.
+      statusValue = { available: false, active: 3 };
+      metadata["local.checkpoint"] = { ready: true };
+      assert.doesNotMatch(visibleText(slots[1].render()), /✓/);
+      connected();
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.equal(statusCalls, beforeReconnect + 1);
+      assert.equal(
+        metadataSyncs,
+        1,
+        "reconnect refreshes missed checkpoint state",
+      );
+      assert.match(visibleText(slots[1].render()), /Active: 3.*Checkpoint/);
+      assert.match(visibleText(slots[1].render()), /✓/);
+      statusValue = { available: false, active: 1 };
+      callback();
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.match(visibleText(slots[1].render()), /Active: 1/);
+      metadata["local.checkpoint"] = { ready: false };
+      await metadataCallback({ data: { sessionID: "another-session" } });
+      assert.equal(metadataSyncs, 1, "ignore other sessions' metadata events");
       const sharingStatus = {
         available: false,
         reason: "token-sharing-quota-unavailable",
@@ -340,10 +371,16 @@ test(
       );
       assert.match(prompts[0].text, /fix blocking findings, then review again/);
       assert.match(prompts[0].text, /Without Git/);
+      assert.match(
+        prompts[0].text,
+        /this checkpoint request does not authorize one/,
+      );
+      assert.match(prompts[0].text, /leave reviewed changes uncommitted/);
       const beforeBurst = statusCalls;
       holdStatus = true;
       callback();
       for (let i = 0; i < 1000; i++) callback();
+      connected();
       assert.equal(
         statusCalls,
         beforeBurst + 1,
@@ -363,9 +400,25 @@ test(
         beforeBurst + 2,
         "no idle retry loop after the burst",
       );
+      // Dispose with a read pending: its late response must not schedule a
+      // queued reconnect follow-up or mutate the last rendered snapshot.
+      const beforeDispose = statusCalls;
+      const lastText = visibleText(slots[1].render());
+      holdStatus = true;
+      callback();
+      connected();
       cleanup();
       cleanup = undefined;
-      assert.equal(stopped, 2);
+      statusValue = { available: false, active: 99 };
+      holdStatus = false;
+      releaseStatus();
+      await new Promise((resolve) => setImmediate(resolve));
+      callback();
+      connected();
+      assert.equal(statusCalls, beforeDispose + 1);
+      assert.equal(visibleText(slots[1].render()), lastText);
+      assert.equal(listeners.size, 0);
+      assert.equal(stopped, 3);
       assert.equal(removed, 2);
     } finally {
       globalThis.setInterval = originalInterval;

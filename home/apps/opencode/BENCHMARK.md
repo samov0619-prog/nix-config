@@ -657,6 +657,52 @@ own-answer control/confirmation hint may be visible. The opaque plugin backdrop
 does not alter the host render tree or form cache. The previous presenter fails
 this wide-terminal regression, even though its 80×24 tests pass.
 
+## Limits reconnect and explicit commit policy (2026-11-13)
+
+Read-only live diagnosis found fresh local cache and `local.limits/status` while
+the user confirmed the TUI stayed stale, including after `/reload`. The surviving
+TUI's log shows the 00:55 UTC disconnect and native reconnection. An in-memory
+probe of the exact installed 2.1.4 Promise RPC and SharedEvents sources, with
+mocked transport only, reproduced a permanently ended RPC callback despite a
+working replacement event subscription and status reads. This does not establish
+every possible cause of stale UI or independent checkpoint failure.
+
+The prepared fix uses the host data stream and re-reads limits/current checkpoint
+after `server.connected`, without idle polling. The TUI fixture rejects one-shot
+RPC listeners and checks missed-event catch-up, subsequent updates, concurrent
+reconnect coalescing, metadata isolation, and disposal during a pending read.
+Checkpoint text now requires a separate explicit commit request and accepts a
+reviewed, explicitly uncommitted handoff. Native shell declarations ask for
+`git commit` (also with Git options), not other Git commands; saved Always grants
+can override Ask and arbitrary wrappers are not a sandboxed guarantee.
+
+All 22 targeted limits/TUI/commit/offline tests pass with the installed TypeScript
+transpiler; commit matching is a declaration fixture, not a native permission UI
+test. No build, activation, live fixed TUI/PTY, service restart, or commit was run.
+
+## Saved permissions TUI (2026-11-13)
+
+The TUI-only `/permissions` plugin uses the connected client's native location
+lookup and saved-permission list/remove API. Scope is frozen to the opening
+directory/project; unloaded session locations do not fall back to the launch
+project. The controller filters project IDs independently of the API, serializes
+requests, revalidates displayed ID/action/resource before deletion, and refuses
+late deletes after closure or scope changes. The ID-only remove API cannot make
+the preceding read atomic; already dispatched DELETE requests cannot be undone.
+
+Twelve actual-controller tests cover sorting/filtering/copying, empty/bounded
+selection, double confirmation, navigation disarming, stale action/resource/
+project/disappearance, concurrent requests, errors, refresh failure and closure
+during loading, validation and deletion. Two declaration/TUI-fixture tests verify
+the co-located HM source bytes, public method input shapes, slash command/modal
+bindings, rendered text/viewport, escaping, long-resource inspection, cleanup,
+lookup failures, hydration, duplicate opens and q/Esc/reload/scope/replacement
+closure during validation. TSX is parsed by the installed TypeScript transpiler;
+lazy JSX getters and Solid lifecycle are fixtures, not native tracking/rendering
+or keyboard dispatch. All 14 checks pass without builds. No live saved grants
+were deleted, no service restarted, and no installed HM/native TUI/PTY acceptance
+or full semantic TypeScript check was performed.
+
 ## Accounting limits
 
 `opencode-task-report` opens a SQLite read-only URI and a snapshot transaction.
