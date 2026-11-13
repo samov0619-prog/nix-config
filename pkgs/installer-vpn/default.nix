@@ -16,6 +16,16 @@
 let
   backend = callPackage ../amneziawg-3.1/go.nix { };
   tools = callPackage ../amneziawg-3.1/tools.nix { };
+  dnsResolver = runCommand "installer-vpn-resolvconf" { } ''
+    install -Dm755 ${
+      replaceVars ./resolvconf.bash {
+        inherit bash openresolv;
+        nativeResolvconf = "/run/current-system/sw/bin/resolvconf";
+        nativeResolvectl = "/run/current-system/sw/bin/resolvectl";
+        nativeSystemctl = "/run/current-system/sw/bin/systemctl";
+      }
+    } "$out/bin/resolvconf"
+  '';
   # A separate quick script: the server's kernel-oriented tools stay unchanged.
   quick = runCommand "installer-vpn-quick" { nativeBuildInputs = [ makeWrapper ]; } ''
     install -Dm755 ${tools.src}/src/wg-quick/linux.bash "$out/bin/installer-vpn-quick"
@@ -31,7 +41,7 @@ let
           coreutils
           iproute2
           iptables
-          openresolv
+          dnsResolver
           procps
           tools
         ]
@@ -49,7 +59,7 @@ let
       coreutils
       iproute2
       iptables
-      openresolv
+      dnsResolver
       procps
       tools
     ];
@@ -60,9 +70,16 @@ writeShellApplication {
   text = ''
     exec ${python3}/bin/python3 -I ${script} "$@"
   '';
-  passthru = { inherit backend tools quick; };
+  passthru = {
+    inherit
+      backend
+      tools
+      quick
+      dnsResolver
+      ;
+  };
   meta = {
-    description = "Temporary AWG 3.1 full tunnel for a NixOS live installer";
+    description = "Temporary AWG 3.1 full tunnel for NixOS installation bootstrap";
     license = lib.licenses.mit;
     platforms = lib.platforms.linux;
     mainProgram = "installer-vpn";

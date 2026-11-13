@@ -29,10 +29,12 @@ assert helper.tools.version == "3.1.20260812";
 assert helper.backend.version == "3.1.20260814";
 assert helper.drvPath != "";
 assert helper.quick.drvPath != "";
+assert helper.dnsResolver.drvPath != "";
 {
   linuxAppEvaluatesWithoutServerSettingsOrInstallGuard = true;
   sharedBackendPreservesOriginalClientDerivation = true;
   serverToolsAreUnmodified = true;
+  dnsAdapterEvaluatesWithoutBuilds = true;
   backend = helper.backend.version;
   tools = helper.tools.version;
 }

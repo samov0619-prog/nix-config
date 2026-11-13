@@ -25,6 +25,7 @@ spec = importlib.util.spec_from_file_location("installer_vpn", ROOT / "installer
 vpn = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(vpn)
 QUICK_SOURCE = None
+RESOLVECTL = None
 TEST_TMP = "/tmp/opencode" if Path("/tmp/opencode").is_dir() else None
 PROFILE = """[Interface]
 Address = 10.66.0.2/32, fd00:66::2/128
@@ -51,6 +52,109 @@ Endpoint = 192.0.2.42:51820
 AllowedIPs = 0.0.0.0/0, ::/0
 PersistentKeepalive = 25
 """
+
+
+def write_dns_adapter(path, native, fallback, resolved=None, systemctl=None):
+    source = (ROOT / "resolvconf.bash").read_text()
+    source = source.replace("@bash@/bin/bash", shutil.which("bash"))
+    source = source.replace("@nativeResolvconf@", str(native))
+    source = source.replace("@nativeResolvectl@", str(resolved or path.parent / "missing-resolvectl"))
+    source = source.replace("@nativeSystemctl@", str(systemctl or path.parent / "missing-systemctl"))
+    source = source.replace("@openresolv@/sbin/resolvconf", str(fallback))
+    path.write_text(source)
+    path.chmod(0o755)
+
+
+class DnsAdapterTests(unittest.TestCase):
+    def test_installed_resolvectl_compatibility_mode_without_alias(self):
+        if RESOLVECTL is None:
+            self.skipTest("pass --resolvectl for a real binary's read-only compatibility CLI check")
+        with tempfile.TemporaryDirectory(prefix="installer-dns-cli-", dir=TEST_TMP) as temporary:
+            root = Path(temporary)
+            systemctl = root / "systemctl"
+            systemctl.write_text(f"#!{shutil.which('bash')}\nexit 0\n")
+            systemctl.chmod(0o755)
+            adapter = root / "adapter"
+            write_dns_adapter(adapter, root / "missing", root / "no-fallback", RESOLVECTL, systemctl)
+            result = subprocess.run(
+                [str(adapter), "--help"], capture_output=True, text=True, timeout=10,
+                env={"PATH": os.defpath, "LC_ALL": "C", "SYSTEMD_COLORS": "0"},
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("resolvconf -a INTERFACE", result.stdout)
+            self.assertIn("-x", result.stdout)
+            self.assertIn("-f", result.stdout)
+
+    def test_resolved_probe_error_does_not_fall_back(self):
+        with tempfile.TemporaryDirectory(prefix="installer-dns-probe-", dir=TEST_TMP) as temporary:
+            root = Path(temporary)
+            systemctl = root / "systemctl"
+            systemctl.write_text(f"#!{shutil.which('bash')}\nexit 1\n")
+            systemctl.chmod(0o755)
+            fallback = root / "fallback"
+            fallback.write_text(f"#!{shutil.which('bash')}\nexit 99\n")
+            fallback.chmod(0o755)
+            adapter = root / "adapter"
+            write_dns_adapter(adapter, root / "missing", fallback, fallback, systemctl)
+            for status in (1, 2, 5):
+                with self.subTest(status=status):
+                    systemctl.write_text(f"#!{shutil.which('bash')}\nexit {status}\n")
+                    result = subprocess.run([str(adapter), "-d", "lenovo", "-f"], timeout=10)
+                    self.assertEqual(result.returncode, status)
+
+    def test_native_alias_preserves_arguments_stdin_exit_code_and_never_falls_back(self):
+        with tempfile.TemporaryDirectory(prefix="installer-dns-test-", dir=TEST_TMP) as temporary:
+            root = Path(temporary)
+            # The symlink name, not the target name, selects systemd's CLI mode.
+            target = root / "resolvectl"
+            target.write_text(
+                f"#!{sys.executable}\n"
+                "import json, sys\n"
+                "print(json.dumps([sys.argv, sys.stdin.read()]))\n"
+                "sys.exit(23)\n"
+            )
+            target.chmod(0o755)
+            native = root / "resolvconf"
+            native.symlink_to(target)
+            fallback = root / "fallback"
+            fallback.write_text(
+                f"#!{sys.executable}\n"
+                f"from pathlib import Path; Path({str(root / 'fallback-used')!r}).touch()\n"
+            )
+            fallback.chmod(0o755)
+            adapter = root / "adapter"
+            write_dns_adapter(adapter, native, fallback)
+            args = ["-a", "lenovo", "-m", "0", "-x"]
+            data = "nameserver 10.66.0.1\nnameserver fd00:66::1\n"
+            result = subprocess.run(
+                [str(adapter), *args], input=data, capture_output=True, text=True, timeout=10,
+            )
+            self.assertEqual(result.returncode, 23)
+            self.assertEqual(json.loads(result.stdout), [[str(native), *args], data])
+            self.assertFalse((root / "fallback-used").exists())
+
+    def test_missing_native_uses_bundled_fallback(self):
+        with tempfile.TemporaryDirectory(prefix="installer-dns-test-", dir=TEST_TMP) as temporary:
+            root = Path(temporary)
+            fallback = root / "fallback"
+            fallback.write_text(
+                f"#!{sys.executable}\n"
+                "import json, sys; print(json.dumps(sys.argv[1:])); sys.exit(7)\n"
+            )
+            fallback.chmod(0o755)
+            adapter = root / "adapter"
+            systemctl = root / "systemctl"
+            for status in (None, 3, 4):
+                with self.subTest(status=status):
+                    if status is not None:
+                        systemctl.write_text(f"#!{shutil.which('bash')}\nexit {status}\n")
+                        systemctl.chmod(0o755)
+                    write_dns_adapter(adapter, root / "missing", fallback, fallback, systemctl)
+                    result = subprocess.run(
+                        [str(adapter), "-d", "lenovo", "-f"], capture_output=True, text=True, timeout=10,
+                    )
+                    self.assertEqual(result.returncode, 7)
+                    self.assertEqual(json.loads(result.stdout), ["-d", "lenovo", "-f"])
 
 
 class InstallerVpnTests(unittest.TestCase):
@@ -238,6 +342,24 @@ class InstallerVpnTests(unittest.TestCase):
 
 class ActualQuickTests(unittest.TestCase):
     def test_userspace_override_and_native_dns_routes_teardown(self):
+        for backend in ("fallback", "native-openresolv", "native-resolved"):
+            with self.subTest(backend=backend):
+                self.exercise_quick(backend)
+
+    def test_dns_failure_rolls_back_without_trying_another_dns_manager(self):
+        for backend in ("fallback", "native-openresolv", "native-resolved"):
+            with self.subTest(backend=backend):
+                self.exercise_quick(backend, failure="dns")
+
+    def test_partial_resolved_dns_failure_releases_link_state(self):
+        self.exercise_quick("native-resolved", failure="partial-dns")
+
+    def test_later_route_failure_reverts_dns_and_policy_rules(self):
+        for backend in ("fallback", "native-openresolv", "native-resolved"):
+            with self.subTest(backend=backend):
+                self.exercise_quick(backend, failure="route")
+
+    def exercise_quick(self, backend, failure=None):
         if QUICK_SOURCE is None:
             self.skipTest("pass --quick-source for actual pinned upstream script coverage")
         self.assertEqual(
@@ -267,11 +389,23 @@ class ActualQuickTests(unittest.TestCase):
 import json, os, pathlib, sys
 name = pathlib.Path(sys.argv[0]).name
 args = sys.argv[1:]
+if name in ('resolvconf', 'resolvectl'): name = pathlib.Path(sys.argv[0]).parent.name + '-resolvconf'
 with open({str(root / 'calls.jsonl')!r}, 'a') as log:
     log.write(json.dumps([name, *args]) + '\\n')
-if name == 'ip':
+if name == 'systemctl':
+    assert args == ['--quiet', 'is-active', 'systemd-resolved.service']
+    sys.exit(0 if {backend!r} == 'native-resolved' else 3)
+elif name == 'ip':
     if args[:3] == ['link', 'show', 'dev']: sys.exit(1)
     if args[:3] == ['link', 'add', 'lenovo']: sys.exit(99)
+    # resolved owns link-scoped state: deleting the link releases even a partial set.
+    if args == ['link', 'delete', 'dev', 'lenovo'] and {backend!r} == 'native-resolved':
+        pathlib.Path({str(root / 'dns-override')!r}).unlink(missing_ok=True)
+    # Fail the second default-route command, regardless of IPv4/IPv6 ordering.
+    if len(args) >= 4 and args[1:3] == ['route', 'add'] and args[3] in ('0.0.0.0/0', '::/0') and {failure!r} == 'route':
+        seen = pathlib.Path({str(root / 'first-route')!r})
+        if seen.exists(): sys.exit(19)
+        seen.touch()
     if args[:3] == ['route', 'show', 'default']: print('default via 192.168.0.1 dev wlan0 mtu 1500')
     if args[:2] == ['route', 'get']: print('192.0.2.42 via 192.168.0.1 dev wlan0 mtu 1500')
     if len(args) >= 3 and args[1] == 'rule':
@@ -289,42 +423,70 @@ elif name == 'awg':
     elif args == ['show', 'interfaces']: print('lenovo')
     elif args[:2] == ['setconf', 'lenovo']:
         assert pathlib.Path(args[2]).read_text().find('HeaderProtectionKey') >= 0
-elif name == 'resolvconf':
+elif name in ('native-resolvconf', 'fallback-resolvconf'):
     state = pathlib.Path({str(root / 'dns-override')!r})
     if args[0] == '-a':
+        assert args == ['-a', 'lenovo', '-m', '0', '-x']
         assert sys.stdin.read() == 'nameserver 10.66.0.1\\n'
+        if {failure!r} == 'dns': sys.exit(17)
         state.touch()
-    elif args[0] == '-d': state.unlink(missing_ok=True)
+        if {failure!r} == 'partial-dns': sys.exit(18)
+    elif args[0] == '-d':
+        assert args == ['-d', 'lenovo', '-f']
+        state.unlink(missing_ok=True)
 """)
             fixture.chmod(0o755)
-            for name in ("ip", "awg", "resolvconf", "iptables", "ip6tables", "iptables-save",
+            for name in ("ip", "awg", "iptables", "ip6tables", "iptables-save",
                          "ip6tables-save", "iptables-restore", "ip6tables-restore", "sysctl", "backend"):
                 (root / name).symlink_to(fixture)
+            native = root / "native" / "resolvconf"
+            resolved = root / "native" / "resolvectl"
+            systemctl = root / "systemctl"
+            systemctl.symlink_to(fixture)
+            fallback = root / "fallback" / "resolvconf"
+            fallback.parent.mkdir()
+            fallback.symlink_to(fixture)
+            native.parent.mkdir()
+            resolved.symlink_to(fixture)
+            if backend == "native-openresolv":
+                native.symlink_to(fixture)
+            write_dns_adapter(root / "resolvconf", native, fallback, resolved, systemctl)
             # Avoid the host's nft/ip/awg and network state entirely.
             for name in ("readlink", "stat", "sort"):
                 executable = shutil.which(name)
                 self.assertIsNotNone(executable)
                 (root / name).symlink_to(executable)
             env = {"PATH": str(root), "WG_QUICK_USERSPACE_IMPLEMENTATION": str(root / "backend")}
-            for action in ("up", "down"):
+            for action in (("up",) if failure else ("up", "down")):
                 result = subprocess.run(
                     [shutil.which("bash"), str(quick), action, str(config)],
                     env=env, capture_output=True, text=True, timeout=10,
                 )
-                self.assertEqual(result.returncode, 0, result.stderr)
+                expected_code = {"dns": 17, "partial-dns": 18, "route": 19}.get(failure, 0)
+                self.assertEqual(result.returncode, expected_code, result.stderr)
             calls = [json.loads(line) for line in (root / "calls.jsonl").read_text().splitlines()]
             self.assertIn(["backend", "lenovo"], calls)
             self.assertFalse(any(call[:3] == ["ip", "link", "add"] for call in calls))
             self.assertIn(["ip", "-4", "address", "add", "10.66.0.2/32", "dev", "lenovo"], calls)
             self.assertIn(["ip", "-6", "address", "add", "fd00:66::2/128", "dev", "lenovo"], calls)
-            self.assertIn(["ip", "-4", "route", "add", "0.0.0.0/0", "dev", "lenovo", "table", "51820"], calls)
-            self.assertIn(["ip", "-6", "route", "add", "::/0", "dev", "lenovo", "table", "51820"], calls)
-            self.assertTrue(any(call[:2] == ["resolvconf", "-a"] for call in calls))
-            self.assertTrue(any(call[:2] == ["resolvconf", "-d"] for call in calls))
+            if failure not in ("dns", "partial-dns"):
+                self.assertIn(["ip", "-4", "route", "add", "0.0.0.0/0", "dev", "lenovo", "table", "51820"], calls)
+                self.assertIn(["ip", "-6", "route", "add", "::/0", "dev", "lenovo", "table", "51820"], calls)
+            dns_command = "fallback-resolvconf" if backend == "fallback" else "native-resolvconf"
+            dns_calls = [call for call in calls if call[0].endswith("-resolvconf")]
+            self.assertTrue(dns_calls)
+            self.assertTrue(all(call[0] == dns_command for call in dns_calls))
+            if backend == "native-resolved":
+                self.assertFalse(native.exists())
+                self.assertIn(["systemctl", "--quiet", "is-active", "systemd-resolved.service"], calls)
+            self.assertIn([dns_command, "-a", "lenovo", "-m", "0", "-x"], calls)
+            if failure not in ("dns", "partial-dns"):
+                self.assertIn([dns_command, "-d", "lenovo", "-f"], calls)
             self.assertIn(["ip", "link", "delete", "dev", "lenovo"], calls)
             for family in ("-4", "-6"):
-                self.assertIn(["ip", family, "rule", "delete", "table", "51820"], calls)
-                self.assertIn(["ip", family, "rule", "delete", "table", "main", "suppress_prefixlength", "0"], calls)
+                if failure not in ("dns", "partial-dns"):
+                    self.assertIn(["ip", family, "rule", "delete", "table", "51820"], calls)
+                    self.assertIn(["ip", family, "rule", "delete", "table", "main", "suppress_prefixlength", "0"], calls)
                 self.assertEqual((root / ("rules" + family)).read_text(), "")
             self.assertFalse((root / "dns-override").exists())
 
@@ -332,6 +494,8 @@ elif name == 'resolvconf':
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--quick-source", type=Path)
+    parser.add_argument("--resolvectl", type=Path)
     args, rest = parser.parse_known_args()
     QUICK_SOURCE = args.quick_source
+    RESOLVECTL = args.resolvectl
     unittest.main(argv=[sys.argv[0], *rest])

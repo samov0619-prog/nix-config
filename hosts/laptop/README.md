@@ -191,6 +191,11 @@ df -h /mnt
 `--inputs-from .` выбирает Disko этого lock, не независимый latest. Ожидаются
 целевой ext4 root, ESP на `/mnt/boot` и 48 GiB swap. При несовпадении остановиться.
 Не выполнять затем ещё раз ручные partition/format/mount из примера manual.
+В запросе Disko `Type 'yes' to continue, anything else to abort:` ещё раз сверить
+список устройств и только затем ввести ровно `yes`; не обходить подтверждение.
+Если swap создан, но не активен, после проверки его identity включить существующий
+раздел через `sudo swapon /dev/disk/by-partlabel/disk-main-swap` и повторить
+`swapon --show`. Это не повторная разметка и не `mkswap`.
 
 ### 7. Сохранить checkout и установить NixOS
 
@@ -224,6 +229,19 @@ sudo nixos-install --no-update-lock-file --flake .#laptop
 Это реальная сборка/установка на целевой диск, не evaluation. Проверить успешный
 выход и установку загрузчика. Штатный installer может запросить root password;
 это не меняет согласованный bootstrap пользователя `samov`.
+
+До reboot проверить system profile и загрузчик:
+
+```fish
+readlink -f /mnt/nix/var/nix/profiles/system
+sudo ls -lh /mnt/boot/EFI/BOOT/BOOTX64.EFI /mnt/boot/grub/grub.cfg
+```
+
+ESP с `umask=0077` требует sudo; Permission denied без него не доказывает поломку.
+Если для первого HM после boot понадобится VPN, заранее сохранить helper closure,
+GC root и private профиль по [bootstrap-инструкции](../../pkgs/installer-vpn/README.md#optional-retain-bootstrap-across-installed-boot).
+Live tunnel и RAM store сами через reboot не переносятся. Без этой необходимости
+копирование helper пропустить; установленному Lenovo оно не нужно.
 
 ### 8. Первый установленный boot: консоль, сеть, личный пароль
 

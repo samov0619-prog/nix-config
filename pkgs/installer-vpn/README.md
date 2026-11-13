@@ -1,7 +1,8 @@
-# Installer VPN: AWG 3.1 before downloading the system
+# Installer VPN: AWG 3.1 for NixOS bootstrap
 
 `nix run .#installer-vpn` provides a temporary full tunnel on an **x86_64 Linux
-NixOS live installer**. It does not install the graphical Amnezia client, activate
+NixOS live installer**, or temporarily after installed boot before standalone HM.
+It does not install the graphical Amnezia client, activate
 NixOS/HM, partition disks or depend on a running Acer or administrative SSH access
 to the VPN server. Lenovo's installation assertion and external server settings
 do not gate this standalone app.
@@ -92,6 +93,88 @@ not create a persistent service or auto-start entry; the live tunnel is lost on
 reboot. Once NixOS/HM are installed, use the configured graphical Amnezia client;
 do not also leave the installer tunnel running.
 
+## Native DNS adapter
+
+`resolvconf.bash` selects the running NixOS DNS adapter, not one from the caller's
+PATH. It first executes `/run/current-system/sw/bin/resolvconf` when available.
+Otherwise, with native `resolvectl` and active `systemd-resolved.service`, it uses
+Bash `exec -a resolvconf` to select resolvectl's compatibility CLI. Plain
+`resolvectl` does not accept quick's `-a`/`-d` CLI. This reuses the running systemd
+without adding another systemd version to the bootstrap closure.
+
+With no alias and inactive/unknown resolved (or unavailable native tools), bundled
+openresolv remains the fallback for live installers. Unexpected service-probe
+errors fail closed; a selected adapter's failure is returned directly, never
+retried through a competing DNS manager. Keep the DNS manager/system unchanged
+between `up` and `down`. The helper does not stop resolved, overwrite
+`/etc/resolv.conf` itself or edit NetworkManager connections.
+
+Systemd's compatibility mode accepts `-a INTERFACE -m 0 -x` and
+`-d INTERFACE -f`; the metric is ignored and `-x` selects `~.` DNS routing.
+Resolved settings are link-scoped, including a partially applied update; quick's
+link deletion releases them. This is not a guarantee of complete firewall/DNS
+rollback or compatibility with other concurrent VPN policies.
+
+The recovered old-laptop record reports that the `d9edc3f` helper failed on
+installed Lenovo with active resolved, no `resolvconf` alias and disabled
+openresolv. Its suppressed output does not establish the first failed subprocess.
+The separately delivered dispatcher version was user-built and accepted there:
+fresh handshake, resolved DNS `10.66.0.1`/`~.`, cache HTTPS and IPv4 route through
+`lenovo`; after `down`, no interface and ordinary Wi-Fi routing/DNS/HTTPS.
+This is historical user-reported acceptance, not a new build/integration test,
+external-IP/IPv6-leak/firewall audit or reason to replace working graphical Amnezia.
+
+## Optional: retain bootstrap across installed boot
+
+Only needed if ordinary installed networking cannot download the first HM closure.
+Before reboot, after successful NixOS installation, use the **same reviewed
+checkout/lock** on the live machine. The following gets only the helper, not HM.
+Stop on any error; do not overwrite existing roots/profile files without inspecting
+them. The example assumes the private live profile is `$HOME/lenovo.conf` and the
+target root is mounted at `/mnt`:
+
+```fish
+nix --extra-experimental-features 'nix-command flakes' build --no-update-lock-file --out-link "$HOME/installer-vpn-bootstrap" .#installer-vpn
+set helper (readlink -f "$HOME/installer-vpn-bootstrap")
+sudo nix --extra-experimental-features 'nix-command flakes' copy --no-check-sigs --to /mnt "$helper"
+sudo nix --extra-experimental-features 'nix-command flakes' path-info --store /mnt --recursive "$helper"
+sudo test -x "/mnt$helper/bin/installer-vpn"
+sudo mkdir -p /mnt/nix/var/nix/gcroots
+sudo ln -s "$helper" /mnt/nix/var/nix/gcroots/installer-vpn-bootstrap
+sudo install -m 600 "$HOME/lenovo.conf" /mnt/root/lenovo.conf
+```
+
+Here `--no-check-sigs` is scoped to copying this reviewed, locally built helper
+closure between local stores: local outputs may be unsigned. Do not disable
+signature checking globally or use this for arbitrary downloaded store paths.
+The target `path-info --store /mnt` check matters: an absolute GC-root symlink in
+the live environment can resolve through the live store, not the target store.
+The profile stays outside Git/store. This copy does not replace the live profile;
+finish downloads and `down` the live tunnel before reboot.
+
+After installed boot, connect ordinary Wi-Fi first and, if needed, run:
+
+```fish
+sudo /nix/var/nix/gcroots/installer-vpn-bootstrap/bin/installer-vpn up /root/lenovo.conf
+sudo /nix/var/nix/gcroots/installer-vpn-bootstrap/bin/installer-vpn status /root/lenovo.conf
+resolvectl status lenovo
+ip -4 route get 1.1.1.1
+curl --fail --head --max-time 20 https://cache.nixos.org
+```
+
+After HM downloads, disconnect with the **same helper/profile**, then verify
+ordinary route/DNS/HTTPS before starting graphical Amnezia:
+
+```fish
+sudo /nix/var/nix/gcroots/installer-vpn-bootstrap/bin/installer-vpn down /root/lenovo.conf
+```
+
+Import a private user-readable copy of the profile into graphical Amnezia manually,
+not via Git/store. Remove temporary roots/helper copies and duplicate profiles
+only after successful teardown and acceptance of the graphical client; never
+delete the only working profile first. Existing installed Lenovo needs none of
+these bootstrap steps. Old store outputs do not update when sources change.
+
 ## Implementation and SSH boundary
 
 - `../amneziawg-3.1/go.nix` is the same pinned **3.1.20260814** backend as the
@@ -101,8 +184,8 @@ do not also leave the installer tunnel running.
   insertion point to select the userspace backend directly. Server tools and
   kernel modules are unchanged. No live kernel-module build or reboot is needed;
   the live kernel must provide ordinary `/dev/net/tun`.
-- Native quick handles addresses, policy routes, firewall rules and openresolv
-  DNS setup/teardown. It suppresses only the main default route, preserving more
+- Native quick handles addresses, policy routes, firewall rules and DNS
+  setup/teardown through the adapter above. It suppresses only the main default route, preserving more
   specific LAN routes. No NetworkManager connection or global hostname is edited.
 - When invoked over SSH with `SSH_CONNECTION` present, the helper refuses `up` if
   the peer is reachable only through a default route. It checks the outgoing
@@ -177,11 +260,14 @@ python3 -B pkgs/installer-vpn/tests/test_installer_vpn.py
 
 Wrapper fixtures cover private external profiles, rejection of hooks/routing
 overrides, sudo argv, secret-output suppression, temporary snapshots, handshake
-reporting and SSH pre/postflight/rollback. An additional actual-script test takes
+reporting and SSH pre/postflight/rollback. Additional actual-script tests take
 the source from the exact pinned tools revision, validates its SHA-256, inserts
 the production userspace override, and runs native quick with fake ip/awg/backend/
-resolvconf/firewall commands. It checks IPv4/IPv6 address/default-route setup,
-DNS teardown and link deletion, not a real AWG handshake or native C parser.
+resolvconf/firewall commands. They run the production dispatcher with fake native
+openresolv/resolved and bundled openresolv, checking IPv4/IPv6 routes, DNS teardown,
+DNS/partial-DNS/later-route failure rollback and link deletion. Resolved's release
+of link-scoped state is modelled, not a real daemon test. No real AWG handshake,
+systemd D-Bus interaction or native C parser is covered.
 
 Provide an already available pinned source (do not build the project to obtain it):
 
@@ -189,9 +275,21 @@ Provide an already available pinned source (do not build the project to obtain i
 python3 -B pkgs/installer-vpn/tests/test_installer_vpn.py --quick-source /path/to/amneziawg-tools/src/wg-quick/linux.bash
 ```
 
-Without `--quick-source` this extra test is explicitly skipped. On a tools update,
+Without `--quick-source` these extra tests are explicitly skipped. On a tools update,
 review the upstream quick changes and override point before updating the test
 digest. Never update it just to make an unrelated source pass.
+
+Add `--resolvectl /run/current-system/sw/bin/resolvectl` for a read-only native
+compatibility CLI check (`--help` only, no daemon/network changes). Without it
+that check is explicitly skipped. Dispatcher fixtures also check argv/stdin/status
+forwarding, fallback selection and no fallback after a selected adapter fails.
+
+During recovery of the old-laptop patch on 13 November 2026, all 22 tests passed
+with the pinned quick source and installed resolvectl's `--help`. Selected Nix
+declarations passed offline without builds/IFD, preserving the original AWG backend
+and server tools derivations. Bash syntax, nixfmt 1.5.0 and whitespace checks
+passed. No build, activation, live VPN/DNS change or new installed-layout test was
+run. Prettier/Ruff/Beautysh were unavailable; their file types retain existing style.
 
 After review, the user can build only this helper on a machine with enough space:
 
