@@ -37,6 +37,24 @@
   context unless the skill has changed; do not reload it for every follow-up.
   Keep skill permission restrictions intact; a subagent is not a permission bypass.
 
+## Working Files and Artifacts
+
+- Put disposable files in one uniquely named task directory under `/tmp/opencode`;
+  reuse it within the task. Respect tool-owned storage and project-required
+  build/test directories instead of relocating them.
+- Keep durable source, tests and documentation in the project when in scope.
+  Use an agreed persistent location for external artifacts needed for recovery or
+  handoff: `/tmp` retention is not guaranteed.
+- Do not use `~/.opencode` as general scratch space. Use `~/.opencode/plan` only
+  for explicitly requested plans/handoffs, subject to the active mode's rules.
+- Minimize sensitive diagnostic data and restrict access to private directories
+  and files. Do not include secrets in reports or transferable packages.
+- Clean up only known disposable files created for the current task, subject to
+  normal permissions. Never broadly clean old/other tasks' files or delete the
+  only copy of a needed result.
+- Report useful retained artifacts with their paths and purpose, not every
+  scratch file. These rules do not authorize writes in read-only tasks or Plan.
+
 ## Formatting
 
 - Use the project's declared formatter, configuration and version through its CLI,
