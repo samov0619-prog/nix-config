@@ -1,5 +1,10 @@
 # Lenovo Home Manager hotkeys
 
+Left Alt/Super and Command-editing changes, permission separation, agreed
+limitations and acceptance/recovery are documented in
+[`command-keys/README.md`](command-keys/README.md). The user reports successful
+ordinary use after application; the full hardware/UI matrix is not verified.
+
 For a manually launched 5-second NVIDIA/PPD table, see
 `home/linux/laptop/gpu-monitor.md`. It appends samples until Ctrl+C and does not
 change profiles or add a service; explicit polling can postpone GPU sleep.

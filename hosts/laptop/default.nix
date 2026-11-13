@@ -12,6 +12,7 @@
     ./disko.nix
     ./graphics.nix
     ./hardware-configuration.nix
+    ./command-keys.nix
   ];
 
   networking = {

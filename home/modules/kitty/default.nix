@@ -1,4 +1,9 @@
-{ pkgs, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 let
   # Build-time трансформация langmap: (kitty.conf + map.txt) -> новый kitty.conf.
   # Раньше это делал kitten на живой машине, мутируя файл на месте — отсюда
@@ -12,23 +17,33 @@ let
         ''cat ${./darwin-prelude.conf} "''${templates[0]}" ${./common.conf} ${./darwin.conf} > source.conf''
       else
         ''cat "''${templates[0]}" ${./common.conf} ${./linux-context.conf} > source.conf''
+        + lib.optionalString (config.programs.kittyExtraConfig != "") (
+          "\n" + "cat ${pkgs.writeText "kitty-extra.conf" config.programs.kittyExtraConfig} >> source.conf"
+        )
     }
     ${pkgs.python3}/bin/python3 ${./kitty-langmap/build.py} \
       source.conf ${./kitty-langmap/map.txt} > "$out"
   '';
 in
 {
-  home.packages = [
-    pkgs.kitty
-    pkgs.nerd-fonts.noto
-  ];
+  options.programs.kittyExtraConfig = lib.mkOption {
+    type = lib.types.lines;
+    default = "";
+    description = "Additional host-specific Kitty configuration before langmap generation.";
+  };
+  config = {
+    home.packages = [
+      pkgs.kitty
+      pkgs.nerd-fonts.noto
+    ];
 
-  # Всё декларативно и read-only. Обновления из репы доезжают сами,
-  # результат воспроизводим на любой машине.
-  xdg.configFile = {
-    "kitty/kitty.conf".source = kittyConf;
-    "kitty/dark-theme.auto.conf".source = ./dark-theme.auto.conf;
-    "kitty/light-theme.auto.conf".source = ./light-theme.auto.conf;
-    "kitty/themes".source = ./themes;
+    # Всё декларативно и read-only. Обновления из репы доезжают сами,
+    # результат воспроизводим на любой машине.
+    xdg.configFile = {
+      "kitty/kitty.conf".source = kittyConf;
+      "kitty/dark-theme.auto.conf".source = ./dark-theme.auto.conf;
+      "kitty/light-theme.auto.conf".source = ./light-theme.auto.conf;
+      "kitty/themes".source = ./themes;
+    };
   };
 }

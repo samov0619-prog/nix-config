@@ -220,6 +220,7 @@
 
         laptop = mkNixos {
           system = systems.linux;
+          extraSpecialArgs = { inherit xremap-flake; };
           overlays = [
             self.overlays.amnezia-vpn
             self.overlays.blueman-polkit

@@ -26,6 +26,7 @@ in
     ../core-set
     ../gui-set
     ../../modules/voice-dictate
+    ./command-keys
   ];
 
   # Keep the agreed raw configuration workflow on fresh HM 26.05 as well.
@@ -57,6 +58,6 @@ in
     jdk_headless
   ];
 
-  # No xremap/keycap remapping on Lenovo. Voice remains available on CPU until
+  # Voice remains available on CPU until
   # target GPU enumeration establishes a backend; never inherit Acer's -dev 1.
 }

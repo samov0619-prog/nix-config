@@ -931,6 +931,22 @@ live SSH does not persist and the target does not enable an SSH server.
 
 ### xremap (laptop-old/Acer only)
 
+Lenovo separately uses an isolated socket daemon in
+`hosts/laptop/command-keys.nix` and a Hyprland context bridge plus native TUI
+bindings in `home/linux/laptop/command-keys/`. Only the measured built-in keyboard
+is granted to a dedicated service UID; samov gets IPC-group membership, not raw
+input. Left Alt/Super only; no global terminal Ctrl-Z translation. The user
+applied the changes and reports successful ordinary use, not independent agent
+UI observation or full lifecycle/EN-RU/clipboard/latency coverage.
+The user chose Kitty as primary, accepting
+Alacritty's terminal-native C/V limitation, and deferred an OpenCode input C/X
+plugin until a real failure; no such plugin or cli.json edit was made. Native
+OpenCode paste is retained for attachments, not live-tested. Seven actual-action
+fixtures, native headless Neovim undo/redo/select, Fish syntax/bind checks, Kitty's
+native mapping parser, generated-script Bash syntax and fourteen selected merged
+checks pass; not keyboard/UI/clipboard/latency acceptance. See that README for
+limitations and recovery. Acer is unchanged.
+
 - Модификаторы:物理 Super → Alt,物理 Alt → Super, Menu → Alt.
 - GUI: Super+key → Ctrl+key (copy/paste/cut/undo/redo).
 - Терминал: Super+C/V → Ctrl+Shift+C/V, остальной Ctrl не трогается.
