@@ -55,6 +55,11 @@ in
       resource = "opencode";
       effect = "allow";
     }
+    {
+      action = "provider.use";
+      resource = "groq";
+      effect = "allow";
+    }
   ]
   ++
     map
