@@ -175,3 +175,67 @@ test("the reviewer remains general-purpose and distinguishes partial evidence fr
   }
   assert.doesNotMatch(system, /openai\/|anthropic\/|gpt-6/);
 });
+
+// Text guards only: passing these does not demonstrate defect-finding quality.
+test("analysis follows behavior and counterexamples rather than procedural completion", () => {
+  for (const marker of [
+    "Analysis comes before report formatting",
+    "expected behavior",
+    "delayed or duplicate events",
+    "focus/selection",
+    "channel/platform branches",
+    "counterexample",
+    "later watcher or callback repairs",
+    "source reasoning from runtime observation",
+  ]) {
+    assert.ok(system.includes(marker), marker);
+  }
+  assert.ok(system.indexOf("Analysis comes before") < system.indexOf("When a fingerprint"));
+  assert.match(command, /Do not send the whole command or the parent's recovery ledger/);
+  assert.match(command, /a focused input during an asynchronous update/);
+});
+
+test("verdicts account for material contract questions without manufacturing defects", () => {
+  for (const prompt of [command, system]) {
+    for (const marker of [
+      "REQUEST_CHANGES",
+      "material requirement",
+      "optional improvements",
+      "clarification",
+      "not a confirmed defect",
+    ]) {
+      assert.ok(prompt.includes(marker), marker);
+    }
+  }
+  assert.match(system, /Do not infer a bug from missing tests alone/);
+  assert.match(system, /accepted risk/);
+  assert.match(command, /do not silently rewrite the child's verdict/);
+});
+
+test("handoff and review preserve evidence boundaries instead of widening acceptance", () => {
+  for (const marker of [
+    "Separate requirements/accepted exceptions from implementation observations",
+    "which operation is skipped and which side effects still occur",
+    "exit status and verification limits",
+    "Do not call a failed check clean",
+  ]) {
+    assert.ok(command.includes(marker), marker);
+  }
+  for (const marker of [
+    "Acceptance is effect-specific",
+    "consistency, not product acceptance",
+    "safe interleaving with new user input",
+    "Preserve failure qualifiers",
+    "failed or blocked is not clean",
+    "without automatic severity escalation",
+  ]) {
+    assert.ok(system.includes(marker), marker);
+  }
+});
+
+test("the command and reviewer expose the same review-policy revision", () => {
+  for (const prompt of [command, system]) {
+    assert.match(prompt, /^Review policy: behavior-v2\.$/m);
+  }
+  assert.match(command, /Include the review-policy revision in the handoff/);
+});

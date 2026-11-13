@@ -82,6 +82,79 @@ These guards are not a new real-model run of the stricter artifact restriction.
 The previous native mock still covers unchanged transport mechanisms, not revised
 prompt compliance; it was not rerun. No build, activation or corporate Mac edits.
 
+## Review-analysis revision (2026-11-13; live acceptance pending)
+
+A user-supplied same-start comparison and follow-up exposed a missed caret path
+and an inadequately justified APPROVE despite an unresolved material email
+requirement. Both reviewers found the missing email concealment. The observed
+missing highlight does not establish the later proposed watcher diagnosis.
+Unknown-ID and subject concerns were not all confirmed defects. Earlier recovery
+tests never established preservation of defect-finding quality.
+
+The prompt now leads with expected behavior, representative stateful/user paths,
+cross-branch comparison and counterexamples, including possible self-repair by
+later callbacks. Verdicts distinguish material defects/decisive contract questions
+from optional improvements, sourced accepted risk and unrun runtime checks. Parent
+validation may request a reasoned resolution, not silently change the child's
+verdict. The child does not receive the full command/recovery ledger. Native
+recovery, fingerprint, model route and permission declarations are unchanged.
+
+Eight settings/static/hash tests pass (two new guards failed before the change).
+Seven tests in `test_delegated_review_analysis.mjs` execute seeded and corrected
+synthetic candidates, including intentional-overwrite/unknown-ID/subject negative
+controls. These validate the **exercise oracle**, not real model analysis or
+native DOM/Vue behavior. The blind two-candidate protocol and scoring criteria are
+in `tests/fixtures/delegated-review/EVALUATION.md`. No live reviewer A/B comparison,
+native runtime/PTY rerun, build or activation has been performed for this revision.
+Prettier remains unavailable; no substitute was installed. The second Chrome-MCP
+audit scenario in the user's archive was only identified, not changed/tested.
+
+The user subsequently supplied a live same-diff run and full handoff. Its expanded
+command exactly matches the first analysis revision; review selected `review` and
+returned REQUEST_CHANGES for email and a caret finding, but downplayed the latter
+by extending accepted overwrite semantics. The raw child report contains that
+inference before translation. The handoff incorrectly summarized unknown-ID
+reject as ignored (restore still occurs), and called a blocked typecheck "clean
+apart from" its environment error; the child dropped the qualifier. Worktree
+location changed the manifest, not the reviewed historical diff. The effective
+child system prompt was not included, so its precise version is unverified.
+
+The current `Review policy: behavior-v2.` refinement bounds acceptance/correctness
+to specific effects and scenarios, separates handoff requirements from code
+observations, and preserves failed-check qualifiers. It does not force higher
+severity or deduplication where the product allows overwrite. Ten static/settings/
+hash and nine synthetic-oracle checks pass, including two new interleaving controls;
+the two added text guards failed on the previous revision. No live run of this
+refinement, build or activation was performed by the agent. A separate four-file
+Mac candidate is in `~/Downloads/delegated-review-mac-2026-11-13-scenario1-r2/`;
+earlier packages and supplied exports/archive are preserved. Chrome was deferred at
+that stage. A later user-supplied behavior-v2 run matches the command bytes and
+original diff/manifest, carries the new marker and retains email REQUEST_CHANGES
+and the caret finding without the broad Wall/idempotence exemptions. This is one
+limited positive case, not general quality acceptance. Filtered tsc with TS2688
+still does not establish a clean typecheck; history restore remains contract-dependent.
+
+### Chrome evidence audit (2026-11-13)
+
+The subsequently authorized Chrome scenario adds a self-contained native Markdown
+command and HM file declaration, without changing shared reviewer/routing. Its
+`chrome-evidence-v1` contract distinguishes action effects from fixture legitimacy,
+claim support/contradiction/absence/contamination and complete audit from missing
+required evidence. A parent-only private export exception does not permit child
+writes, browser actions, secret exposure or live re-testing. `drc-scope-v2` binds
+the primary/supporting bytes and provenance/limitations; matching hashes do not
+authenticate the source. Recovery retains one initial plus six shared calls.
+
+Six Chrome tests pass: instruction/declaration guards, executable canonical hash
+recipe and integrity of eight synthetic oracle cases. These do not execute a model
+classifier, native export or Chrome browser. The 27-test combined Node run and four
+Python fixture tests pass; pinned nixfmt 1.5.0 checks the changed Nix module. No
+new builds, runtime/PTY/model/browser run or activation. Prettier remains unavailable.
+The separate three-file Mac candidate is
+`~/Downloads/delegated-review-mac-2026-11-13-chrome/`; older packages/archive and
+corporate configuration are preserved. Native export completeness/redaction,
+Chrome recovery, effective Mac runtime and real-model audit quality remain unverified.
+
 ## Background-tab attention ownership (2026-11-12)
 
 The user isolated missing audio/outer urgency to inactive internal OpenCode tabs.

@@ -544,6 +544,48 @@ live SSH does not persist and the target does not enable an SSH server.
   guide) is in `~/Downloads/delegated-review-mac-2026-11-12/`, outside Git; original
   drafts and corporate config are untouched, no Mac acceptance yet. No agent build/
   activation. See `home/apps/opencode/DELEGATED-REVIEW.md`.
+- The 2026-11-13 reviewer revision follows a user-supplied R1/R2 comparison:
+  behavior/counterexamples precede reporting; material unmet requirements or
+  acceptance-changing contract questions require REQUEST_CHANGES, not approval
+  with buried caveats. Parent checks consistency without rewriting child verdicts.
+  Recovery/model/permissions remain unchanged. Eight settings/static/hash and
+  seven synthetic-candidate oracle checks pass, not real-model quality acceptance.
+  Blind A/B instructions are in tests/fixtures/delegated-review/EVALUATION.md;
+  no live run/build/activation. A separate four-file Mac candidate is in
+  ~/Downloads/delegated-review-mac-2026-11-13-scenario1/; command/prompt match source,
+  previous package/archive are untouched. The supplied opc-loc.zip Chrome-MCP audit variant
+  was only identified; its second scenario remains deferred until the first is settled.
+- A user-run same-diff review of that first analysis revision found caret loss
+  and requested email changes, but widened accepted overwrite to caret acceptance.
+  The full handoff also generalized unknown-ID bubble skip to ignored rejection
+  and a failed typecheck to "clean apart from" an env error; the child dropped it.
+  Current `Review policy: behavior-v2.` bounds claims/acceptance to specific effects,
+  separates handoff code observations from requirements, preserves failure qualifiers
+  and does not automatically raise severity or require deduplication. Ten settings/
+  static/hash and nine synthetic oracle checks pass, not live v2 acceptance.
+  Separate Mac candidate: ~/Downloads/delegated-review-mac-2026-11-13-scenario1-r2/;
+  previous packages/exports/archive unchanged, no agent build/activation/model run.
+- A later supplied behavior-v2 run is a limited positive same-diff result, not
+  general reviewer acceptance; TS2688/conditional history restore remain caveats.
+  The subsequently authorized Chrome scenario now adds a self-contained passive
+  `/delegated-review-chrome`, `Audit policy: chrome-evidence-v1.`, without changing
+  shared reviewer/routing. It distinguishes effect/fixture legitimacy and per-claim
+  support/contradiction/absence/contamination; missing required evidence means no
+  final verdict. One necessary private parent export is allowed, never child writes
+  or browser actions. `drc-scope-v2` freezes evidence/provenance, not authenticity.
+  Six static/hash/fixture-integrity checks and eight human-oracle cases are not
+  model/browser/export acceptance. Separate three-file Mac package:
+  ~/Downloads/delegated-review-mac-2026-11-13-chrome/; prior packages/archive unchanged.
+  No agent builds/activation/model/browser tests. See DELEGATED-REVIEW-CHROME.md.
+- `/problem-brief` is a manual in-session command, not an automatic review stage,
+  skill or agent. After initial byte-exact import, the user approved home-only Scope
+  and local-read changes: default is the preceding assistant response; arguments
+  select source/scope/output, including local Git and completed-work summaries.
+  Downloads/Mac originals stay unchanged; earlier model tests cover the original,
+  not new scope semantics. Preserve remaining prompt rules; do not optimize/reformat
+  or add model/effort overrides without authorization.
+  HM installs the guide outside commands. Briefs supplement full reports, never
+  replace evidence or independent-review handoffs. See the module README.
 - Глобального formatter и его CLI-зависимостей в OpenCode нет. Короткое правило в
   `config/AGENTS.md` требует использовать объявленный проектом CLI только для
   изменённых файлов; без правил сохранять оформление, без global fallback или

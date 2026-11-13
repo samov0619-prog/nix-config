@@ -9,6 +9,8 @@ Respect all applicable permissions and project instructions. Do not invoke this
 command recursively. If delegation is unavailable, report that limitation rather
 than impersonating the reviewer.
 
+Review policy: behavior-v2.
+
 Both parent and reviewer must keep agent-created review artifacts in session
 context or memory. Do not create temporary helper scripts, manifests, reports or
 directories, even outside the repository. Use inline interpreter code for
@@ -107,11 +109,25 @@ parent reasoning, self-review verdict or unrelated session history:
 2. Task goal in one or two sentences, with its source. Separate documented or
    user-agreed requirements from intent inferred from commits or the diff.
 3. Commit/path list and brief factual change summary; deliberate non-goals and
-   known limitations, without arguing that the implementation is correct.
+   known limitations, without arguing that the implementation is correct. Cite
+   the source of accepted behavior/risk; do not turn author explanations or
+   "documented workarounds" into user-approved exceptions.
 4. Instructions to obtain the diff/source independently and examine necessary
    callers, contracts and tests beyond the touched lines without expanding the
    review target. State existing check results with provenance, not as proof.
 5. The review contract and report format below.
+
+Separate requirements/accepted exceptions from implementation observations and
+open questions; do not group them under an undifferentiated "accepted behavior"
+heading. State each exception's source and precise effects covered. Describe
+which operation is skipped and which side effects still occur, not a vague "event
+ignored" when other state is updated. Preserve check provenance, command/result,
+exit status and verification limits when available. Do not call a failed check clean
+"apart from" an error; report failure/blocked coverage and any separately established facts.
+Include the review-policy revision in the handoff as provenance, not proof of quality.
+
+Do not send the whole command or the parent's recovery ledger to the child.
+Fingerprint inputs identify the target; keep orchestration out of the analysis.
 
 ## Reviewer contract
 
@@ -139,6 +155,25 @@ Tell the reviewer:
 > before accepting it. Report missing coverage explicitly; silence or an idle
 > session is not proof of review completion. Use ordinary native session history
 > for continuity, not a new checkpoint file or plugin.
+>
+> Analysis takes priority over report formatting. Establish expected behavior
+> independently of the implementation, then trace representative user scenarios
+> through callers, state and observable results. Include relevant channel/platform
+> branches and a plausible failure/interleaving, such as a focused input during an asynchronous update.
+> Seek a counterexample to safety claims; check whether later callbacks repair
+> intermediate state before reporting a race. Separate static evidence, observed
+> behavior and unresolved timing hypotheses. Hashes, coverage and passing tests
+> are not substitutes for this analysis; do not invent defects to fill a checklist.
+> Bound conclusions to the property and scenario actually supported. Acceptance
+> of one behavior does not waive separate side effects; matching code paths prove
+> consistency, not product approval. Preserve failed-check qualifiers when citing
+> inherited results. Evaluate residual impact without automatically raising severity.
+>
+> An unmet material requirement needs REQUEST_CHANGES. A contract question that
+> could change acceptance also needs REQUEST_CHANGES pending clarification, not
+> APPROVE with a buried caveat; the question is not a confirmed defect. APPROVE
+> may include optional improvements or a sourced, explicitly accepted risk.
+> Missing runtime checks alone do not require rejection or make source review incomplete.
 
 Require a self-contained final report containing:
 
@@ -264,6 +299,11 @@ scope. A genuinely different user-requested scope starts a separate review.
 
 Native completion/text alone is insufficient. Check review ID/fingerprint,
 coverage, current-attempt provenance, all required sections and unchanged scope.
+Check that the verdict agrees with material findings and open acceptance questions;
+do not silently rewrite the child's verdict or downplay a finding. If it conflicts
+with the report, request a reasoned resolution in the same child within the shared
+budget. If unresolved, return the provisional report as incomplete, without a
+final verdict. Formatting repairs must not demand extra findings or a preferred verdict.
 For a terminal child with a truncated/incomplete report, request completion in
 the same child only within the remaining budget; a transient provider failure
 uses the delay policy above. Do not manufacture missing findings or a verdict.

@@ -108,6 +108,9 @@ in
   xdg.configFile = {
     "opencode/AGENTS.md".source = ./config/AGENTS.md;
     "opencode/commands/delegated-review.md".source = ./commands/delegated-review.md;
+    "opencode/commands/delegated-review-chrome.md".source = ./commands/delegated-review-chrome.md;
+    "opencode/commands/problem-brief.md".source = ./commands/problem-brief.md;
+    "opencode/problem-brief.README.md".source = ./problem-brief.README.md;
     "opencode/plugins/model-routing" = {
       source = modelRoutingPlugin;
       # Preserve the existing managed leaf paths during upgrades. Each link
