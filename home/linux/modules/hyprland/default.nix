@@ -164,8 +164,8 @@ in
     plugin = ${hyprSpaces}/lib/libhypr-spaces.so
   '';
 
-  xdg.configFile."hypr/scripts/terminal-layout-en.sh" = {
-    source = ./scripts/terminal-layout-en.sh;
+  xdg.configFile."hypr/scripts/focus-layout-en.sh" = {
+    source = ./scripts/focus-layout-en.sh;
     executable = true;
   };
 }

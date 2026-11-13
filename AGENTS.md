@@ -903,7 +903,14 @@ live SSH does not persist and the target does not enable an SSH server.
 - Конфиги хостов — raw `.conf` файлы, подключаемые через `xdg.configFile`. Не NixOS-модули.
 - Laptop: без compose:ralt (xremap перехватывает), есть `on_focus_under_fullscreen`.
 - Desktop: compose:ralt активен, есть `new_window_takes_over_fullscreen`.
-- Оба: dwindle, zero gaps/borders, UWSM autostart, waybar, terminal-layout-en.sh.
+- Оба: dwindle, zero gaps/borders, UWSM autostart, waybar, focus-layout-en.sh.
+- Shared `focus-layout-en.sh` selects EN on terminal-group entry and every Qt
+  pinentry focus. Manual layout changes remain allowed; the user explicitly chose
+  no restoration of the previous RU layout. Lenovo's new HM script/launcher are
+  installed and its old watcher was replaced with approval, without restarting
+  Hyprland or GPG-agent. Fixtures are not independent live pinentry UI acceptance.
+  See `home/linux/modules/hyprland/layout-en.md`; do not import Neovim's separate
+  saved-layout/Insert-mode policy into this watcher without a new request.
 - Системный Wayland bell: `onionbell.service` в HM-модуле Hyprland воспроизводит общий `xdg-system-bell-v1` (не только Kitty). Пакет pinned в `pkgs/onionbell`, с compatibility-правкой для отсутствующего `clients.pseudo` и `ogg-first-span.patch`: Rodio 0.21 принимает пустой первый Vorbis span за EOF; полное декодирование короткого bell в PCM устраняет тишину. Регрессионный тест пропускает настоящий freedesktop `bell.oga` через output mixer. Kitty использует `enable_audio_bell yes` в `common.conf`. После перехода с 0.55/0.56 на Hyprland со встроенным звуком bell (upstream PR #15502) удалить onionbell service, чтобы исключить двойное воспроизведение.
 - `ipc-eof.patch` в onionbell завершает IPC reader при обрыве соединения вместо busy loop с ростом памяти. Независимые `ipc-test-harness.patch` и `ipc-tests.rs` проверяют реальные Unix-сокеты без аудиоустройства; повторное чтение после EOF ограничено guard-ом. При обновлении pinned `rev` проверить пакет без `ipc-eof.patch` по `pkgs/onionbell/README.md`: удалить только этот фикс, когда все EOF-тесты проходят без него, тесты сохранить. `flake.lock` не обновляет этот pin; конфликт patch — повод для review, не доказательство upstream-исправления.
 - Для живой проверки выхода через `pw-record` обязательно задавать `--properties '{ stream.capture.sink = true }'` вместе с `--target <sink-name>` и проверять PipeWire links от `monitor_FL/FR`: без этого WirePlumber может записывать микрофон вместо выхода. Ненулевой peak сам по себе не доказывает воспроизведение bell.

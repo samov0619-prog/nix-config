@@ -498,7 +498,7 @@ flowchart TD
   `Super+Shift+P`; по решению пользователя вводит первую строку **без Enter**.
   Проверки и применение — в [журнале](feedback.md#gpgpass-и-ввод-пароля-через-tofi).
 - Terminal-layout watcher подписывается на Hyprland socket и переключает раскладку
-  при фокусе терминала; [script](../../home/linux/modules/hyprland/scripts/terminal-layout-en.sh)
+  при фокусе терминала; [script](../../home/linux/modules/hyprland/scripts/focus-layout-en.sh)
   использует `socat` из [core packages](../../home/core-set/packages.nix).
 
 ## Дополнительная installed-state сверка — 10.11.2026
