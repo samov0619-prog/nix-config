@@ -682,26 +682,38 @@ test. No build, activation, live fixed TUI/PTY, service restart, or commit was r
 
 ## Saved permissions TUI (2026-11-13)
 
-The TUI-only `/permissions` plugin uses the connected client's native location
-lookup and saved-permission list/remove API. Scope is frozen to the opening
-directory/project; unloaded session locations do not fall back to the launch
-project. The controller filters project IDs independently of the API, serializes
-requests, revalidates displayed ID/action/resource before deletion, and refuses
-late deletes after closure or scope changes. The ID-only remove API cannot make
-the preceding read atomic; already dispatched DELETE requests cannot be undone.
+The TUI-only `/permissions` plugin uses public native `dialog.select()` and
+`dialog.confirm()`, the connected client's location lookup and saved-permission
+list/remove API. No custom rendering, JSX or new binary patch is needed. Ctrl+D
+or Enter requests confirmation; only explicit `true` authorizes removal. q/Esc
+closes the list; Cancel/Esc or dialog replacement cancels confirmation. Completion
+uses a native toast, never automatically reopens the list over another dialog.
 
-Twelve actual-controller tests cover sorting/filtering/copying, empty/bounded
-selection, double confirmation, navigation disarming, stale action/resource/
-project/disappearance, concurrent requests, errors, refresh failure and closure
-during loading, validation and deletion. Two declaration/TUI-fixture tests verify
-the co-located HM source bytes, public method input shapes, slash command/modal
-bindings, rendered text/viewport, escaping, long-resource inspection, cleanup,
-lookup failures, hydration, duplicate opens and q/Esc/reload/scope/replacement
-closure during validation. TSX is parsed by the installed TypeScript transpiler;
-lazy JSX getters and Solid lifecycle are fixtures, not native tracking/rendering
-or keyboard dispatch. All 14 checks pass without builds. No live saved grants
-were deleted, no service restarted, and no installed HM/native TUI/PTY acceptance
-or full semantic TypeScript check was performed.
+Scope is frozen to the opening directory/project; unloaded session locations do
+not fall back to the launch project. The controller independently filters project
+IDs, serializes operations and revalidates displayed ID/project/action/resource
+after confirmation, immediately before deletion. Scope mismatches and disposal
+refuse subsequent operations; they do not automatically clear an existing native
+dialog. Public promise dialogs provide no ownership handle, so cleanup deliberately
+avoids clearing a potentially unrelated replacement. The ID-only remove API cannot
+make the preceding read atomic; already dispatched DELETE cannot be undone.
+
+Fourteen actual-controller tests cover sorting/filtering/copying, empty/unknown
+IDs, confirmation and cancellation, stale action/resource/project/disappearance,
+concurrent requests, errors, refresh failure and disposal/scope changes during
+loading, confirmation, validation and deletion. Eight HM/native-dialog fixtures
+verify co-located plain TypeScript source bytes, public API input shapes, command
+registration, selection/confirmation settlement, stale callbacks, escaping, full
+long-resource payloads, hydration, duplicate opens, errors including post-delete
+notification failure, scope guards and late responses without modal reopening.
+No JSX transpiler is required. All 22 checks pass without builds. These fixtures
+do not test real OpenTUI layout, keyboard dispatch, very-long-pattern readability,
+installed HM layout or native TUI/PTY behavior. No live saved grants were deleted,
+no service restarted, and no full semantic TypeScript check was performed.
+
+The user subsequently accepted the native UI. This is user-reported acceptance,
+not independent agent observation of the installed layout, every cancellation/
+deletion path or very-long-pattern readability.
 
 ## Accounting limits
 

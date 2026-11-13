@@ -743,12 +743,18 @@ live SSH does not persist and the target does not enable an SSH server.
   The changed store plugin directory needs the established post-HM service restart
   and TUI reopen in a later user-chosen maintenance window, not now or via /reload.
 - `/permissions` is a prepared TUI-only saved-Always manager for the current native
-  project ID, not configured policy. Arrows select, Ctrl+D twice deletes by ID;
-  navigation disarms, q/Esc closes. Frozen scope, fresh pre-delete validation and
-  lifecycle guards cannot make the ID-only API atomic or undo dispatched DELETE.
-  Fourteen actual-controller/HM-declaration/TSX public-API fixture tests pass, not
-  native TUI/PTY/installed-generation acceptance. No live grants deleted, service
-  restart, build, activation or commit by agent. Apply HM/reopen TUI; the separate
+  project ID, not configured policy. Public native select/confirm replace custom
+  rendering: search/arrows select, Ctrl+D or Enter requests confirmation, q/Esc
+  closes the list and Cancel/Esc cancels confirmation. Completion uses a toast,
+  without reopening. Frozen scope and fresh pre-delete validation refuse stale
+  operations, not automatically close dialogs. Disposal avoids global clear:
+  public promise dialogs have no ownership handle. The ID-only API remains
+  non-atomic; dispatched DELETE cannot be undone. Twenty-two actual-controller/
+  HM/native-dialog fixture tests pass, not native TUI/PTY/installed-generation
+  or very-long-pattern layout acceptance. The user subsequently accepted the
+  native UI; this is user-reported acceptance, not independent agent observation
+  or proof of every deletion/layout scenario. No live grants deleted, service
+  restart, build or activation by agent. Apply HM/reopen TUI; the separate
   limits/server changes still need their later maintenance window. See README.
 - Audio — только native notifications/OpenTUI; mutable `cli.json` seeded once,
   `attention.sound`/volume/custom permission/done/error sounds. Старые V1

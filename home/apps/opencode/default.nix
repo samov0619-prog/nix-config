@@ -35,7 +35,7 @@ let
   '';
   permissionsPlugin = pkgs.runCommand "opencode-permissions-plugin" { } ''
     mkdir -p "$out"
-    cp ${./plugins/permissions/tui.tsx} "$out/tui.tsx"
+    cp ${./plugins/permissions/tui.ts} "$out/tui.ts"
     cp ${./plugins/permissions/state.ts} "$out/state.ts"
   '';
   # Keep runtime imports/assets in the plugin closure, not in the flake's

@@ -7,8 +7,6 @@ export type SavedPermission = {
 
 export type PermissionView = {
   entries: SavedPermission[];
-  selected: number;
-  armed?: string;
   busy: boolean;
   error: string;
 };
@@ -19,13 +17,11 @@ export function permissionList(options: {
   current: () => boolean;
   list: (projectID: string) => Promise<SavedPermission[]>;
   remove: (id: string) => Promise<void>;
-  changed: (view: PermissionView) => void;
-  close: () => void;
+  confirm: (entry: SavedPermission) => Promise<boolean | undefined>;
 }) {
   let alive = true;
   let state: PermissionView = {
     entries: [],
-    selected: 0,
     busy: false,
     error: "",
   };
@@ -33,11 +29,7 @@ export function permissionList(options: {
     if (!alive) return false;
     if (options.current()) return true;
     alive = false;
-    options.close();
     return false;
-  };
-  const publish = () => {
-    if (valid()) options.changed({ ...state });
   };
   const rows = async () =>
     (await options.list(options.projectID))
@@ -51,16 +43,8 @@ export function permissionList(options: {
           a.resource.localeCompare(b.resource) ||
           a.id.localeCompare(b.id),
       );
-  const replace = (entries: SavedPermission[], id?: string) => {
-    const index = entries.findIndex((entry) => entry.id === id);
-    state = {
-      ...state,
-      entries,
-      selected:
-        index >= 0
-          ? index
-          : Math.min(state.selected, Math.max(0, entries.length - 1)),
-    };
+  const replace = (entries: SavedPermission[]) => {
+    state = { ...state, entries };
   };
   return {
     get view() {
@@ -68,8 +52,7 @@ export function permissionList(options: {
     },
     async load() {
       if (!valid() || state.busy) return;
-      state = { ...state, busy: true, armed: undefined, error: "" };
-      publish();
+      state = { ...state, busy: true, error: "" };
       try {
         const entries = await rows();
         if (!valid()) return;
@@ -82,77 +65,57 @@ export function permissionList(options: {
         };
       } finally {
         state = { ...state, busy: false };
-        publish();
       }
     },
-    move(delta: number) {
-      if (!valid() || state.busy) return;
-      state = {
-        ...state,
-        armed: undefined,
-        error: "",
-        selected: Math.max(
-          0,
-          Math.min(state.entries.length - 1, state.selected + delta),
-        ),
-      };
-      publish();
-    },
-    disarm() {
-      if (!valid()) return;
-      state = { ...state, armed: undefined };
-      publish();
-    },
-    async erase() {
-      if (!valid() || state.busy) return;
-      const selected = state.entries[state.selected];
-      if (!selected) return;
-      if (state.armed !== selected.id) {
-        state = { ...state, armed: selected.id, error: "" };
-        publish();
-        return;
-      }
-      state = { ...state, armed: undefined, busy: true, error: "" };
-      publish();
+    async erase(id: string) {
+      if (!valid() || state.busy) return false;
+      const entry = state.entries.find((entry) => entry.id === id);
+      if (!entry) return false;
+      const selected = { ...entry };
+      state = { ...state, busy: true, error: "" };
       try {
+        // Only the native confirmation's explicit true authorizes deletion.
+        const confirmed = await options.confirm({ ...selected });
+        if (!valid() || confirmed !== true) return false;
         // A grant may have changed in another client since it was displayed.
         const fresh = await rows();
-        if (!valid()) return;
+        if (!valid()) return false;
         const candidate = fresh.find((entry) => entry.id === selected.id);
         if (
           !candidate ||
           candidate.action !== selected.action ||
           candidate.resource !== selected.resource
         ) {
-          replace(fresh, selected.id);
+          replace(fresh);
           state = {
             ...state,
             error:
-              "Permission changed or disappeared. Confirm again if needed.",
+              "Permission changed or disappeared. Reopen the list to check it.",
           };
-          return;
+          return false;
         }
         await options.remove(selected.id);
-        if (!valid()) return;
+        if (!valid()) return true;
         replace(fresh.filter((entry) => entry.id !== selected.id));
         try {
           const entries = await rows();
-          if (valid()) replace(entries, state.entries[state.selected]?.id);
+          if (valid()) replace(entries);
         } catch {
           state = {
             ...state,
             error: "Deleted; refresh failed. Close and reopen to retry.",
           };
         }
+        return true;
       } catch {
-        if (!valid()) return;
+        if (!valid()) return false;
         state = {
           ...state,
           error: "Deletion failed. Close and reopen to check the saved grant.",
         };
+        return false;
       } finally {
         state = { ...state, busy: false };
-        publish();
       }
     },
     dispose() {

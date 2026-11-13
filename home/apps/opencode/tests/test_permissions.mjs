@@ -9,12 +9,11 @@ const grant = (id, resource = `command ${id}`, projectID = "project-a") => ({
   resource,
 });
 const deferred = () => {
-  let resolve, reject;
-  const promise = new Promise((yes, no) => {
-    resolve = yes;
-    reject = no;
+  let resolve;
+  const promise = new Promise((done) => {
+    resolve = done;
   });
-  return { promise, resolve, reject };
+  return { promise, resolve };
 };
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 function fixture(entries = [grant("a"), grant("b")]) {
@@ -22,10 +21,10 @@ function fixture(entries = [grant("a"), grant("b")]) {
     entries,
     removed: [],
     requests: [],
-    views: [],
+    confirmations: [],
     current: true,
-    closed: 0,
     list: async () => state.entries,
+    confirm: async () => true,
     remove: async (id) => {
       state.entries = state.entries.filter((row) => row.id !== id);
     },
@@ -33,10 +32,10 @@ function fixture(entries = [grant("a"), grant("b")]) {
   const model = permissionList({
     projectID: "project-a",
     current: () => state.current,
-    close: () => {
-      state.closed++;
+    confirm: async (entry) => {
+      state.confirmations.push(entry);
+      return state.confirm(entry);
     },
-    changed: (value) => state.views.push(value),
     list: async (projectID) => {
       state.requests.push(projectID);
       return state.list();
@@ -49,7 +48,7 @@ function fixture(entries = [grant("a"), grant("b")]) {
   return { model, state };
 }
 
-test("project-filtered, sorted copies; empty list and selection boundaries", async () => {
+test("project-filtered sorted copies; empty/unknown IDs cannot request confirmation", async () => {
   const { model, state } = fixture([
     grant("b"),
     grant("foreign", "x", "project-b"),
@@ -61,44 +60,28 @@ test("project-filtered, sorted copies; empty list and selection boundaries", asy
     ["a", "b"],
   );
   assert.deepEqual(state.requests, ["project-a"]);
-  state.entries[2].resource = "changed behind the view";
+  state.entries[2].resource = "external change";
   assert.equal(model.view.entries[0].resource, "command a");
-  model.move(-1);
-  assert.equal(model.view.selected, 0);
-  model.move(100);
-  assert.equal(model.view.selected, 1);
+  assert.equal(await model.erase("foreign"), false);
+  assert.equal(await model.erase("unknown"), false);
   state.entries = [];
   await model.load();
-  model.move(1);
-  await model.erase();
-  assert.equal(model.view.selected, 0);
+  assert.equal(await model.erase("a"), false);
+  assert.deepEqual(state.confirmations, []);
   assert.deepEqual(state.removed, []);
-  assert.equal(model.view.armed, undefined);
 });
 
-test("two confirmations delete exactly the selected ID; navigation and details disarm", async () => {
+test("native confirmation receives the displayed grant; explicit true deletes only that ID", async () => {
   const { model, state } = fixture();
   await model.load();
-  await model.erase();
-  assert.equal(model.view.armed, "a");
-  assert.deepEqual(state.removed, []);
-  model.move(-1); // Even a clamped move cancels confirmation.
-  assert.equal(model.view.armed, undefined);
-  await model.erase();
-  model.disarm();
-  assert.equal(model.view.armed, undefined);
-  model.move(1);
-  await model.erase();
-  assert.equal(model.view.armed, "b");
-  await model.erase();
+  assert.equal(await model.erase("b"), true);
+  assert.deepEqual(state.confirmations, [grant("b")]);
   assert.deepEqual(state.removed, ["b"]);
   assert.deepEqual(
     model.view.entries.map((row) => row.id),
     ["a"],
   );
-  assert.equal(model.view.selected, 0);
   assert.equal(model.view.busy, false);
-  assert.equal(model.view.armed, undefined);
   assert.equal(
     state.requests.length,
     3,
@@ -106,94 +89,99 @@ test("two confirmations delete exactly the selected ID; navigation and details d
   );
 });
 
-for (const change of ["action", "resource", "projectID", "disappeared"]) {
-  test(`stale ${change} refuses deletion and requires new confirmation`, async () => {
+for (const decision of [false, undefined]) {
+  test(`native cancellation ${decision} does not validate or delete`, async () => {
     const { model, state } = fixture();
+    state.confirm = async () => decision;
     await model.load();
-    await model.erase();
-    if (change === "disappeared") state.entries.shift();
-    else state.entries[0][change] = "different";
-    await model.erase();
+    assert.equal(await model.erase("a"), false);
+    assert.equal(state.confirmations.length, 1);
+    assert.equal(state.requests.length, 1);
     assert.deepEqual(state.removed, []);
-    assert.equal(model.view.armed, undefined);
-    assert.match(model.view.error, /changed or disappeared/);
     assert.equal(model.view.busy, false);
-    await model.erase();
-    assert.deepEqual(
-      state.removed,
-      [],
-      "fresh selection is armed, not immediately deleted",
-    );
+    assert.equal(model.view.error, "");
   });
 }
 
-test("serializes loading, validation, deletion and refresh; no duplicate requests", async () => {
+for (const change of ["action", "resource", "projectID", "disappeared"]) {
+  test(`stale ${change} after confirmation refuses deletion`, async () => {
+    const { model, state } = fixture();
+    await model.load();
+    state.confirm = async () => {
+      if (change === "disappeared") state.entries.shift();
+      else state.entries[0][change] = "different";
+      return true;
+    };
+    assert.equal(await model.erase("a"), false);
+    assert.deepEqual(state.removed, []);
+    assert.match(model.view.error, /changed or disappeared/);
+    assert.equal(model.view.busy, false);
+  });
+}
+
+test("serializes load, confirmation, validation, delete and refresh", async () => {
   const { model, state } = fixture();
   let wait = deferred();
   state.list = () => wait.promise;
   const loading = model.load();
   await model.load();
-  await model.erase();
-  model.move(1);
+  await model.erase("a");
   assert.equal(state.requests.length, 1);
   wait.resolve(state.entries);
   await loading;
-  await model.erase();
-  wait = deferred();
-  const deleting = model.erase();
-  await model.erase();
+  const confirmation = deferred();
+  state.confirm = () => confirmation.promise;
+  const deleting = model.erase("a");
+  await model.erase("b");
   await model.load();
-  model.move(1);
-  assert.equal(model.view.selected, 0);
+  assert.equal(state.confirmations.length, 1);
+  assert.equal(state.requests.length, 1);
+  wait = deferred();
+  confirmation.resolve(true);
+  await tick();
+  await model.erase("a");
   assert.equal(state.requests.length, 2);
   const removing = deferred();
   state.remove = () => removing.promise;
   wait.resolve(state.entries);
   await tick();
-  await model.erase();
+  await model.erase("b");
   assert.deepEqual(state.removed, ["a"]);
   const refreshing = deferred();
   state.list = () => refreshing.promise;
   removing.resolve();
   await tick();
-  await model.erase();
+  await model.erase("b");
   assert.deepEqual(state.removed, ["a"]);
   refreshing.resolve([grant("b")]);
-  await deleting;
+  assert.equal(await deleting, true);
   assert.equal(model.view.busy, false);
 });
 
-test("loading, validation and deletion errors never silently remove a row", async () => {
-  const { model, state } = fixture();
-  state.list = async () => {
-    throw new Error("private server message");
-  };
-  await model.load();
-  assert.match(model.view.error, /Could not load/);
-  assert.doesNotMatch(model.view.error, /private/);
-  assert.equal(model.view.busy, false);
-  state.list = async () => state.entries;
-  await model.load();
-  await model.erase();
-  state.list = async () => {
-    throw new Error("offline");
-  };
-  await model.erase();
-  assert.deepEqual(state.removed, []);
-  assert.match(model.view.error, /Deletion failed/);
-  assert.equal(model.view.armed, undefined);
-  state.list = async () => state.entries;
-  state.remove = async () => {
-    throw new Error("offline");
-  };
-  await model.erase();
-  await model.erase();
-  assert.equal(model.view.entries.length, 2);
-  assert.match(model.view.error, /Deletion failed/);
-  assert.equal(model.view.busy, false);
+test("load, confirmation, validation and remove errors never silently drop rows", async () => {
+  for (const stage of ["load", "confirm", "validate", "remove"]) {
+    const { model, state } = fixture();
+    const failure = async () => {
+      throw new Error("private server message");
+    };
+    if (stage === "load") state.list = failure;
+    await model.load();
+    if (stage === "load") assert.match(model.view.error, /Could not load/);
+    else {
+      if (stage === "confirm") state.confirm = failure;
+      if (stage === "validate") state.list = failure;
+      if (stage === "remove") state.remove = failure;
+      assert.equal(await model.erase("a"), false);
+      assert.equal(model.view.entries.length, 2);
+      assert.match(model.view.error, /Deletion failed/);
+    }
+    assert.doesNotMatch(model.view.error, /private/);
+    assert.equal(model.view.busy, false);
+    assert.equal(state.removed.length, stage === "remove" ? 1 : 0);
+  }
 });
 
-test("successful delete plus failed refresh is reported distinctly", async () => {
+test("successful delete plus failed refresh is distinct from failed deletion", async () => {
   const { model, state } = fixture();
   await model.load();
   state.remove = async () => {
@@ -201,8 +189,7 @@ test("successful delete plus failed refresh is reported distinctly", async () =>
       throw new Error("offline");
     };
   };
-  await model.erase();
-  await model.erase();
+  assert.equal(await model.erase("a"), true);
   assert.deepEqual(
     model.view.entries.map((row) => row.id),
     ["b"],
@@ -212,44 +199,41 @@ test("successful delete plus failed refresh is reported distinctly", async () =>
 });
 
 for (const stop of ["dispose", "scope-change"]) {
-  test(`${stop} during loading or validation prevents deletion and late publication`, async () => {
-    for (const phase of ["loading", "validation"]) {
+  test(`${stop} during load, confirmation or validation prevents any late delete`, async () => {
+    for (const phase of ["loading", "confirmation", "validation"]) {
       const { model, state } = fixture();
-      if (phase === "validation") {
-        await model.load();
-        await model.erase();
-      }
+      if (phase !== "loading") await model.load();
+      const before = model.view.entries;
       const wait = deferred();
-      state.list = () => wait.promise;
-      const operation = phase === "loading" ? model.load() : model.erase();
-      const publications = state.views.length;
+      if (phase === "confirmation") state.confirm = () => wait.promise;
+      else state.list = () => wait.promise;
+      const operation = phase === "loading" ? model.load() : model.erase("a");
+      await tick();
       if (stop === "dispose") model.dispose();
       else state.current = false;
-      wait.resolve(state.entries);
+      wait.resolve(phase === "confirmation" ? true : state.entries);
       await operation;
-      await model.erase();
-      model.move(1);
-      model.disarm();
+      await model.erase("b");
       assert.deepEqual(state.removed, []);
-      assert.equal(state.views.length, publications);
-      assert.equal(state.closed, stop === "dispose" ? 0 : 1);
+      assert.equal(
+        model.view.entries,
+        before,
+        "late results do not replace the view",
+      );
     }
   });
 }
 
-test("closing after DELETE dispatch cannot undo it but never refreshes or publishes", async () => {
+test("closing after DELETE dispatch cannot undo it but never refreshes", async () => {
   const { model, state } = fixture();
   await model.load();
-  await model.erase();
   const wait = deferred();
   state.remove = () => wait.promise;
-  const operation = model.erase();
+  const operation = model.erase("a");
   await tick();
   assert.deepEqual(state.removed, ["a"]);
-  const publications = state.views.length;
   model.dispose();
   wait.resolve();
   await operation;
-  assert.equal(state.views.length, publications);
   assert.equal(state.requests.length, 2);
 });
