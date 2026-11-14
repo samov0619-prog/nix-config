@@ -127,7 +127,12 @@ in
     "opencode/plugins/git-offline-v2".source = serverPlugin "git-offline" ./plugins/git-offline.ts;
     "opencode/plugins/permission-stats-v2".source =
       serverPlugin "permission-stats" ./plugins/permission-stats.ts;
-    "opencode/plugins/model-calls-v2".source = serverPlugin "model-calls" ./plugins/model-calls.ts;
+    "opencode/plugins/model-calls-v2" = {
+      # Optional routing/effort/retry diagnostics. Set true to record future calls;
+      # task-report works without it, and disabling does not delete old journals.
+      enable = false;
+      source = serverPlugin "model-calls" ./plugins/model-calls.ts;
+    };
     "opencode/plugins/limits-v2".source = limitsPlugin;
     "opencode/plugins/permissions".source = permissionsPlugin;
     "opencode/plugins/skill-stats-v2".source = serverPlugin "skill-stats" ./plugins/skill-stats.ts;

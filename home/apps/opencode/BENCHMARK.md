@@ -722,6 +722,14 @@ It detects `session_v2`/`session_message`, preferring V2 for the requested sessi
 otherwise retains legacy `session`/`message`/`part` and saved ledger handling.
 The report includes descendants, model routes, stored usage, cache, tool states,
 saved retries and compaction markers; it does not expose prompts/source text.
+The home HM declaration now disables `model-calls-v2` with the native file
+`enable = false`; its source/tests remain for explicit routing/effort/retry
+profiling. The user subsequently applied HM and reported completing the restart.
+Read-only checks confirm the installed plugin path and `local.model-calls` runtime
+registry entry are absent, with the service available. The agent did not activate
+HM or restart the service. Existing journals are not deleted, and the report
+remains usable from session storage without the plugin.
+
 It also reads per-session XDG state `opencode/model-calls/*.jsonl` (override with
 `--calls-dir`) and lists transport attempts individually, separately from tokens.
 Turn filtering uses attempt timestamps, including responses arriving after the
@@ -739,6 +747,9 @@ the final request after later hooks or server-side alias resolution. Oversized
 HTTP JSON (>8 MiB) or unsupported bodies leave wire model/effort unknown. No
 provider response bodies, URLs, headers, prompts or keys are persisted.
 Report explicit coverage gaps rather than inventing missing usage.
+The isolated runtime fixture explicitly installs the logger when testing source
+plugins. With `OPENCODE_TEST_HM_GENERATION`, it instead respects whether that
+generation includes `model-calls-v2` and expects no journal when it is absent.
 
 The configured 212000 soft-input ceiling is not a proof of usable context or a
 hard cap on individual request sizes. Checks happen between steps. Work High /

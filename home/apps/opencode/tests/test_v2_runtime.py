@@ -244,6 +244,10 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                 True  # Never connect to corporate services in this test.
             )
     generation = os.environ.get("OPENCODE_TEST_HM_GENERATION")
+    # Source-only fixtures opt in; installed-generation checks follow its layout.
+    model_calls_enabled = not generation or (
+        Path(generation) / "home-files/.config/opencode/plugins/model-calls-v2"
+    ).is_dir()
     if generation and not mac:
         installed = Path(generation) / "home-files/.config/opencode/opencode.json"
         assert json.loads(installed.read_text()).get("formatter", False) is False
@@ -262,6 +266,8 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
         if limits_only:
             entries = [("limits", "limits/index.ts")]
         for name, entry in entries:
+            if name == "model-calls" and not model_calls_enabled:
+                continue
             plugin = config / "plugins" / name
             generation = os.environ.get("OPENCODE_TEST_HM_GENERATION")
             if generation:
@@ -465,6 +471,8 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                     "local.skill-stats",
                     "local.agent-todo",
                 }
+                if not model_calls_enabled:
+                    expected_plugins.discard("local.model-calls")
                 if limits_only:
                     expected_plugins = {"local.limits"}
                 assert {p["id"] for p in local} == expected_plugins, local
@@ -1321,19 +1329,23 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                             "fixture unavailable",
                         )
                     )
-                assert len(attempts) == len(MockResponses.requests), (
-                    len(attempts),
-                    len(MockResponses.requests),
-                )
-                assert Counter(
-                    (r["wireModel"], r.get("effort")) for r in attempts
-                ) == Counter(
-                    (r["model"], r.get("reasoning", {}).get("effort"))
-                    for r in MockResponses.requests
-                )
-                print(
-                    "PASS: every real mock HTTP attempt, title/free title, generation, children, compaction and retry recorded privately without token double-counting"
-                )
+                if model_calls_enabled:
+                    assert len(attempts) == len(MockResponses.requests), (
+                        len(attempts),
+                        len(MockResponses.requests),
+                    )
+                    assert Counter(
+                        (r["wireModel"], r.get("effort")) for r in attempts
+                    ) == Counter(
+                        (r["model"], r.get("reasoning", {}).get("effort"))
+                        for r in MockResponses.requests
+                    )
+                    print(
+                        "PASS: every real mock HTTP attempt, title/free title, generation, children, compaction and retry recorded privately without token double-counting"
+                    )
+                else:
+                    assert not (root / "state/opencode/model-calls").exists()
+                    print("PASS: disabled HM logger is not loaded and creates no journal")
             except Exception:
                 log.flush()
                 text = log_path.read_text()

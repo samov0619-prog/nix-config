@@ -631,7 +631,22 @@ real plugin root. Отдельный symlink `index.ts` за пределы root
 обе версии без дубликатов. Проверен на настоящей изолированной V2 DB, включая
 точные token totals и compaction.
 
-`plugins/model-calls.ts` дописывает приватный XDG state `opencode/model-calls/<session>.jsonl`.
+`plugins/model-calls.ts` сохранён для диагностики routing/effort/retries, но
+**выключен в домашнем HM**: у `xdg.configFile."opencode/plugins/model-calls-v2"`
+в `default.nix` стоит `enable = false`. Для будущего профилирования поставить
+`true`, применить HM и перезагрузить server plugins в согласованное окно.
+Пользователь применил HM и сообщил о выполнении restart. Read-only проверка
+подтверждает отсутствие установленного plugin path и `local.model-calls` в
+runtime registry; сервис доступен. Агент не применял HM и не перезапускал сервис.
+
+`opencode-task-report` остаётся установленным и работает по данным сессий без
+плагина. Старые журналы не удаляются и по-прежнему доступны отчёту; без нового
+журналирования сведения о будущих transport attempts будут отсутствовать.
+На корпоративный Mac плагин и обновление отчёта в текущем переносе не добавлять;
+существующую корпоративную диагностику оставить без изменений.
+
+При включении плагин дописывает приватный XDG state
+`opencode/model-calls/<session>.jsonl`.
 В том же отчёте теперь есть **каждая наблюдаемая transport attempt**: время,
 сессия/ребёнок, `primary`/`title`/`generate`/`compaction`, agent, resolved
 provider/model/variant, API `model` и reasoning effort (если удалось извлечь).
