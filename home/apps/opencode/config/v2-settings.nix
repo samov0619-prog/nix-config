@@ -17,6 +17,101 @@ let
     "subagent"
     "todowrite"
   ];
+  gitApprovalCommands =
+    map (command: "${command} *") [
+      "commit"
+      "merge"
+      "cherry-pick"
+      "revert"
+      "am"
+      "rebase"
+      "reset"
+      "checkout"
+      "switch"
+      "restore"
+      "clean"
+    ]
+    ++ [
+      "stash"
+      "stash -*"
+    ]
+    ++ map (command: "stash ${command} *") [
+      "push"
+      "save"
+      "apply"
+      "pop"
+      "drop"
+      "clear"
+      "branch"
+      "store"
+      "create"
+      "import"
+      "export"
+    ]
+    ++ map (command: "worktree ${command} *") [
+      "remove"
+      "move"
+      "prune"
+      "repair"
+    ]
+    ++
+      builtins.concatMap
+        (flag: [
+          "branch ${flag}*"
+          "branch * ${flag}*"
+        ])
+        [
+          "-d"
+          "-D"
+          "--delete"
+          "-m"
+          "-M"
+          "--move"
+          "-C"
+          "-f"
+          "--force"
+          "-rd"
+          "-rD"
+        ]
+    ++
+      builtins.concatMap
+        (flag: [
+          "tag ${flag}*"
+          "tag * ${flag}*"
+        ])
+        [
+          "-d"
+          "--delete"
+          "-f"
+          "--force"
+        ];
+  # Literal command boundaries keep merge-base/diff-tree distinct from merge/diff.
+  # Direct inspection exceptions also allow refs named e.g. "rebase"; do not use
+  # "git * diff *" as an exception, which could allow "git reset --hard diff".
+  gitInspectionCommands = map (command: "git ${command} *") [
+    "status"
+    "diff"
+    "diff-tree"
+    "diff-index"
+    "diff-files"
+    "range-diff"
+    "log"
+    "show"
+    "merge-base"
+    "rev-list"
+    "rev-parse"
+    "for-each-ref"
+    "name-rev"
+    "describe"
+    "ls-tree"
+    "ls-files"
+    "cat-file"
+    "blame"
+    "reflog show"
+    "stash list"
+    "stash show"
+    "worktree list"
+  ];
   limit = {
     context = 1050000;
     input = 244000;
@@ -46,10 +141,17 @@ in
         inherit resource;
         effect = "ask";
       })
-      [
-        "git commit *"
-        "git * commit *"
-      ];
+      (
+        builtins.concatMap (command: [
+          "git ${command}"
+          "git * ${command}"
+        ]) gitApprovalCommands
+      )
+    ++ map (resource: {
+      action = "shell";
+      inherit resource;
+      effect = "allow";
+    }) gitInspectionCommands;
   policies = [
     {
       action = "provider.use";
@@ -115,7 +217,7 @@ in
         "shell:git * remote show -n*"
         "shell:git * remote show * -n*"
       ];
-  # Apart from explicit commit approval, retain the native V2 permission baseline.
+  # Apart from approval-sensitive Git mutations, retain the native V2 baseline.
   # The shell hook disables Git transports and lazy fetch, independently of remembered Always.
   providers.openai.models = {
     "gpt-6.1-sol" = reasoning [

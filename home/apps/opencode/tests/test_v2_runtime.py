@@ -249,8 +249,9 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
         Path(generation) / "home-files/.config/opencode/plugins/model-calls-v2"
     ).is_dir()
     if generation and not mac:
-        installed = Path(generation) / "home-files/.config/opencode/opencode.json"
+        installed = Path(generation) / "home-files/.config/opencode/opencode.jsonc"
         assert json.loads(installed.read_text()).get("formatter", False) is False
+        assert not os.path.lexists(installed.parent / "opencode.json")
     with tempfile.TemporaryDirectory(prefix="opencode-v2-", dir="/tmp/opencode") as tmp:
         root = Path(tmp)
         config = root / "config" / "opencode"

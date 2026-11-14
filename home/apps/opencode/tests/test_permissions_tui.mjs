@@ -171,10 +171,19 @@ test("HM co-locates plain TypeScript modules; no JSX, private UI imports or UI p
   );
 });
 
+test("Allowed permissions uses the native palette and only the renamed slash command", () => {
+  const state = fixture();
+  const commands = state.layers.flatMap((layer) => layer.commands);
+  assert.equal(commands.length, 1);
+  assert.equal(commands[0].title, "Allowed permissions");
+  assert.equal(commands[0].palette, true);
+  assert.deepEqual(commands[0].slash, { name: "allowed-permissions" });
+  assert.equal(state.dialogs.length, 0);
+  state.dispose();
+});
+
 test("native select -> native confirm -> selected ID removal; one key only requests confirmation", async () => {
   const state = fixture();
-  assert.deepEqual(state.layers[0].commands[0].slash, { name: "permissions" });
-  assert.equal(state.layers[0].commands[0].palette, true);
   const operation = state.open();
   await tick();
   assert.deepEqual(state.locations, [

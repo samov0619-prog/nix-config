@@ -4,6 +4,25 @@ Pinned upstream: 2.1.4, `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`.
 Historical model-quality experiments and V1 behavior are retained in
 [archive/v1/BENCHMARK.md](archive/v1/BENCHMARK.md). They do not measure V2 quality.
 
+## Main config filename (2026-11-14)
+
+Home now declares `opencode.jsonc` as the target of HM's existing generated
+`opencode.json` entry, matching the current external Mac configuration. Native
+`programs.opencode.settings` generation and merging stay intact; no second config,
+custom generator or migration hook is added. HM's normal old-generation cleanup
+removes the former managed link; it deliberately preserves unrelated manual files.
+
+One lightweight test evaluates the pinned HM modules with a package placeholder,
+without building or activating anything. With decision-support both enabled and
+disabled, before/after merged settings and generated source paths are identical;
+only the managed config target changes, with exactly one JSONC target and no JSON
+target. The optional installed-generation runtime harness now expects JSONC and
+rejects even a dangling legacy JSON link. That runtime harness and actual HM
+activation/removal were not run; generated files were not built/read for this test.
+The filename test plus ten logger-disable/TUI declaration and dialog tests pass;
+Python syntax and whitespace checks also pass. Nixfmt and Prettier ran on changed
+files; Ruff is unavailable, so the two Python edits preserve existing layout.
+
 ## Delegated review configuration (2026-11-12)
 
 HM now declares `commands/delegated-review.md`; the existing `review` agent reads
@@ -657,6 +676,30 @@ own-answer control/confirmation hint may be visible. The opaque plugin backdrop
 does not alter the host render tree or form cache. The previous presenter fails
 this wide-terminal regression, even though its 80×24 tests pass.
 
+## Approval-sensitive Git mutations (2026-11-14)
+
+The user approved extending commit Ask to history/integration/checkout/discard
+operations, stash mutations, destructive/ref-changing branch/tag operations and
+worktree cleanup. Native permissions retain literal command boundaries, so
+`merge-base` is not `merge`. Direct inspection exceptions preserve comparisons
+even with refs named `rebase`; no broad `git * diff *` allow can hide a reset.
+Instructions require explicit operation consent, separate flags and no Always.
+Read-only agent restrictions, provider/tool policies and git-offline are unchanged.
+
+Eight approval declaration tests and two existing offline tests pass. They cover
+ordinary and option-prefixed mutations, implicit stash push, ref/worktree changes,
+branch/tag/worktree inspection, graph comparisons and mutation operands named
+after inspection commands. The conservative `git -C /repo diff main rebase` Ask
+is explicit fixture coverage: native wildcard rules are not a Git argv parser.
+They do not sandbox aliases/wrappers or exhaust every combined flag form.
+Four additional external-package tests execute the extracted pinned 2.1.4
+matcher/evaluator, compare the declaration matcher across the command fixtures,
+and verify corporate/home rule equality, provider preservation and the saved
+Always caveat. Both Mac patch variants apply/reverse on original and comment-
+refined personal rules (four fixture combinations), without touching live config.
+No native permission UI, shell-scanner integration, live saved-grant update,
+build, activation, service restart or new commit was performed.
+
 ## Limits reconnect and explicit commit policy (2026-11-13)
 
 Read-only live diagnosis found fresh local cache and `local.limits/status` while
@@ -679,6 +722,22 @@ can override Ask and arbitrary wrappers are not a sandboxed guarantee.
 All 22 targeted limits/TUI/commit/offline tests pass with the installed TypeScript
 transpiler; commit matching is a declaration fixture, not a native permission UI
 test. No build, activation, live fixed TUI/PTY, service restart, or commit was run.
+
+## Saved permissions command naming (2026-11-14)
+
+The command is now **Allowed permissions** in the native Ctrl+P palette and
+`/allowed-permissions`, without retaining the ambiguous `/permissions` alias.
+Only public command metadata changed; plugin/command IDs and the saved-grant
+controller, API scope and native dialogs remain unchanged. All 23 controller/TUI
+fixture tests pass, including the single palette/slash registration. This is not
+Mac/OpenTUI runtime acceptance or a new binary patch.
+
+The final external Mac patch targets the already-applied
+`opencode-mac-permissions-2026-11-14.patch`: Git approval expansion, append-only
+personal consent rules and the existing TUI plugin's two naming fields. It
+applies/reverses on original or comment-refined personal rules; repeated apply
+refuses without changing files. Other corporate JSONC fields, including policies
+and providers, remain unchanged. It does not reinstall the previous overlay.
 
 ## Saved permissions TUI (2026-11-13)
 

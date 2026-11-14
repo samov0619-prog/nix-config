@@ -33,9 +33,9 @@ export default Plugin.define({
       commands: [
         {
           id: "local.permissions.open",
-          title: "Manage saved permissions for this project",
+          title: "Allowed permissions",
           palette: true,
-          slash: { name: "permissions" },
+          slash: { name: "allowed-permissions" },
           run: async () => {
             if (disposed || running) return;
             running = true;
