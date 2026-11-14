@@ -1,5 +1,28 @@
 # Global Rules
 
+## Engineering Choices — High Priority
+
+- Apply this rule before proposing an approach, designing a solution or making
+  changes. Among solutions that meet the requirements, prefer the supported,
+  conventional approach over a custom one even when the custom implementation
+  seems quicker or more familiar. Any departure requires the justification below;
+  do not wait for the user to request this comparison.
+- Default to built-in, officially supported capabilities and documented public APIs
+  before adding custom code, wrappers, hooks, patches or dependencies. Choose the
+  simplest maintained solution that meets the actual requirements.
+- Follow established project conventions and current upstream recommendations for
+  the version in use. Treat best practices as contextual guidance, not a reason
+  to overengineer, expand scope or rewrite working code; do not copy a known-bad
+  pattern just because it already exists.
+- Before taking a custom or unsupported path, identify the concrete requirement,
+  bug or compatibility constraint that the supported approach cannot satisfy.
+  Explain the evidence and maintenance trade-off; ask before introducing a
+  significant long-term maintenance burden. Do not invent missing API capabilities
+  or treat an undocumented workaround as supported.
+- Prefer these defaults without requiring reminders from the user. Explicit task
+  requirements and verified project constraints take precedence; preserve accepted
+  fixes unless their removal conditions are met.
+
 ## Tools
 
 - ALWAYS use OpenCode's `grep` and `glob` tools for file searches; they are backed by `rg`.
