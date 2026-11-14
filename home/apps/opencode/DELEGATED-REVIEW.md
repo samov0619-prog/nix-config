@@ -10,12 +10,23 @@
 в контексте сессии. Штатные runtime logs/session storage этим не запрещаются.
 
 ```text
+/delegated-review
 /delegated-review current branch
 /delegated-review last 2 commits
 /delegated-review working tree
 /delegated-review последние 3 коммита
 /delegated-review src/auth.ts + tests
 ```
+
+Без аргументов (или с одними пробелами) сначала проверяются **незакоммиченные
+изменения**: staged/unstaged tracked и релевантные неигнорируемые untracked файлы.
+Если они есть, проверяется только working tree относительно HEAD, без коммитов
+ветки. Если их нет — **текущая ветка** от merge-base с локальной базой до HEAD.
+Посторонние untracked артефакты и ignored файлы не включаются и не запускают выбор
+working tree. Явный аргумент имеет приоритет; выбранный дефолт озвучивается.
+Неоднозначная база/detached HEAD требуют уточнения, unborn HEAD — явного указания
+ограничения; произвольные коммиты вместо них не выбираются. Если изменений для
+ревью нет, агент сообщает об этом и не вызывает reviewer.
 
 ## Разделение ответственности
 

@@ -24,7 +24,20 @@ working-tree scope and launch a reviewer on their behalf.
 
 ## Resolve and identify the scope
 
-Use local read-only Git inspection. Interpret English or Russian arguments:
+Use local read-only Git inspection. Explicit English or Russian arguments take
+precedence over defaults. If arguments are empty or whitespace-only:
+
+1. Check for staged or unstaged tracked changes and relevant non-ignored untracked
+   files. If any exist, select Working tree below, not branch commits; do not combine
+   the two scopes. Unrelated untracked artifacts and ignored files do not trigger it.
+2. Otherwise select Current branch below. Resolve its local base as usual; a clean
+   tree does not mean the branch has no committed changes. If the branch/base cannot
+   be determined safely (including detached HEAD), ask rather than choose arbitrary
+   commits. Identify an unborn HEAD instead of inventing a branch comparison.
+3. State which default was selected and why. If neither scope contains reviewable
+   changes, report that there is nothing to review and stop without a reviewer.
+
+Interpret the selected scope as follows:
 
 - Current branch: determine the intended local base, resolve its merge-base
   with HEAD, and review that exact base commit against the exact HEAD commit.

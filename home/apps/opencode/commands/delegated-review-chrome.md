@@ -20,11 +20,27 @@ that limitation rather than impersonating the auditor. Native permissions apply.
 ## Resolve the evidence boundary
 
 Interpret English or Russian arguments as a session/export, testing run and claims.
-Prefer a supplied history file; do not rewrite it. Without an explicit session,
-select the current session up to the invocation boundary, excluding this audit,
-and state that choice. Resolve an immutable cutoff by message/event ID when
-available, not a moving "latest". Ask if testing occurred in another child/session,
-several runs are ambiguous, or related child evidence would change coverage.
+Prefer a supplied history file; do not rewrite it. Explicit source/run boundaries
+take precedence. Without a supplied session/export, use the current session before
+this invocation, excluding this audit. When no run is specified (including empty
+or whitespace-only arguments), select only the last recorded Chrome-MCP testing
+run in that source, by event order, not the whole session or last successful run.
+Failed or aborted runs count; discussion, plans and earlier audits do not.
+
+Identify the run's request/setup, actual test calls, outcomes and associated claims
+or caveats through the invocation cutoff. Include earlier requirements/setup/state
+only where causally needed, with references; do not import unrelated prior runs'
+claims. State the default choice and freeze start/end and cutoff by message/event
+IDs when available, not a moving "latest". If the latest run is still in progress
+or its boundary is unclear, ask or report incomplete, not an older run's verdict.
+If the complete selected history contains no testing run, report
+**В текущей сессии не было прогонов Chrome-MCP для аудита** (adapt the source label
+for an explicitly supplied session/export) and stop without an audit export or
+auditor. Missing/truncated history is not proof of no runs: report the gap instead.
+
+Ask if testing occurred in another child/session, run boundaries are ambiguous,
+or related child evidence would change coverage. Several distinct runs alone do
+not require clarification when the last one is identifiable.
 Do not sweep unrelated sessions. Capture relevant delegated testing/tool-wrapper
 events as well as top-level events; do not mistake an opaque wrapper for no calls.
 
