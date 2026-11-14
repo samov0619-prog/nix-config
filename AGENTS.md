@@ -19,6 +19,11 @@
 - **`laptop` / `samov-laptop` — Lenovo; `laptop-old` / `samov-laptop-old` — Acer.**
   Не применять профиль Lenovo на Acer. Старых `laptop-next` aliases нет.
   `desktop-next` — непроверенный шаблон, не текущий desktop.
+- Для будущих хостов конфигурация Lenovo (`hosts/laptop/` и `home/linux/laptop/`)
+  — основной источник истины для актуальных пользовательских решений и поведения.
+  Старые Acer/desktop не считать эталоном по умолчанию. Аппаратные параметры,
+  storage, драйверы и host-specific fixes переносить только после проверки нового
+  оборудования; это не разрешение применять профиль Lenovo на другом хосте.
 - `server` — VPS; реальные settings передаются внешним `server-settings` input,
   tracked `hosts/server/settings.nix` — только пример. `samov-mac` — только HM,
   без nix-darwin. Корпоративный OpenCode Mac управляется отдельно от домашнего HM.

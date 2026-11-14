@@ -5,6 +5,12 @@ limitations and acceptance/recovery are documented in
 [`command-keys/README.md`](command-keys/README.md). The user reports successful
 ordinary use after application; the full hardware/UI matrix is not verified.
 
+The F-key follow-up adds Super+F invoking native Ctrl+F in the
+GUI allowlist, and the unused floating/tiled focus bindings are removed without
+replacement (including the RU physical Shift+F Firefox launcher). See the
+command-keys guide for scoped user-reported Chrome behavior, remaining checks
+and the NixOS + HM apply procedure.
+
 For a manually launched 5-second NVIDIA/PPD table, see
 `home/linux/laptop/gpu-monitor.md`. It appends samples until Ctrl+C and does not
 change profiles or add a service; explicit polling can postpone GPU sleep.

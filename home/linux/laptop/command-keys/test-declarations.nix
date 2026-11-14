@@ -6,6 +6,9 @@ let
   s = c.systemd.services.lenovo-xremap.serviceConfig;
   b = h.systemd.user.services.lenovo-xremap-bridge.Service;
   lib = flake.inputs.nixpkgs.lib;
+  bar = builtins.readFile ../hyprland.conf;
+  gui = builtins.head rules.keymap;
+  find = builtins.elemAt rules.keymap 1;
   checks = {
     isolatedUser = s.User == "lenovo-xremap" && s.User != "root";
     noRawUserGroups =
@@ -47,6 +50,13 @@ let
       !(h.xdg.configFile ? "nvim/init.lua")
       && h.xdg.dataFile ? "nvim/site/plugin/lenovo-command-keys.lua";
     kittyNativeRouting = lib.hasInfix "kitten command_keys.py shift+z" h.programs.kittyExtraConfig;
+    guiFind =
+      builtins.length rules.keymap == 2
+      && find.application == gui.application
+      && find.remap == { "Super-f" = "Ctrl-f"; };
+    exactFindModifiers = find.exact_match;
+    noWindowFocusBindings = !(lib.hasInfix "focuswindow," bar);
+    noRussianShiftFLauncher = !(lib.hasInfix "bind = $mainMod SHIFT, А," bar);
   };
 in
 assert lib.assertMsg (builtins.all (x: x) (

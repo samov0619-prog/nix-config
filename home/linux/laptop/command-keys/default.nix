@@ -99,6 +99,7 @@ in
   programs.tofi.controls.shortcuts = lib.mkAfter ''
     Left Alt           Command/Super; left Windows key becomes Alt
     Super+C/V/X/A      copy / paste / cut / select all (app-specific)
+    Super+F            native Ctrl+F action (GUI allowlist; usually find)
     Super+Z/Shift+Z    undo / redo (no filesystem undo in Yazi)
   '';
 }

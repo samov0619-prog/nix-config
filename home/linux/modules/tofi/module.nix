@@ -25,6 +25,8 @@ in
         F3                  agent todo in Neovim
         Print               select screenshot region, edit in Swappy
         Super+F11           toggle light/dark theme
+        Super+F             focus floating window
+        Super+Shift+F       focus tiled window
       '';
       description = "Host-specific shortcut lines displayed by hypr-controls.";
     };
@@ -82,8 +84,6 @@ in
           HYPRLAND CONTROLS
           ' ${lib.escapeShellArg cfg.controls.shortcuts} '
           Super+M             fullscreen
-          Super+F             focus floating window
-          Super+Shift+F       focus tiled window
           Super+G             toggle floating
           Super+T             toggle Dwindle split
           Super+P             toggle pseudotile

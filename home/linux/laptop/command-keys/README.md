@@ -40,13 +40,25 @@ A stalled request can delay subsequent input. Latency has not been measured.
 - Physical left Alt becomes Super; physical left Windows becomes Alt. Right Alt,
   Ctrl, Caps, Fn and other keys have no remap entries. External keyboards are not
   selected. Firmware-generated modifier chords still need real-device acceptance.
-- C/V/X/A/Z/Shift+Z translate only for the explicit GUI allowlist in `rules.nix`.
+- C/V/X/A/F/Z/Shift+Z translate only for the explicit GUI allowlist in `rules.nix`.
   Actual classes, especially Freesm/Ardour/Qt apps and XWayland, need acceptance.
   Terminals, games, password dialogs, mpv, Tofi and unknown/empty context are not
   blanket-translated. A focused layer surface can leave a stale toplevel context;
   layer-shell behavior is not accepted by these source checks.
-- Hyprland retains its window-control scheme. The conflicting Russian copy/redo
-  aliases are removed (killactive on С, Zoom on Shift+Я). Super+Q still closes.
+- Hyprland retains its window-control scheme except the deliberately removed
+  Super+F / Super+Shift+F floating/tiled focus bindings; they are not relocated.
+  The RU Super+Shift+А Firefox launcher on physical F is removed as well.
+  The conflicting Russian copy/redo aliases are removed (killactive on С,
+  Zoom on Shift+Я). Super+Q still closes.
+- Super+F sends native Ctrl+F only in the existing GUI allowlist (usually find;
+  the exact action belongs to each application). Its separate `exact_match` rule
+  prevents xremap's extra-modifier fallback without changing existing editing
+  rules. There is no new Super+Shift+F translation or terminal/TUI F binding.
+  The user subsequently reported working Super+F in Chrome: the mini.files site
+  opens both site and browser searches in EN, only browser search in RU;
+  Telegram Web opens its own search. This is scoped user-reported behavior, not
+  independent UI verification or acceptance for all allowlisted apps. The precise
+  site-handler causes were not traced; no site-specific workaround was added.
 - Kitty's small in-process action normalizes the six keys using its ASCII layout
   fallback and inspects foreground processes, not titles. Neovim/Yazi receive
   native Super chords. Fish receives prompt-native chords. Otherwise C copies
@@ -137,3 +149,18 @@ After reviewing the agreed scope and diff:
 
 Documentation and tests require no Nix activation. The Neovim mappings are HM
 site-runtime data; no manual edit in `~/.config/nvim` is required.
+
+## Applying the F-key follow-up on an existing Lenovo installation
+
+1. Review the changes. Apply NixOS with
+   `sudo nixos-rebuild switch --flake .#laptop` for the xremap rules, then HM with
+   `home-manager switch --flake .#samov-laptop` for Hyprland and F1 help. No new
+   group membership or reboot is needed for this follow-up. NixOS may restart
+   the remapper, so release all modifiers before application.
+2. Run `hyprctl reload`, then `hyprctl configerrors`; expect no errors. F1 should
+   list GUI Super+F, not floating/tiled focus. Acer/desktop keep their old focus
+   shortcuts and help; no other host activation is requested.
+3. In Chrome, test Super+F on a normal page in EN and RU: find-in-page should open.
+   Check another allowlisted app's native Ctrl+F action and the existing editing
+   chords. Confirm Super+Shift+F no longer changes window focus or launches Firefox
+   in RU. No replacement action or universal terminal find is promised.
