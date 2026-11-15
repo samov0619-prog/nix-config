@@ -15,6 +15,19 @@ For a manually launched 5-second NVIDIA/PPD table, see
 `home/linux/laptop/gpu-monitor.md`. It appends samples until Ctrl+C and does not
 change profiles or add a service; explicit polling can postpone GPU sleep.
 
+Lenovo dictation now uses [Handy / Parakeet Q4](handy/README.md): Intel-only
+Vulkan, a hidden graphical-session service, Super+Shift+R to start/stop and
+Super+Shift+T to cancel. Ctrl+Space stays available to Neovim.
+The package, model, service and compositor bindings are declarative; initial
+settings are seeded once, then remain writable through the GUI.
+
+The previous Lenovo Whisper setup and measurements are
+[archived](../../../docs/laptop-audit/archive/voice-dictate.md), with an inactive
+[`archive/whisper.nix`](archive/whisper.nix). Acer/desktop keep the shared helper.
+NixOS still prefers the built-in microphone and automatic headphone/speaker
+output, with Bluetooth HFP selected manually; this migration does not change
+audio/power policy. The same archive preserves its acceptance history.
+
 The top row sends hardware functions without Fn; Fn exposes ordinary F1–F12.
 Only the Lenovo leaf changes these bindings:
 

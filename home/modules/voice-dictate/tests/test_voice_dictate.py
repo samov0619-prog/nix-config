@@ -1,7 +1,8 @@
-"""Production stop/transcription branch with no real signals, audio or display."""
+"""Production stop/transcription branch; fake recorder signals, no audio/display."""
 
 import json
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import sys
@@ -14,7 +15,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class VoiceDictateTests(unittest.TestCase):
-    def run_dictation(self, text="Пример диктовки.", *, whisper_exit=0, empty_audio=False):
+    def run_dictation(self, text="Пример диктовки.", *, whisper_exit=0, empty_audio=False,
+                      vulkan=False, driver_file=None):
         source = (ROOT / "default.nix").read_text()
         self.assertEqual(source.count("    text = ''\n"), 1)
         body = source.split("    text = ''\n", 1)[1].split("\n    '';", 1)[0]
@@ -22,12 +24,19 @@ class VoiceDictateTests(unittest.TestCase):
         self.assertIn("${whisperSmallQ51}", body)
         self.assertIn("${gpuFlag}", body)
         body = body.replace("${whisperSmallQ51}", "/fixture/model.bin")
-        body = body.replace("${gpuFlag}", "").replace("''${", "${")
+        body = body.replace("${lib.boolToString config.voiceDictate.fastLocalInput}", "false")
+        vulkan_env = f"VK_DRIVER_FILES={shlex.quote(driver_file)} " if vulkan and driver_file else ""
+        body = body.replace("${vulkanEnv}", vulkan_env)
+        body = body.replace("${gpuFlag}", " -dev 0" if vulkan else "").replace("''${", "${")
         # kill is a shell function in this child, never the real builtin.
         # First probe: recording exists; subsequent probe: mock recorder stopped.
         prefix = '''
             checks=0
             kill() {
+                if [ "${2-}" != 424242 ]; then
+                    builtin kill "$@"
+                    return
+                fi
                 printf '%s\\n' "$*" >> "$HOME/signals.txt"
                 case "$1" in
                     -0) checks=$((checks + 1)); [ "$checks" -eq 1 ] ;;
@@ -59,6 +68,7 @@ class VoiceDictateTests(unittest.TestCase):
                     import sys
                     from pathlib import Path
                     Path("whisper-argv.json").write_text(json.dumps(sys.argv[1:]))
+                    Path("whisper-env.json").write_text(json.dumps(os.environ.get("VK_DRIVER_FILES")))
                     sys.stdout.write(Path("transcript.txt").read_text())
                     sys.exit(int(os.environ["WHISPER_EXIT"]))
                 """,
@@ -74,6 +84,7 @@ class VoiceDictateTests(unittest.TestCase):
                     else:
                         raise SystemExit("clipboard must not inherit the toggle lock")
                     Path("clipboard-argv.json").write_text(json.dumps(sys.argv[1:]))
+                    Path("clipboard-env.json").write_text(json.dumps(os.environ.get("VK_DRIVER_FILES")))
                     Path("copied.bin").write_bytes(sys.stdin.buffer.read())
                 """,
                 "wtype": """
@@ -137,7 +148,7 @@ class VoiceDictateTests(unittest.TestCase):
             )
             notification_path = root / "notifications.jsonl"
             self.assertEqual(
-                json.loads((root / "closed.jsonl").read_text()),
+                json.loads((root / "closed.jsonl").read_text().splitlines()[0]),
                 ["--app-name=Voice dictate", "--category=voice-dictate.recording.424242"],
             )
             output = {
@@ -145,14 +156,16 @@ class VoiceDictateTests(unittest.TestCase):
                 "stderr": result.stderr,
                 "audio_remains": (state / "recording.wav").exists(),
                 "notifications": (
-                    [json.loads(line) for line in notification_path.read_text().splitlines()]
+                    [json.loads(line) for line in notification_path.read_text().splitlines()
+                     if "--action=default=Cancel" not in json.loads(line)]
                     if notification_path.exists() else []
                 ),
             }
             for name in ("copied.bin", "typed.bin"):
                 path = root / name
                 output[name] = path.read_bytes() if path.exists() else None
-            for name in ("wtype-argv.json", "clipboard-argv.json", "whisper-argv.json"):
+            for name in ("wtype-argv.json", "clipboard-argv.json", "whisper-argv.json",
+                         "whisper-env.json", "clipboard-env.json"):
                 path = root / name
                 output[name] = json.loads(path.read_text()) if path.exists() else None
             return output
@@ -223,6 +236,21 @@ class VoiceDictateTests(unittest.TestCase):
         self.assertEqual(arguments[2], "-f")
         self.assertTrue(arguments[3].endswith("/voice-dictate/recording.wav"))
         self.assertEqual(arguments[4:], ["-l", "ru", "-nt", "-np"])
+        self.assertIsNone(output["whisper-env.json"])
+
+    def test_intel_driver_is_scoped_to_recognizer_not_clipboard(self):
+        driver_file = "/fixture/Intel ICD's manifest.json"
+        output = self.run_dictation(vulkan=True, driver_file=driver_file)
+        self.assertEqual(output["exit"], 0, output["stderr"])
+        self.assertEqual(output["whisper-env.json"], driver_file)
+        self.assertIsNone(output["clipboard-env.json"])
+        self.assertEqual(output["whisper-argv.json"][4:], ["-l", "ru", "-dev", "0", "-nt", "-np"])
+
+    def test_other_vulkan_hosts_keep_normal_driver_discovery(self):
+        output = self.run_dictation(vulkan=True)
+        self.assertEqual(output["exit"], 0, output["stderr"])
+        self.assertIsNone(output["whisper-env.json"])
+        self.assertIn("-dev", output["whisper-argv.json"])
 
 
 if __name__ == "__main__":

@@ -25,7 +25,7 @@ in
   imports = [
     ../core-set
     ../gui-set
-    ../../modules/voice-dictate
+    ./handy
     ./command-keys
   ];
 
@@ -47,6 +47,8 @@ in
     Fn+F11             toggle light/dark theme
     Super+Shift+LMB    resize floating window / tiled split
     Super+Ctrl+T       current Dwindle split 50/50 (not whole layout)
+    Super+Shift+R      Handy: start / stop dictation
+    Super+Shift+T      Handy: cancel recording / recognition
   '';
 
   # Keep the apps, but do not activate an unprepared world/backup watcher.
@@ -58,6 +60,4 @@ in
     jdk_headless
   ];
 
-  # Voice remains available on CPU until
-  # target GPU enumeration establishes a backend; never inherit Acer's -dev 1.
 }

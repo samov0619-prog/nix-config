@@ -40,7 +40,7 @@ Acer после backup/lifecycle fixes; это не проверка Minecraft r
 - [Диск в Waybar](../../home/linux/modules/waybar/README.md): I/O busy, свободно/всего и скорости вместо `FREE` в Yazi на Linux GUI.
 - [Браузеры](browsers.md): stable Chrome, default-like Firefox и границы ручного переноса профилей/ключей.
 - [Скриншоты и clipboard](screenshots.md): Print → область → Swappy, корректная отмена и ручное сохранение/копирование.
-- [Диктовка](voice-dictate.md): уведомление/cleanup при ошибке Whisper и ввод через stdin без дополнительного Enter.
+- [Диктовка Lenovo — Handy Q4](../../home/linux/laptop/handy/README.md): фоновый Intel-only запуск, начальные настройки и хоткеи; [Whisper и замеры](archive/voice-dictate.md) — архив Lenovo, общий helper сохранён для Acer/desktop.
 - [FileManager1](../../pkgs/filemanager1-common/README.md): `file://localhost` и `file:///` открывают один локальный путь в Kitty/Yazi.
 - [Запуск TUI](tui-launchers.md): текстовый файл → Kitty → Neovim, отличия shell/project environment и явного sudo-Yazi.
 - [Съёмные накопители](removable-media.md): рабочая секция меню udiskie и каталоги через Kitty/Yazi, без изменения прав/автомонтирования.
