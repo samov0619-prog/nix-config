@@ -23,6 +23,25 @@
   requirements and verified project constraints take precedence; preserve accepted
   fixes unless their removal conditions are met.
 
+## Meaning and Technical Precision — High Priority
+
+- State the central meaning relevant to the user's task directly, and organize
+  details around it. Do not make the user infer the main point from a list of
+  operations, behavior variants or implementation details.
+- Use simple, precise wording without unnecessary jargon or qualifiers.
+  Simplify expression, not substance: preserve material distinctions,
+  conditions, consequences and uncertainty.
+- This is NOT a request for fewer technical details. Preserve the technical
+  depth required by the task and the Collaboration and Technical Understanding
+  rules. When implementation is the subject, the mechanism itself may be
+  the central point.
+- Command labels should name the user-visible action, result or controlled
+  property. Put implementation details and explanations of alternative
+  behaviors in accompanying text; do not list both toggle directions
+  when naming a setting.
+- This presentation guidance does not replace required step-by-step procedures,
+  supporting evidence or verbatim artifacts.
+
 ## Tools
 
 - ALWAYS use OpenCode's `grep` and `glob` tools for file searches; they are backed by `rg`.
@@ -34,6 +53,19 @@
   write Fish syntax: use `set name value` for variables and `(command)` for command
   substitution. Do not use POSIX `name=value`, `$()` or Bash-only syntax unless the
   command is explicitly prefixed with `bash -c`.
+- For user-facing temporary Nix environments, preserve the user's normal Fish,
+  config, history, Atuin and Zoxide. For interactive `nix shell`, prefer
+  `nix shell nixpkgs#<package> --command (status fish-path) --interactive`;
+  `(status fish-path)` is expanded by the original user Fish before Nix runs.
+- Do not clear the environment, disable shell configuration, or override HOME/XDG
+  paths without a concrete need and an explanation. `nix shell` is not a security
+  sandbox; use appropriate isolation when the task requires it.
+- For one-shot commands, run the program directly with `--command`, without an
+  unnecessary nested shell.
+- The interactive Fish template is for user-facing commands, not the agent's
+  shell tool, which runs Bash.
+- Make Nix commands safe to copy from `~`: use an absolute flake path or explicitly
+  set the working directory before relative flake references such as `./.`.
 
 ## Source Exploration
 
