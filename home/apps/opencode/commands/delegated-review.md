@@ -9,7 +9,7 @@ Respect all applicable permissions and project instructions. Do not invoke this
 command recursively. If delegation is unavailable, report that limitation rather
 than impersonating the reviewer.
 
-Review policy: behavior-v2.
+Review policy: evidence-v5.
 
 Both parent and reviewer must keep agent-created review artifacts in session
 context or memory. Do not create temporary helper scripts, manifests, reports or
@@ -115,8 +115,13 @@ endpoints inspect their actual contents; never substitute today's worktree.
 
 ## Compose a minimal handoff
 
-Send only the following to a fresh child, never the development transcript,
-parent reasoning, self-review verdict or unrelated session history:
+Use a fresh native `subagent` without `sessionID` for the initial launch. OpenCode
+does not copy the parent's conversation into that child; no context-clearing step,
+fork or custom isolation layer is needed. Shared project/system instructions,
+location and tools still apply: this is a fresh conversation, not a security sandbox.
+Do not retrieve the parent's or unrelated sessions' history to enrich the handoff.
+Send only the following, never the development transcript, parent reasoning,
+self-review verdict or unrelated session history:
 
 1. Review ID, fingerprint/recipe, repository location, exact scope and exclusions.
 2. Task goal in one or two sentences, with its source. Separate documented or
@@ -144,10 +149,14 @@ Fingerprint inputs identify the target; keep orchestration out of the analysis.
 
 ## Reviewer contract
 
-Choose the configured `review` agent, otherwise `general` with this explicit
-read-only contract. Do not set a model/provider/effort override. Keep the same
+Choose the configured `review` agent. If it is unavailable or delegation is
+forbidden, report the limitation and stop; do not substitute `general` or the
+parent's own review. Do not set a model/provider/effort override. Keep the same
 agent on continuation. Start a fresh child with the minimal handoff; native
 project/system instructions still apply, so do not promise an instruction vacuum.
+This command owns delegation; ordinary review-request routing must not launch
+another reviewer. The configured reviewer's system prompt owns the analysis and
+evidence policy; this command owns scope, handoff, recovery and report delivery.
 
 Tell the reviewer:
 
@@ -169,24 +178,9 @@ Tell the reviewer:
 > session is not proof of review completion. Use ordinary native session history
 > for continuity, not a new checkpoint file or plugin.
 >
-> Analysis takes priority over report formatting. Establish expected behavior
-> independently of the implementation, then trace representative user scenarios
-> through callers, state and observable results. Include relevant channel/platform
-> branches and a plausible failure/interleaving, such as a focused input during an asynchronous update.
-> Seek a counterexample to safety claims; check whether later callbacks repair
-> intermediate state before reporting a race. Separate static evidence, observed
-> behavior and unresolved timing hypotheses. Hashes, coverage and passing tests
-> are not substitutes for this analysis; do not invent defects to fill a checklist.
-> Bound conclusions to the property and scenario actually supported. Acceptance
-> of one behavior does not waive separate side effects; matching code paths prove
-> consistency, not product approval. Preserve failed-check qualifiers when citing
-> inherited results. Evaluate residual impact without automatically raising severity.
->
-> An unmet material requirement needs REQUEST_CHANGES. A contract question that
-> could change acceptance also needs REQUEST_CHANGES pending clarification, not
-> APPROVE with a buried caveat; the question is not a confirmed defect. APPROVE
-> may include optional improvements or a sourced, explicitly accepted risk.
-> Missing runtime checks alone do not require rejection or make source review incomplete.
+> Apply your configured shared analysis/evidence policy. Scope fingerprints,
+> report formatting and recovery do not replace behavioral analysis. Keep the
+> report self-contained so its evidence and verdict can be checked by the parent.
 
 Require a self-contained final report containing:
 
@@ -216,6 +210,15 @@ completed work when one child fails. If independent reviewers are already part
 of the requested plan, retain their scopes and independence; do not turn the
 whole plan serial or change models/accounts to evade a concurrency limit.
 
+Recovery applies only after this logical task's initial child invocation exists.
+A new review request starts a fresh child without `sessionID`, not a search for
+old reviewers by recency or source similarity. A child left in the transcript after
+`/reload` is not automatically this task's reviewer. User cancellation ends
+automatic recovery; resuming a cancelled task requires an explicit user request
+to resume it, identity/scope verification and its preserved ledger. Only an
+explicit user request for a fresh independent review can start a new logical task
+at the same scope; the agent cannot reinterpret a failed recovery to reset budgets.
+
 1. Capture the child ID from native tool progress, results, errors and completion
    metadata, including failed calls. Prefer continuing that same child with
    `sessionID`; do not paste the full handoff into every continuation. Remind it
@@ -232,7 +235,11 @@ whole plan serial or change models/accounts to evade a concurrency limit.
    original prompt, ID, fingerprint and invocation. Do not guess by title or
    recency. If the ID is missing, inspect the parent's invocation metadata and
    parent-filtered child list, following pagination as needed. Inspect only the
-   relevant child's messages; do not export unrelated sessions or credentials.
+    relevant child's messages; do not export unrelated sessions or credentials.
+    Use paginated native metadata/messages in memory, not whole-session CLI export
+    probes or temporary files. Do not hide errors or cut JSON with head/tail and
+    then parse the preview as a complete response. Invalid JSON or unresolved
+    pagination cannot establish a recovered report.
    Limit this reconciliation to two minutes, also respecting the recovery
    deadline below; if pagination or an unavailable API prevents a reliable answer
    within that bound, stop incomplete. This is a safety limit, not permission to
@@ -317,6 +324,9 @@ do not silently rewrite the child's verdict or downplay a finding. If it conflic
 with the report, request a reasoned resolution in the same child within the shared
 budget. If unresolved, return the provisional report as incomplete, without a
 final verdict. Formatting repairs must not demand extra findings or a preferred verdict.
+If a blocking claim lacks its decisive implementation path or a proposed fix
+contradicts that path, request evidence or correction from the same child under
+its shared policy, within the same budget; do not turn a hypothesis into a defect.
 For a terminal child with a truncated/incomplete report, request completion in
 the same child only within the remaining budget; a transient provider failure
 uses the delay policy above. Do not manufacture missing findings or a verdict.

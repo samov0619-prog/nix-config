@@ -64,6 +64,10 @@ test("native HM target rename preserves the merged config and leaves only JSONC"
               toString after.xdg.configFile."opencode/opencode.json".source;
             settingsUnchanged = before.programs.opencode.settings == after.programs.opencode.settings;
             instructions = after.programs.opencode.settings.instructions or [];
+            reviewAnalysisTarget = after.xdg.configFile."opencode/review-analysis.md".target;
+            reviewAnalysisInstalled = builtins.readFile after.xdg.configFile."opencode/review-analysis.md".source;
+            reviewSystem = after.programs.opencode.settings.agents.review.system;
+            hasReviewAnalysisTarget = builtins.elem ".config/opencode/review-analysis.md" afterTargets;
           }
         ) [ false true ]`,
       ],
@@ -80,6 +84,11 @@ test("native HM target rename preserves the merged config and leaves only JSONC"
     assert.equal(state.otherTargetsUnchanged, true);
     assert.equal(state.sourceUnchanged, true);
     assert.equal(state.settingsUnchanged, true);
+    assert.equal(state.reviewAnalysisTarget, ".config/opencode/review-analysis.md");
+    assert.equal(state.hasReviewAnalysisTarget, true);
+    assert.ok(state.reviewAnalysisInstalled.includes("Review policy: evidence-v5."));
+    assert.ok(state.reviewSystem.startsWith(state.reviewAnalysisInstalled + "\n"));
+    assert.equal(state.reviewSystem.split("Review policy: evidence-v5.").length, 2);
     assert.equal(
       state.instructions.includes(
         "/home/opencode-fixture/.config/opencode/decision-support.md",

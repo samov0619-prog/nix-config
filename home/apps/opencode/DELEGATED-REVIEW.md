@@ -1,8 +1,8 @@
 # /delegated-review
 
 Домашний HM-модуль устанавливает `commands/delegated-review.md` как
-`~/.config/opencode/commands/delegated-review.md`. Профиль `agents.review` читает
-`config/review-system.md`, сохраняя существующие model routing и permissions.
+`~/.config/opencode/commands/delegated-review.md`. Профиль `agents.review` объединяет
+`config/review-analysis.md` и `config/review-system.md`, сохраняя model routing и permissions.
 Это config-only изменение, без binary patch, плагина или нового сервиса.
 Корпоративный personal-layer и исходные файлы в Downloads не меняются.
 Родитель и reviewer не создают временные scripts/manifests/reports/directories,
@@ -28,21 +28,102 @@ working tree. Явный аргумент имеет приоритет; выб�
 ограничения; произвольные коммиты вместо них не выбираются. Если изменений для
 ревью нет, агент сообщает об этом и не вызывает reviewer.
 
+## Обычное и делегированное ревью (2026-11-16)
+
+Обычное «поревьюй» выполняется **в текущем разговоре**, с его контекстом и без
+смены агента/модели, fork или запуска ребёнка. Родитель сначала читает установленный
+`review-analysis.md` из активного глобального config directory OpenCode; HM
+устанавливает его рядом с `AGENTS.md`. Встроенная `/review` не заменяется и тоже
+работает в текущем потоке. Сам запрос ревью не разрешает правки/сборки/коммиты и не
+снимает Plan restrictions. Последующий запрос реализации возвращает обычную работу,
+без необходимости переключать роль обратно.
+
+`review` — один отдельный read-only subagent для **явно делегированных** проверок.
+Его system prompt содержит те же правила анализа плюс ограничения/continuity
+из `review-system.md`; это не второй агент. `/delegated-review` остаётся
+оркестратором scope/fingerprint, выбранного handoff, recovery и полного отчёта.
+Явная просьба отдать code review отдельному reviewer сначала читает применимый
+установленный template этой команды, а не создаёт второй workflow. Model override
+не передаётся: сохраняются reviewer route и Free/Paid family policy.
+
+Маршрутизация — инструкция модели, **не программный перехват ключевых слов**.
+Обсуждение правил, цитата, отрицание/будущий запрос, обычная разработка/debug и
+самостоятельная проверка не запускают отдельный review workflow. Активная команда
+сама владеет запуском: второй reviewer не добавляется. При недоступном `review`
+делегированный workflow сообщает ограничение без `general` или self-review вместо
+ребёнка. Обычному ревью в текущем потоке доступность subagent не требуется.
+Явный запрос аудита записанных Chrome-MCP результатов остаётся специальным
+делегированным workflow, а не обычным code review; см.
+[Chrome-контракт](DELEGATED-REVIEW-CHROME.md#согласование-с-обычным-запросом-ревью-2026-11-16).
+
+Текущая аналитическая policy — `evidence-v5`; критерии анализа/вердикта находятся
+в **одном** `review-analysis.md`: обычное ревью читает его, Nix включает точные
+байты в reviewer system prompt. В командах нет второй аналитической policy.
+Перед блокирующим finding обязательна полная релевантная цепочка от события
+до результата: типы/signatures, callers, wrappers/hosts, инжекция/defaults и порядок
+spread. Частичный поиск не доказывает отсутствия; нужно искать опровержение своего
+вывода. Предлагаемый фикс также проверяется на success/cancel/error paths и
+изменении состояния во время `await`. Архитектурное предпочтение не становится
+blocker без обязательного правила или конкретного существенного эффекта. После
+снятия finding вердикт пересматривается, а не сохраняется через повышение nits.
+
+Новая делегированная задача начинает нового ребёнка без `sessionID`; recovery относится только
+к уже начатой текущей задаче. Отменённая задача не возобновляется из-за `/reload`
+или сходства scope: нужен явный запрос продолжить её и сверка ledger/identity.
+Диагностика recovery читает paginated metadata/messages в памяти, не создаёт
+экспорты/probe-файлы. Решающее причинное звено нельзя заменять словами прежней
+модели либо считать доказанным, одновременно отправляя его проверку в optional.
+
+Компиляция не обязательна при каждом ревью: сначала определить, какую
+неопределённость снимет штатная проверка, её стоимость и побочные записи
+(`--noEmit` не исключает incremental metadata). Неизвестные/дорогие/изменяющие
+проверки не запускаются без необходимого разрешения. Source review не подменяется
+ни passing typecheck, ни обязательным запуском всей системы.
+
+38 лёгких Node-проверок settings/static/hash, прежнего synthetic behavior oracle
+и Chrome проходят, включая три исполняемых теста опубликованного exclusive-write
+recipe. Guards проверяют текст/подключение инструкций, writer-тесты — сам рецепт,
+не семантическую маршрутизацию, completeness/redaction или качество модели.
+Дополнительно проходит HM evaluation test: проверяет установку общего файла и
+включение тех же байтов в reviewer system prompt с обоими decision-support settings,
+без сборки/активации. Итого 39 checks. Новых model/runtime/PTY runs,
+сборок, activation, restart сервиса и корпоративных правок нет. Nixfmt выполнен;
+Prettier недоступен;
+layout сохранён без подмены formatter. Процедура новой модельной приёмки — в
+[`EVALUATION.md`](tests/fixtures/delegated-review/EVALUATION.md); она пока не выполнена.
+
 ## Разделение ответственности
 
 Команда остаётся в текущей сессии (`subagent: false`): родитель определяет scope,
-составляет минимальный хэндофф, вызывает независимый `review` (или `general`, если
-его нет), восстанавливает попытку и возвращает полный отчёт на русском. Модель
+составляет минимальный хэндофф, вызывает независимый `review`, восстанавливает
+попытку и возвращает полный отчёт на русском. Модель
 не задаётся командой: действует локальная политика выбора моделей. Диалог
 разработки, self-review и полный transcript ребёнку не передаются; обычные
 project/system instructions OpenCode продолжают действовать.
+
+Для нового native subagent без `sessionID` OpenCode 2.1.4 создаёт пустую историю
+и передаёт строку `You are a subagent spawned by another session.` плюс выбранный
+prompt. Контекст не требуется «очищать»: новая сессия не является fork. Handoff
+нужно отбирать, чтобы родитель сам не скопировал лишнее. Это не security sandbox:
+файлы/инструменты, location и унаследованные metadata/permissions остаются общими;
+запрет получать постороннюю историю через инструменты — инструкция, не изоляция ОС.
+В Chrome выбранная запись намеренно передаётся как evidence, а не как инструкции.
+
+Проверены pinned исходники `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`:
+`packages/core/src/tool/plugin/subagent.ts:153–213` (новая сессия/prompt),
+`packages/core/src/session/history.ts:103–123` (история по ID сессии),
+`packages/core/src/session/context.ts:126–184` (общие инструкции и сборка контекста).
+В этой версии foreground — default, фон задаётся `background: true`; текущая
+онлайн-документация про обязательный фон новее pinned реализации. Fork копирует
+историю, но не получает `parentID` и не может продолжаться через обычный subagent
+инструмент; для согласованного workflow он не нужен.
 
 `review` остаётся общим read-only ревьюером changes **и claims**, а не только
 исполнителем этой команды. Он проверяет унаследованные findings, различает
 прочитанные файлы и проанализированные review units, проведённые и непроведённые
 проверки. Новых checkpoint-файлов нет. Сам `edit=deny` не запрещает запись через
-shell: prompt дополняет shell policy, но не является security sandbox. Fallback
-`general` получает prompt-контракт, не permission rules агента `review`.
+shell: prompt дополняет shell policy, но не является security sandbox. При
+недоступном `review` команда останавливается без fallback на другой профиль.
 
 Команда `/delegated-review` не перекрывает встроенную `/review`; имя агента
 `review` тоже не заменяет slash-команду. README намеренно находится вне `commands/`.
@@ -270,7 +351,7 @@ Handoff выявил и родительскую неточность: «ignore 
 передан как «clean apart from webpack-env error», а ребёнок сократил его до clean.
 Ошибка окружения не доказывает ни чистоту typecheck, ни новые ошибки диффа.
 
-Текущий маркер обоих файлов — `Review policy: behavior-v2.`. Handoff теперь
+На этом этапе маркер обоих файлов — `Review policy: behavior-v2.`. Handoff теперь
 разделяет требования/принятые исключения, наблюдения реализации и открытые вопросы;
 сохраняет фактический status/limits проверок и точные side effects каждой ветки.
 Reviewer ограничивает согласование конкретными эффектами, не выводит product
@@ -382,16 +463,20 @@ README пакета содержит таблицу всех путей. Ста�
    автоматически. До этого `.#...` не включает untracked файлы:
 
    ```fish
-   git add -- home/apps/opencode/commands/delegated-review.md home/apps/opencode/config/review-system.md
+    git -C /home/samov/nix-config add -- home/apps/opencode/config/review-analysis.md
    ```
 
    Пользователь применяет только нужный HM-профиль:
-   `home-manager switch --flake .#samov-laptop` (либо `samov-laptop-old`/`samov-desktop`).
+    `home-manager switch --flake /home/samov/nix-config#samov-laptop`
+    (либо `samov-laptop-old`/`samov-desktop`).
    NixOS не меняется; агент не выполняет сборку или activation.
 2. Проверить наличие `/delegated-review` в TUI, при необходимости `/reload`.
    Для этого config-only изменения restart сервиса и переоткрытие binary не нужны.
-3. В отдельной тестовой сессии запустить команду на небольшом согласованном scope;
-   проверить точный диапазон, независимого ребёнка, coverage и итоговый отчёт.
+3. На небольшом согласованном scope проверить обычное «поревьюй»: тот же поток,
+   контекст/роль/модель, без ребёнка и исправлений. Затем отдельно вызвать
+   `/delegated-review`: свежий `review`, выбранный диапазон/manifest/handoff и отчёт.
+   Для Chrome дефолт остаётся последним записанным прогоном текущей сессии;
+   не запускать повторные browser tests ради проверки маршрутизации.
 4. Terminal failure → same-child continuation уже проверен native mock выше.
    Остальные эксперименты согласовывать отдельно: потерянный ID, running child
    без duplicate prompt, partial report, replacement, scope change и исчерпание

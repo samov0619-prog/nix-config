@@ -8,7 +8,7 @@ Chrome-MCP test outcomes the recorded evidence supports, contradicts or cannot
 establish, and whether interventions invalidate the claimed test conditions.
 This is an audit of a completed testing session, not a code review or live test.
 
-Audit policy: chrome-evidence-v1.
+Audit policy: chrome-evidence-v3.
 
 This command authorizes delegation and, when needed, the single bounded export
 below. It does not authorize code edits, builds, installation, commits, Git network
@@ -59,12 +59,33 @@ records only within the resolved scope. Do not summarize, silently omit, reorder
 or reconstruct missing events from memory. A UI copy with "earlier lines" previews
 is not a full native export; record the gaps instead of inferring absence.
 
+Capture complete native responses in memory with their exit/error status before
+parsing; do not suppress stderr or pipe JSON through head/tail. Successful JSON
+parsing alone does not prove boundary, pagination or tool-result completeness.
+If whole-session CLI export is invalid/truncated, discard that in-memory result
+and switch once to supported paginated native message reads using the installed
+schema. Do not loop whole-session export until it happens to parse. If that path
+is unavailable or still incomplete, stop with the gap and request a safe export;
+do not repair JSON, reconstruct omitted events or guess missing content.
+
+Before the sole history write, verify the selected range/cutoff, causal supporting
+events, stable IDs/order, completed pagination and required full tool arguments/
+results. Select only those events in memory, preserving their source references;
+exclude unrelated turns, audit/recovery chatter and hidden/encrypted reasoning
+fields not needed as evidence. Record the extraction/omissions and redactions as
+provenance. Hashing a full-session dump does not replace this boundary check.
+
 Exactly one parent-created history file is permitted, only when needed. Use an
 existing private destination outside the repository, create exclusively with
 owner-only access, never overwrite an existing file, and record the export method,
 cutoff and limitations. No helper scripts, manifests, reports or new directories.
 Use inline interpreter code for mechanical work. This export exception does not
 allow the child to write anything. Native runtime-managed storage is unaffected.
+All acquisition, validation, filtering and secret redaction happen in memory
+before that exclusive write. No scratch/probe exports, including child-session
+exports for recovery; no repeated `>` writes to a predictable temporary path.
+If the final write fails, stop and disclose any partial artifact; do not overwrite
+it or create a replacement file under another name in this logical audit.
 
 Minimize sensitive data to the selected scope. Mechanically redact known secrets
 before writing/sharing; disclose rules and affected event/field references without
@@ -135,10 +156,38 @@ means scope-changed/incomplete, not a verdict on mixed versions. Outside context
 is not frozen: disclose relevant uncertainty. Do not silently re-export/rename
 the logical audit to reset scope or budgets; a new scope needs user authorization.
 
+### Exclusive history write
+
+Use this inline standard-library recipe only after scope/completeness/privacy
+validation above, with `artifact` set to a new absolute file path in an existing
+private destination and `history_bytes` the complete selected/redacted JSON bytes in
+memory. JSON validity here is only a final syntax guard, not proof of coverage.
+This is the sole permitted parent artifact write, not a helper script to save:
+
+```python
+import json
+import os
+
+json.loads(history_bytes)
+with os.fdopen(os.open(artifact, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as output:
+    output.write(history_bytes)
+```
+
 ## Minimal handoff and auditor contract
 
-Use configured `review`, otherwise `general`, without a model/provider/effort
-override. Preserve corporate routing/permissions. Send only audit identity,
+Use configured `review` without a model/provider/effort override. If it is
+unavailable or delegation is forbidden, report the limitation and stop; do not
+substitute `general` or the parent's own audit. Preserve corporate routing/permissions.
+The initial launch uses a fresh native `subagent` without `sessionID`, not a fork.
+OpenCode does not copy the parent's conversation; no context-clearing layer is
+needed. Shared instructions/tools remain, so this is not a security sandbox.
+The selected recorded history is deliberate audit evidence, not inherited chat.
+The child must not fetch parent or unrelated session history beyond that evidence.
+This workflow owns the invocation, including when selected by an ordinary-language
+audit request; do not launch an additional reviewer through general review routing.
+The shared reviewer owns general evidence discipline; the specialized audit
+contract below defines the object, claim statuses, coverage and audit verdict,
+not code-review or product-readiness criteria. Send only audit identity,
 manifest/recipe, artifact references, expected behavior with source, authorized
 setup/test conditions, claims and the contract/report format below. Separate
 requirements, accepted test fixtures, observed actions and open questions; bound
@@ -159,6 +208,15 @@ Tell the auditor:
 > a script returning a desired literal or a screenshot filename is not observation
 > of application behavior. Separate evidence recorded by tools from the model's
 > claims; neither is automatically independent ground truth or a complete log.
+>
+> Before a blocking audit finding, trace the decisive recorded path and inspect
+> relevant wrappers, targets, event order, authorized fixtures and later independent
+> observations that could disprove it. A partial record/search cannot establish
+> absence or substitution. If that path is unresolved, preserve the uncertainty
+> under the claim-status/coverage rules below, not a demonstrated systemic blocker.
+> Do not demand source access, compilation or live re-testing merely to finish this
+> passive audit. Distinguish defects in the application from unsupported reporting;
+> a truthfully reported failed test is not an audit-integrity failure.
 >
 > Classify every relevant Chrome leaf call by effect: observational, mutating or
 > unknown/mixed; and by role: ordinary test interaction, authorized setup/fixture,
@@ -231,6 +289,15 @@ timestamps, invocations_used, additional_used, additional_remaining, provider_re
 last verified substantive progress, terminal errors and coverage. Keep it in session
 context; preserve valid completed work. These are instructions, not a retry service.
 
+Recovery applies only after this logical audit's initial child invocation exists.
+A new audit request starts a fresh child without `sessionID`; do not search old
+auditors by recency or matching source before the initial launch. `/reload` does
+not adopt a previous child. User cancellation ends automatic recovery. Continue a
+cancelled audit only on an explicit user request to resume it, after identity/scope
+verification, with the same ledger and current-contract revalidation of inherited
+findings. A user-requested fresh independent audit may start a new logical task
+at the same source, but the agent cannot relabel recovery or reset budgets itself.
+
 1. Capture child ID from native progress/results/errors/metadata. Continue the same
    child with sessionID and preserved history, unchanged scope, remaining claims.
    Do not resend the entire handoff on continuation or invent completed analysis.
@@ -244,8 +311,11 @@ context; preserve valid completed work. These are instructions, not a retry serv
    is missing, inspect invocation metadata and parent-filtered child lists with
    pagination; do not guess by title/recency. Check only relevant child messages
    and current native execution/retry state, not the database. An old successful
-   message is not necessarily this attempt's final report. Unknown state means
-   incomplete, not permission to launch a replacement.
+    message is not necessarily this attempt's final report. Unknown state means
+    incomplete, not permission to launch a replacement.
+    Use paginated native metadata/messages in memory for this reconciliation,
+    never whole-child CLI exports or probe files. The single history-write
+    exception is for selected test evidence, not auditor-session diagnostics.
 4. Replace only when continuation is genuinely unavailable or bounded correlation
    establishes no recoverable child and no running invocation. A provider error
    or unavailable API alone is not enough. Keep the old session. Supply unchanged
@@ -287,6 +357,10 @@ If a terminal report conflicts with its evidence or is missing required sections
 request reasoned completion in the same child within the shared budget, not extra
 findings or a preferred verdict. Do not silently rewrite the child's conclusions;
 if unresolved, return provisional findings with gaps and no final verdict.
+Verify that a blocking audit finding has its decisive recorded path, including
+relevant counterevidence, and that the verdict concerns claim support rather than
+application correctness. If not, request evidence or correction from the same
+child within the shared budget; do not silently change its verdict or start live tests.
 
 Present the complete report in Russian, preserving order, severity, uncertainty and
 questions. Preserve code/paths/hashes/identifiers/URLs/quoted errors verbatim, except

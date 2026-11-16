@@ -4,6 +4,135 @@ Pinned upstream: 2.1.4, `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`.
 Historical model-quality experiments and V1 behavior are retained in
 [archive/v1/BENCHMARK.md](archive/v1/BENCHMARK.md). They do not measure V2 quality.
 
+## Same-session versus delegated review (2026-11-16; live routing unverified)
+
+The clarified contract replaces ordinary automatic delegation: ordinary review
+keeps the current conversation, agent and model, without a fork or temporary role
+switch. Explicit separate-review requests use the installed delegated template;
+passive recorded Chrome-MCP audits keep their specialized delegated workflow.
+No keyword interceptor, new plugin, fork orchestration or report validator was added.
+
+`evidence-v5` extracts analysis/report criteria into `config/review-analysis.md`.
+HM installs that file for ordinary reviews to read; Nix embeds the same bytes in
+`agents.review.system`, followed by the delegated-only `review-system.md` wrapper.
+Model routes, permissions, scope defaults, canonical fingerprints and bounded
+recovery remain unchanged. Empty code-review arguments still select working tree
+before branch; empty Chrome arguments still select this session's latest recorded
+run before the invocation cutoff. Explicit arguments take precedence.
+
+Read-only source inspection of pinned 2.1.4 established that native subagent creation
+does not copy parent history: `tool/plugin/subagent.ts:153–213` creates a session
+and submits a service prefix plus the supplied prompt; `session/history.ts:103–123`
+selects messages by that session ID. Common instructions are loaded separately in
+`session/context.ts:126–184`; location/metadata/permissions inheritance remains in
+`session.ts:275–303`. No context-clearing layer is needed, but this is not tool/OS
+isolation: a permitted shell/API could retrieve other history. Parent/child share
+cache affinity, not projected messages; WebSocket continuation state is keyed by
+the actual session ID (`session/model-request.ts:271–290,345–348` and
+`session/model-transport.ts:131–138`). No provider-side isolation guarantee follows.
+
+Fork copies settled projected history with `parent_id: null`
+(`session/projector.ts:150–219`), so it is not a normal subagent continuation.
+Native `/review` submits a same-session prompt (`plugin/command.ts:42–53`).
+Pinned subagent foreground is the default, unlike current docs describing
+always-background behavior; these changes do not alter that native execution mode.
+
+38 review-related Node checks pass: 14 settings/instruction/hash, nine existing
+synthetic behavior-oracle and 15 Chrome checks. Guards check same-session routing,
+single-source prompt composition, unchanged defaults and native-context wording;
+they do not execute model intent handling, default scope resolution or context
+confinement. Published hash/write recipes still run. Nixfmt ran on the two changed
+Nix files; Prettier is unavailable, with no substitute installed. No new model,
+native runtime/PTY/browser run, build, activation or commit; no corporate changes.
+The additional existing HM evaluation test passes with decision-support enabled
+and disabled; it now checks the installed shared-policy target and exact content
+prefix in the configured reviewer system prompt. Total: 39 checks. This reads
+source files/evaluates configuration only, not generated outputs or activation.
+
+## Recovery/evidence acquisition refinement (2026-11-16; live behavior unverified)
+
+The supplied experiment is a workflow failure case, not a request to re-audit its
+Chrome conclusions. The revised `evidence-v4` / `chrome-evidence-v3` instructions
+separate fresh-task launch from same-task recovery: no recency-based adoption of
+an old child, no automatic resumption after cancellation, and no reset of the
+shared ledger except a user-requested fresh independent task. Recovery uses
+paginated native metadata/messages in memory rather than whole-child export probes.
+
+Evidence acquisition captures complete responses/errors in memory. Invalid whole
+CLI export permits one switch to supported paginated message reads, not repeated
+exports until parse succeeds. Range/cutoff, pagination, IDs/order, tool results
+and secret minimization precede the sole selected-history write. The command
+publishes a small inline Python exclusive-write recipe, not a new exporter/plugin.
+The shared reviewer disallows substituting inherited prose or optional follow-up
+for a decisive causal link; before/after changes alone do not establish an actor.
+
+35 lightweight Node tests pass: 12 settings/static/hash, nine existing synthetic
+behavior-oracle and 14 Chrome checks. Three Chrome tests execute the exact published
+write recipe against malformed JSON, byte/permission preservation, existing files
+and symlinks. They verify that recipe, not model compliance, actual session-export
+completeness/redaction, API fallback or recovery decisions. Two additional guards
+check lifecycle/acquisition wording. `git diff --check` passes. Prettier remains
+unavailable; no substitute formatter. No build/activation/commit, new model/OpenCode
+runtime/PTY/browser run, corporate edit or Downloads artifact modification.
+
+This is still an instruction workflow, not a sandbox: unchanged `edit=deny` does
+not prohibit arbitrary shell writes. No claim of guaranteed semantic review or
+hard tool isolation follows from these tests. A separately authorized bounded
+model/native scenario is required for behavioral acceptance of this revision.
+
+## Chrome audit alignment (2026-11-16; model acceptance pending)
+
+The Chrome command now uses only the existing `review`, with no `general` fallback,
+model override or second intent-triggered child. Global AGENTS directs explicit
+ordinary-language requests to audit recorded Chrome-MCP test reporting through
+the applicable installed Chrome orchestration template before a generic review
+handoff, respecting project overrides, export/privacy and native permissions.
+Development mentioning MCP and live browser-test requests do not select this
+passive workflow. This remains model instruction routing, not a deterministic hook.
+
+`chrome-evidence-v2` requires the decisive recorded requirement/action/observation/
+claim path and counterevidence before an audit blocker. The shared review prompt
+clarifies that its source/type checks apply only to source-review scope: a passive
+audit does not demand source access, compilation or live retesting. Its verdict
+concerns claim support, not product readiness; honest failed-feature reporting may
+pass. Claim statuses, manifest recipe, privacy/export boundary, native recovery
+budget and browser prohibition are unchanged. Corporate/Downloads files were not
+edited and the old portable Chrome package still contains v1.
+
+30 lightweight Node checks pass: 12 settings/static/hash, nine existing synthetic
+behavior-oracle checks and nine Chrome guards/hash/fixture-integrity checks. The
+three added guards cover instructions only, not live intent routing, reviewer
+classification or model compliance. `git diff --check` passes. No build, activation,
+service restart, model/native runtime/PTY or browser run. Prettier is unavailable;
+no replacement was installed. The blind acceptance protocol is updated but unrun.
+
+## Explicit review routing and evidence-v3 (2026-11-16)
+
+There is still one `review` subagent, with `review-system.md` loaded as its system
+prompt. Global AGENTS now directs explicit present-tense review requests to it
+without model overrides or changing the parent's selection. Intent exclusions
+cover discussion/quotations, future/negated requests, development/self-checks,
+explicit no-delegation and duplicate command-owned launches. This is instruction
+routing, not a deterministic interceptor or proof of weak-model compliance.
+
+Analysis/verdict criteria are owned by the shared reviewer; the duplicate analysis
+block was removed from `/delegated-review`, retaining scope/recovery/reporting.
+The command no longer falls back to `general` when `review` is unavailable. The
+evidence-v3 prompt requires the decisive implementation path before a blocking
+finding, types/wrappers/host injection and spread order, attempted falsification,
+and tracing proposed fixes through adjacent paths. It rejects architectural taste
+as a blocker without an applicable mandatory rule or material impact. Compilation
+is selected for a concrete uncertainty, subject to cost/side effects/permissions,
+not required on every review. Model routes and permissions are unchanged.
+
+27 lightweight Node tests pass: 12 settings/static/hash guards, nine existing
+synthetic behavior-oracle checks and six Chrome checks. New text guards cover
+declarations, not actual intent classification, full-path analysis or model quality.
+The acceptance protocol now includes ordinary-request routing and paired modal
+wiring/fix scenarios; no new model/native runtime/PTY run was performed. No build,
+activation, service restart, corporate config or Downloads artifact changes.
+Prettier is unavailable; existing layout is preserved without a replacement.
+
 ## Main config filename (2026-11-14)
 
 Home now declares `opencode.jsonc` as the target of HM's existing generated

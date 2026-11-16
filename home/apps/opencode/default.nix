@@ -114,6 +114,7 @@ in
     # Keep HM's merged settings/source; only rename the installed config path.
     "opencode/opencode.json".target = "opencode/opencode.jsonc";
     "opencode/AGENTS.md".source = ./config/AGENTS.md;
+    "opencode/review-analysis.md".source = ./config/review-analysis.md;
     "opencode/commands/delegated-review.md".source = ./commands/delegated-review.md;
     "opencode/commands/delegated-review-chrome.md".source = ./commands/delegated-review-chrome.md;
     "opencode/commands/problem-brief.md".source = ./commands/problem-brief.md;

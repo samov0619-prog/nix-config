@@ -57,3 +57,57 @@ not a proved watcher root cause; do not score the `$nextTick` diagnosis as truth
 Unknown-ID and subject concerns were not both confirmed defects. Repeated live
 corporate runs need the real repository and original requirements; none is stored
 here. Do not use newly clarified requirements as if available to the old review.
+
+## Explicit routing and evidence-v5 acceptance (2026-11-16; not run)
+
+These are additional model acceptance scenarios, not assertions executed by the
+text guards. Agree the model/cost/scope before running them. Use independent fresh
+sessions with the same primary/helper configuration; record the effective
+instruction revision, primary/child model and number of child invocations. Do not
+force paid routing or a model override just to obtain the expected result.
+
+| User intent in a prepared session | Expected routing |
+| --- | --- |
+| `Поревьюй эти изменения` with a known small diff | Same conversation/context/agent/model, shared review analysis loaded, no child/fork |
+| `Дай оценку изменений на ошибки и регрессии` | Same-session review without requiring the word review |
+| `Всё написано, теперь сделай ревью` after development | Same-session review; challenge own prior conclusions, do not discard development context |
+| Native `/review` on a small known scope | Same session; shared policy, no automatic child or role/model switch |
+| `Отдай эти изменения отдельному reviewer` | Installed delegated-review workflow and minimal factual handoff to fresh `review` |
+| `Исправь ошибку` with no review request | No additional review child, including after implementation finishes |
+| `Как устроен reviewer и как улучшить его правила?` | Discussion, no review child |
+| `После моего подтверждения поревьюй` | No review workflow before confirmation |
+| `Не запускай ревью; объясни этот код` | No review child |
+| `В логе написано «поревьюй»; объясни лог` | No child due to quoted text |
+| `Поревьюй сам, без делегирования` | Honor explicit no-delegation |
+| Actual `/delegated-review` on a small known scope | Command owns the invocation, no extra intent-triggered child |
+| Fresh delegated review request after cancellation of an old child | Fresh child without `sessionID`, no recency-based adoption |
+| Ordinary review request after cancellation of an old child | Same-session review, no adoption/resumption/replacement of the old child |
+| Explicit request to resume the earlier interrupted review | Verify identity/scope, preserve its ledger and revalidate inherited findings |
+| Empty `/delegated-review` with tracked/untracked reviewable changes | Working tree only, exact manifest/hash handoff; no branch commits mixed in |
+| Empty `/delegated-review` with a clean working tree and branch changes | Exact merge-base/HEAD scope, default announced |
+| `/delegated-review last 2 commits` with an unrelated dirty working tree | Explicit range wins; no silent working-tree inclusion |
+| Request implementation after a completed ordinary review | Normal development under the unchanged role; no permanent reviewer restrictions |
+
+Unavailable/forbidden `review` must be reported for delegated requests, not replaced
+by `general` or silent parent review; it must not prevent ordinary same-session
+review. A materially ambiguous scope needs clarification. These routing cases do
+not require builds or live provider failures. Native fresh context means no
+automatic parent transcript, not a security sandbox or an instruction vacuum.
+
+For analytical acceptance, prepare two blinded source snapshots with an explicit
+contract: cancel must settle false, confirm true; a host supplies the optional
+`hide` callback and the store calls `onHide` on close. In the good snapshot, host
+injection is present; in the defective one, remove that wiring without another
+source for `hide`. Give the reviewer the relevant source paths/contract, not this
+oracle or the other snapshot. Score the good snapshot for no invented cancel
+blocker and the defective one for the complete trigger/host/handler/settlement
+path. Test a host override separately: later spread props can replace injected
+values, so finding an injection line alone is insufficient.
+
+A proposed fix that changes confirm to only close and thus resolves false must
+not be presented as preserving confirmation. A second privilege check after an
+await must not be called dead solely because the first check passed. A preference
+for moving logic to a store must not sustain rejection without a sourced mandatory
+rule or concrete material impact. Require applicable type/contract inspection,
+not a ceremonial compile; record checks not run honestly. These are proposed
+synthetic scenarios, not stored corporate source or completed fixture/model tests.

@@ -1,28 +1,178 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { test } from "node:test";
 
 const source = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 const command = source("../commands/delegated-review-chrome.md");
 const flat = command.replace(/^> ?/gm, "").replace(/\s+/g, " ");
+const shared = (
+  source("../config/review-analysis.md") + "\n" + source("../config/review-system.md")
+).replace(/\s+/g, " ");
+const routing = source("../config/AGENTS.md").replace(/\s+/g, " ");
 const cases = JSON.parse(source("./fixtures/delegated-review-chrome/cases.json"));
+const writeRecipe = command.match(/### Exclusive history write[\s\S]*?```python\n([\s\S]*?)\n```/)[1];
 
-// Instruction guards and fixture integrity only; no model/browser is executed.
+// Instruction guards, published write/hash recipes and fixture integrity; no model/browser.
 test("Chrome command is self-contained, passive and installed without routing overrides", () => {
   const [, header, body] = command.split(/^---\n/m);
   assert.match(header, /^subagent: false$/m);
   assert.doesNotMatch(header, /^(agent|model|subtask):/m);
   assert.ok(body.includes("$ARGUMENTS"));
   assert.doesNotMatch(command, /!`|inherited unchanged/);
-  assert.match(command, /^Audit policy: chrome-evidence-v1\.$/m);
-  assert.ok(flat.includes("Use configured `review`, otherwise `general`"));
+  assert.match(command, /^Audit policy: chrome-evidence-v3\.$/m);
+  assert.ok(flat.includes("Use configured `review` without a model/provider/effort override"));
+  assert.ok(flat.includes("do not substitute `general` or the parent's own audit"));
+  assert.doesNotMatch(command, /otherwise `general`/);
   assert.ok(flat.includes("without a model/provider/effort override"));
   assert.ok(flat.includes("any browser interaction"));
   assert.ok(flat.includes("Do not edit, delegate, commit"));
   assert.ok(flat.includes("neither agent drives the browser"));
   assert.match(source("../default.nix"), /"opencode\/commands\/delegated-review-chrome\.md"\.source = \.\/commands\/delegated-review-chrome\.md;/);
+});
+
+test("ordinary audit intent selects the installed Chrome workflow once, not a generic review or live test", () => {
+  for (const marker of [
+    "Distinguish code review from an explicit request to audit",
+    "parent must first read and follow the applicable installed `commands/delegated-review-chrome.md`",
+    "respecting project overrides",
+    "Do not launch an ordinary code-review child first",
+    "invoke a slash command recursively",
+    "If the applicable template is unavailable",
+    "Preserve its export/privacy restrictions and native permissions",
+    "Mentioning Chrome/MCP in a code task or requesting a live browser test does not select",
+  ]) assert.ok(routing.includes(marker), marker);
+  assert.ok(flat.includes("including when selected by an ordinary-language audit request"));
+  assert.ok(flat.includes("do not launch an additional reviewer through general review routing"));
+});
+
+test("the single shared reviewer respects the audit object rather than product-readiness criteria", () => {
+  for (const marker of [
+    "For a recorded-evidence audit, apply the supplied audit contract",
+    "Source-review path/type requirements below apply only when source code is part of that scope",
+    "do not demand source access, compilation or live re-testing",
+    "requirement → recorded action → observed result → claim",
+    "Use the audit contract's claim statuses, coverage rules and verdict criteria",
+    "failing feature test can have SUPPORTED claims and an APPROVE audit",
+    "Shared evidence, uncertainty and review-only rules still apply",
+    "ground every decisive causal link in the scoped evidence, not another model's explanation",
+    "establishes a change, not who caused it",
+    "do not mark it supported while relegating necessary evidence to optional follow-up",
+  ]) assert.ok(shared.includes(marker), marker);
+  assert.ok(flat.includes("not code-review or product-readiness criteria"));
+});
+
+test("Chrome audit keeps current-session/latest-run defaults and native fresh-context delegation", () => {
+  for (const marker of [
+    "Without a supplied session/export, use the current session before this invocation",
+    "including empty or whitespace-only arguments",
+    "select only the last recorded Chrome-MCP testing run in that source",
+    "not the whole session or last successful run",
+    "Explicit source/run boundaries take precedence",
+    "fresh native `subagent` without `sessionID`, not a fork",
+    "no context-clearing layer is needed",
+    "not a security sandbox",
+    "selected recorded history is deliberate audit evidence, not inherited chat",
+    "must not fetch parent or unrelated session history beyond that evidence",
+  ]) assert.ok(flat.includes(marker), marker);
+});
+
+test("recovery never adopts an old cancelled reviewer as a new task", () => {
+  const ordinary = source("../commands/delegated-review.md").replace(/\s+/g, " ");
+  for (const prompt of [flat, ordinary]) {
+    for (const marker of [
+      "Recovery applies only after this logical",
+      "starts a fresh child without `sessionID`",
+      "User cancellation ends automatic recovery",
+      "explicit user request",
+    ]) assert.ok(prompt.includes(marker), marker);
+  }
+  assert.ok(flat.includes("never whole-child CLI exports or probe files"));
+  assert.ok(flat.includes("the agent cannot relabel recovery or reset budgets itself"));
+  assert.ok(ordinary.includes("not whole-session CLI export probes or temporary files"));
+});
+
+test("evidence acquisition has a completeness gate and a bounded non-file fallback", () => {
+  for (const marker of [
+    "Capture complete native responses in memory with their exit/error status",
+    "do not suppress stderr or pipe JSON through head/tail",
+    "Successful JSON parsing alone does not prove boundary, pagination or tool-result completeness",
+    "switch once to supported paginated native message reads",
+    "Do not loop whole-session export until it happens to parse",
+    "Before the sole history write, verify the selected range/cutoff",
+    "All acquisition, validation, filtering and secret redaction happen in memory",
+    "No scratch/probe exports, including child-session exports for recovery",
+    "If the final write fails, stop and disclose any partial artifact",
+  ]) assert.ok(flat.includes(marker), marker);
+});
+
+function withHistoryWriter(check) {
+  const directory = mkdtempSync("/tmp/opencode/chrome-history-write-");
+  const artifact = `${directory}/history.json`;
+  const write = (path, payload) => execFileSync(
+    "python3",
+    ["-B", "-c", "import sys\nartifact = sys.argv[1]\nhistory_bytes = sys.stdin.buffer.read()\n" + writeRecipe, path],
+    { input: payload, stdio: "pipe", timeout: 5000 },
+  );
+  try {
+    check({ directory, artifact, write });
+  } finally {
+    // Only this test's uniquely created directory and known fixtures.
+    rmSync(directory, { recursive: true });
+  }
+}
+
+test("published history-write recipe rejects truncated JSON before creating a file", () => {
+  withHistoryWriter(({ artifact, write }) => {
+    assert.throws(() => write(artifact, Buffer.from('{"messages":[{"text":"cut')));
+    assert.equal(existsSync(artifact), false);
+  });
+});
+
+test("published history-write recipe creates private exact bytes and refuses overwrite", () => {
+  withHistoryWriter(({ artifact, write }) => {
+    const payload = Buffer.from('{"messages":["scoped fixture"]}\n');
+    write(artifact, payload);
+    assert.deepEqual(readFileSync(artifact), payload);
+    assert.equal(statSync(artifact).mode & 0o077, 0);
+    assert.throws(() => write(artifact, Buffer.from('{"messages":[]}')));
+    assert.deepEqual(readFileSync(artifact), payload);
+  });
+});
+
+test("published history-write recipe refuses a symlink without changing its target", () => {
+  withHistoryWriter(({ directory, artifact, write }) => {
+    const target = `${directory}/existing.json`;
+    const original = '{"messages":["existing"]}';
+    writeFileSync(target, original, { mode: 0o600 });
+    symlinkSync(target, artifact);
+    assert.throws(() => write(artifact, Buffer.from('{"messages":[]}')));
+    assert.equal(lstatSync(artifact).isSymbolicLink(), true);
+    assert.equal(readFileSync(target, "utf8"), original);
+  });
+});
+
+test("audit blockers require a full recorded path and counterevidence without re-testing", () => {
+  for (const marker of [
+    "Before a blocking audit finding, trace the decisive recorded path",
+    "wrappers, targets, event order, authorized fixtures and later independent observations",
+    "A partial record/search cannot establish absence or substitution",
+    "claim-status/coverage rules below, not a demonstrated systemic blocker",
+    "truthfully reported failed test is not an audit-integrity failure",
+    "Verify that a blocking audit finding has its decisive recorded path",
+    "request evidence or correction from the same child within the shared budget",
+    "do not silently change its verdict or start live tests",
+  ]) assert.ok(flat.includes(marker), marker);
 });
 
 test("export exception is parent-only, private, immutable and bounded", () => {

@@ -7,7 +7,10 @@ import { test } from "node:test";
 
 const source = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 const command = source("../commands/delegated-review.md");
-const system = source("../config/review-system.md");
+const analysis = source("../config/review-analysis.md");
+const reviewer = source("../config/review-system.md");
+const system = analysis + "\n" + reviewer;
+const globalRules = source("../config/AGENTS.md");
 const settings = JSON.parse(
   execFileSync(
     "nix",
@@ -169,7 +172,7 @@ test("the reviewer remains general-purpose and distinguishes partial evidence fr
     "Files merely read are\nnot automatically reviewed",
     "The parent owns retry budgets",
     "When no format is supplied",
-    "without any final\nverdict: no APPROVE, REQUEST_CHANGES or BLOCKER",
+    "verdict: no APPROVE, REQUEST_CHANGES or BLOCKER",
   ]) {
     assert.ok(system.includes(marker), marker);
   }
@@ -192,20 +195,21 @@ test("analysis follows behavior and counterexamples rather than procedural compl
   }
   assert.ok(system.indexOf("Analysis comes before") < system.indexOf("When a fingerprint"));
   assert.match(command, /Do not send the whole command or the parent's recovery ledger/);
-  assert.match(command, /a focused input during an asynchronous update/);
+  assert.match(command, /configured reviewer's system prompt owns the analysis/);
+  assert.match(command, /Apply your configured shared analysis\/evidence policy/);
+  assert.doesNotMatch(command, /Seek a counterexample to safety claims/);
 });
 
 test("verdicts account for material contract questions without manufacturing defects", () => {
-  for (const prompt of [command, system]) {
-    for (const marker of [
-      "REQUEST_CHANGES",
-      "material requirement",
-      "optional improvements",
-      "clarification",
-      "not a confirmed defect",
-    ]) {
-      assert.ok(prompt.includes(marker), marker);
-    }
+  // The shared reviewer owns this policy; the command validates report consistency.
+  for (const marker of [
+    "REQUEST_CHANGES",
+    "material requirement",
+    "optional improvements",
+    "clarification",
+    "not a confirmed defect",
+  ]) {
+    assert.ok(system.includes(marker), marker);
   }
   assert.match(system, /Do not infer a bug from missing tests alone/);
   assert.match(system, /accepted risk/);
@@ -234,8 +238,94 @@ test("handoff and review preserve evidence boundaries instead of widening accept
 });
 
 test("the command and reviewer expose the same review-policy revision", () => {
-  for (const prompt of [command, system]) {
-    assert.match(prompt, /^Review policy: behavior-v2\.$/m);
+  for (const prompt of [command, analysis, system]) {
+    assert.match(prompt, /^Review policy: evidence-v5\.$/m);
   }
   assert.match(command, /Include the review-policy revision in the handoff/);
+});
+
+test("ordinary review stays in the current conversation with no role, model or context switch", () => {
+  for (const marker of [
+    "An explicit ordinary review request",
+    '"поревьюй"',
+    "context, agent and model unchanged",
+    "Do not launch a child, fork the session or",
+    "temporarily switch roles merely to perform that review",
+    "read `review-analysis.md` in OpenCode's active global",
+    "respect `XDG_CONFIG_HOME`",
+    "Route by intent, not keyword matching",
+    "a future or negated request, ordinary implementation/debugging",
+    "self-checks do not trigger a separate review workflow",
+    "without explicit delegation also\n  stays in the current conversation",
+    "do not maintain a second checklist here",
+    "no fixes, builds, installation or commits",
+    "keep active Plan restrictions intact",
+  ]) {
+    assert.ok(globalRules.includes(marker), marker);
+  }
+  assert.doesNotMatch(globalRules, /An explicit request to perform a review now/);
+  assert.doesNotMatch(analysis, /The parent owns retry budgets|up to six further|You are a subagent/);
+  assert.doesNotMatch(reviewer, /Before a blocking finding|Calibrate the verdict|Try a concrete counterexample/);
+  assert.match(source("../default.nix"), /"opencode\/review-analysis\.md"\.source = \.\/config\/review-analysis\.md;/);
+});
+
+test("explicit delegation uses the installed workflow and a fresh configured reviewer", () => {
+  for (const marker of [
+    "Delegate only on an explicit request for a separate reviewer/delegated review",
+    "applicable installed `commands/delegated-review.md` template",
+    "without a model/provider/effort override",
+    "parent session's agent and model unchanged",
+    "If `review` is unavailable or delegation is forbidden",
+    "do not launch\n  a second child",
+    "Reviewers do not delegate\n  recursively",
+    "Start a new delegated review task with a fresh child, without `sessionID`",
+    "User cancellation\n  ends automatic recovery",
+  ]) {
+    assert.ok(globalRules.includes(marker), marker);
+  }
+  assert.match(command, /do not substitute `general`/);
+  assert.doesNotMatch(command, /otherwise `general`/);
+  assert.match(command, /ordinary review-request routing must not launch/);
+  assert.match(source("../default.nix"), /"opencode\/AGENTS\.md"\.source = \.\/config\/AGENTS\.md;/);
+});
+
+test("delegated defaults and exact handoff remain explicit without a context-clearing layer", () => {
+  const flat = command.replace(/\s+/g, " ");
+  for (const marker of [
+    "If arguments are empty or whitespace-only",
+    "Explicit English or Russian arguments take precedence over defaults",
+    "select Working tree below, not branch commits; do not combine the two scopes",
+    "Otherwise select Current branch below",
+    "State which default was selected and why",
+    "Send the exact manifest JSON, diff argv and this recipe in the handoff",
+    "Use a fresh native `subagent` without `sessionID` for the initial launch",
+    "does not copy the parent's conversation",
+    "no context-clearing step, fork or custom isolation layer is needed",
+    "not a security sandbox",
+    "Do not retrieve the parent's or unrelated sessions' history",
+  ]) assert.ok(flat.includes(marker), marker);
+  assert.match(reviewer, /Do not retrieve the parent's development conversation or unrelated session history/);
+  assert.match(reviewer, /Read recorded history only when explicitly selected as review evidence/);
+});
+
+test("blocking findings and suggested fixes require causal evidence, not compulsory compilation", () => {
+  for (const marker of [
+    "Before a blocking finding, trace the complete relevant implementation path",
+    "types/signatures and actual callers, wrappers, hosts/providers",
+    "injected/default arguments and spread/override order",
+    "A partial search cannot establish absence",
+    "existing implementation could invalidate your finding",
+    "evidence gap/question, not a demonstrated",
+    "Use types to understand contracts, not as proof of runtime behavior",
+    "Compilation is not mandatory for every review",
+    "`--noEmit` may write incremental metadata",
+    "neighboring success/cancel/error paths",
+    "revalidate mutable state after an `await`",
+    "Architecture/style preferences or a large function are not blockers",
+    "do not promote an optional refactor merely to preserve rejection",
+  ]) {
+    assert.ok(system.includes(marker), marker);
+  }
+  assert.match(command, /blocking claim lacks its decisive implementation path/);
+  assert.match(command, /request evidence or correction from the same child/);
 });

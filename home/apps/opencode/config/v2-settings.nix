@@ -253,7 +253,7 @@ in
       mode = "subagent";
       description = "Independent read-only review of delegated changes or claims, with evidence and explicit coverage.";
       permissions = analysisPermissions;
-      system = builtins.readFile ./review-system.md;
+      system = builtins.readFile ./review-analysis.md + "\n" + builtins.readFile ./review-system.md;
     };
     explore = {
       model = model "explore";
