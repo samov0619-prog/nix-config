@@ -18,6 +18,20 @@
   networking = {
     hostName = "laptop";
     networkmanager.enable = true;
+    # Source-restricted IPv4 LAN hosting; the per-interface allowed-port options
+    # cannot express the source subnet/destination IP. This is the supported
+    # iptables firewall extension, run before its final reject rule. NixOS owns
+    # and recreates nixos-fw on reload, so no custom service/cleanup is needed.
+    firewall.extraCommands = ''
+      iptables -w -A nixos-fw -i wlp0s20f3 \
+        -s 192.168.0.0/24 -d 192.168.0.101 \
+        -p tcp -m multiport --dports 8443,8444 \
+        -m comment --comment aina-world-lan-https -j nixos-fw-accept
+      iptables -w -A nixos-fw -i wlp0s20f3 \
+        -s 192.168.0.0/24 -d 192.168.0.101 \
+        -p udp -m multiport --dports 4433,4434 \
+        -m comment --comment aina-world-lan-game -j nixos-fw-accept
+    '';
   };
   systemd.services.NetworkManager-wait-online.enable = false;
   hardware.enableRedistributableFirmware = true;
