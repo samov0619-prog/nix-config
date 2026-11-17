@@ -87,6 +87,49 @@ then test a floating terminal near multiple corners; test two ordinary tiled
 windows and the 50/50 reset separately. Fullscreen/maximize policy is unchanged.
 Live drag/reset acceptance is pending, not covered by selected declaration tests.
 
+## Blender MCP add-on
+
+The Lenovo leaf installs only `blender_mcp/bundled/addon.py` from the PyPI wheel
+`mcp_for_blender-2.3.0-py3-none-any.whl`, matching Aina's MCP server pin. The wheel's
+SHA-256 is `d420fe5382a7220162d9a8ed3f0740fa19ce83ad87f30c892248bb7c5254b618`.
+There is no Blender add-on module/package for this in the pinned Home Manager or
+nixpkgs; `blender.withPackages` supplies Python dependencies, not add-on files.
+Stock `pkgs.blender` already includes the required `requests` dependency.
+The bundled `bl_info.version` is still `(2, 0)`; this UI metadata is not the wheel
+version and does not mean an older wheel was installed.
+
+Home Manager links one file at
+`$XDG_CONFIG_HOME/blender/<major.minor>/scripts/addons/blender_mcp.py` (normally
+`~/.config/blender/5.1/scripts/addons/blender_mcp.py` today). The directory version
+comes from `pkgs.blender.version`, not a fixed `5.1`. Other add-ons, preferences
+and scene files stay unmanaged; `force = false` preserves collision protection.
+There is no global MCP/uv installation, service, firewall change or auto-enable.
+
+After reviewing the changes:
+
+1. Run `home-manager switch --flake /home/samov/nix-config#samov-laptop`.
+2. For an already running Blender, switch a 3D Viewport to **Python Console**
+   with **Shift+F4** and run
+   `bpy.utils.refresh_script_paths(); bpy.ops.preferences.addon_refresh()`.
+   Return with **Shift+F5**. This refreshes discovery without enabling the add-on
+   or changing preferences/scene data. Alternatively, save your work and restart
+   Blender; a restart discovers the new directory automatically.
+3. Open **Edit > Preferences > Add-ons**, clear any enabled-only filter,
+   search for **MCP for Blender** and enable its checkbox. Do not use Install from
+   Disk: Home Manager already supplies the file.
+4. Keep **Bind Address** at `localhost`, **Allow Remote Connections** and
+   **Allow Telemetry** off, and external asset/generation integrations disabled.
+   The upstream add-on defaults to **Auto-Start Server** on: enabling it starts
+   a local listener on port `9876`. It also checks for updates over the network.
+   These are upstream behaviors, not a system service or HM activation action.
+5. In the 3D Viewport, press **N** and open the **MCP for Blender** tab. Check the
+   connection status there; do not use **Update Addon** for this store-managed
+   file. Update the declarative wheel pin/hash together with Aina instead.
+
+Wheel hash and Python syntax were checked without importing/registering the
+add-on. Builds, activation, Blender UI compatibility and an MCP connection remain
+user verification; no running Blender session or preferences were modified.
+
 ## Checks and application
 
 Small implementation-path fixtures (hyprctl mocked, not a real input device):

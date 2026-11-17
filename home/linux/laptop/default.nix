@@ -1,5 +1,21 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 let
+  # Match the MCP server pinned in Aina; install only its bundled Blender add-on.
+  blenderMcpVersion = "2.3.0";
+  blenderMcpWheel = pkgs.fetchurl {
+    url = "https://files.pythonhosted.org/packages/d4/27/dff438e59b46bc93cebb2558c5e994c821227482d9a22d32814fdc388558/mcp_for_blender-${blenderMcpVersion}-py3-none-any.whl";
+    hash = "sha256-1CD+U4KnIgFi2ajtPwdA+hnOg62H8wyJIki7fFJUthg=";
+  };
+  blenderMcpAddon =
+    pkgs.runCommand "blender-mcp-addon-${blenderMcpVersion}"
+      {
+        nativeBuildInputs = [ pkgs.unzip ];
+      }
+      ''
+        mkdir -p "$out"
+        unzip -p ${blenderMcpWheel} blender_mcp/bundled/addon.py > "$out/blender_mcp.py"
+      '';
+  blenderConfigVersion = lib.versions.majorMinor pkgs.blender.version;
   gpuStatus = pkgs.writeShellScriptBin "waybar-gpu-status" ''
     exec ${pkgs.python3}/bin/python3 ${./waybar/gpu-status.py} "$@"
   '';
@@ -33,6 +49,11 @@ in
   wayland.windowManager.hyprland.configType = "hyprlang";
   # Only Lenovo uses this override; existing profiles retain stock Waybar.
   programs.waybar.package = import ./waybar/package.nix { waybar = pkgs.waybar; };
+  # Manage one add-on, not the scripts directory or user preferences. No auto-enable.
+  xdg.configFile."blender/${blenderConfigVersion}/scripts/addons/blender_mcp.py" = {
+    source = "${blenderMcpAddon}/blender_mcp.py";
+    force = false;
+  };
   xdg.configFile."hypr/hyprland.conf".source = ./hyprland.conf;
   xdg.configFile."waybar/config.jsonc".source = ./waybar-config.jsonc;
   xdg.configFile."waybar/style-dark.css".source = waybarTheme "dark";
