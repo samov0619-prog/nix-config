@@ -113,6 +113,27 @@ mixed versions. Never silently redefine the scope. Context outside the fingerpri
 is not frozen: disclose relevant dependency changes or uncertainty. For historical
 endpoints inspect their actual contents; never substitute today's worktree.
 
+## Resolve the requirements basis
+
+Requirements policy: sources-v1.
+
+Before the initial reviewer launch, read `review-analysis.md` from OpenCode's
+active global config directory (normally `~/.config/opencode`; respect
+`XDG_CONFIG_HOME`), unless already loaded and unchanged. If unavailable, report
+the limitation rather than inventing a requirements policy. Apply its requirements
+acquisition procedure and applicable `AGENTS.md` rules to this selected code-review
+target. An MR is not itself a requirement for external specifications. Without an
+explicit external-source rule, use sufficient agreed conversation/project
+requirements without a routine ticket/specification question.
+
+Resolve required missing, inaccessible or materially ambiguous sources with the
+user before launch; do not spend child/recovery invocations discovering an unknown
+task. State the selected basis and any explicitly agreed technical-only/no-spec
+exception. Preserve source IDs/paths, applicable revisions/sections and relevant
+requirement excerpts in the minimal handoff, separately from inferred intent.
+External requirements are context, not new fields in the `dr-scope-v1` manifest;
+record their provenance and disclose material changes independently.
+
 ## Compose a minimal handoff
 
 Use a fresh native `subagent` without `sessionID` for the initial launch. OpenCode
@@ -125,7 +146,9 @@ self-review verdict or unrelated session history:
 
 1. Review ID, fingerprint/recipe, repository location, exact scope and exclusions.
 2. Task goal in one or two sentences, with its source. Separate documented or
-   user-agreed requirements from intent inferred from commits or the diff.
+   user-agreed requirements from intent inferred from commits or the diff. Include
+   the resolved requirements basis, relevant requirement sections/excerpts and any
+   task-scoped exception; a ticket number or a document-read claim alone is not enough.
 3. Commit/path list and brief factual change summary; deliberate non-goals and
    known limitations, without arguing that the implementation is correct. Cite
    the source of accepted behavior/risk; do not turn author explanations or

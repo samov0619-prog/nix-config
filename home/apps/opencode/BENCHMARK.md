@@ -4,6 +4,147 @@ Pinned upstream: 2.1.4, `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`.
 Historical model-quality experiments and V1 behavior are retained in
 [archive/v1/BENCHMARK.md](archive/v1/BENCHMARK.md). They do not measure V2 quality.
 
+## Acceptance status (2026-11-17)
+
+`not-verified-in-wilde` — saved at the user's request before live acceptance.
+The requirements-source, review-reasoning and simpler-approach changes have local
+source/fixture coverage, not acceptance of actual model behavior. R3 Mac native
+discovery and corporate MCP behavior remain unverified; applying R2 is not that
+acceptance. Keep this marker until the relevant live scenarios are checked and
+their results recorded. A commit does not change this verification status.
+
+## Mac patch R3: source-only team rule, personal workflows (2026-11-16)
+
+The user reports R2 applied and rejects its ownership boundary: team AGENTS must
+select requirements sources without personal reviewer/command dependencies.
+R3 is incremental **after R2**, not a cumulative replacement or an instruction to
+reverse R2. Artifact: `~/Downloads/opencode-mac-update-2026-11-16-r3.patch`.
+SHA256: `4aefdc1f0887a91c6391dc53b7ff1da7afde9e676fe19cb8cd77d0c6de833fa0`.
+
+Team AGENTS retains only the independent `Requirements Sources` addition; its
+remaining original bytes match the input baseline. Personal ordinary/delegated
+review and passive Chrome routing move to the already-loaded personal AGENTS.
+Reviewer and code-review template read policy directly from `opencode-local`.
+R3 deletes the two team policy symlinks, retaining their actual personal files and
+all three existing native command/agent discovery links. No JSON/routing/model or
+permission changes. Goals and Approach is byte-identical to R2; home runtime
+configuration remains unchanged. The Mac command differs from the shared template
+only by policy location, with a parity guard to prevent accidental workflow drift.
+
+52 lightweight Node checks pass, including two new layering/path-parity guards;
+existing goal/baseline/link guards now enforce the corrected ownership contract.
+HM evaluation performs no realization and emits only the existing quota warning.
+The actual native patch changes ten paths (eight regular files, two symlink
+deletions). A selected-file fixture reconstructs ZIP content + three live links +
+applied R2. R3 preflight/apply succeeds, all target bytes match, both team policy
+links disappear and personal policies remain byte-identical. Three discovery-link
+strings/inodes and seven private/unrelated sentinels are preserved. Exact reverse
+returns R2. Duplicate application, a conflicting target and the pre-R2 state are
+rejected; a conflicting direct apply writes nothing. Team has no private file or
+command dependency, while personal consumers name local policy paths. These are
+source/fixture checks, not model compliance or live Mac discovery/MCP acceptance.
+Prettier remains unavailable; no substitute installed. No build, activation,
+restart, live config edit, Git index/history change or commit. R2 is retained as
+the applied baseline artifact; only disposable R3 work files are cleaned.
+
+## Mac patch R2: preserve installed links (2026-11-16; user reports applied)
+
+The user's Mac preflight rejected R1 with `wrong type` for the team reviewer and
+two review commands. No apply occurred. Treating flattened ZIP types as live types
+was a delivery error; R2 does not remove or recreate those three paths. It updates
+their regular-file targets in `opencode-local` and creates only the two new policy
+symlinks. The existing links' actual destinations must be checked separately with
+the documented `readlink` preflight: Git cannot validate paths excluded from diff.
+
+Applied baseline artifact: `~/Downloads/opencode-mac-update-2026-11-16-r2.patch`.
+SHA256: `093cc0e44fc527c472980063270b8a3d6937a0c98f2b9ee55024bab2b1f981b3`.
+It changes 16 paths (14 regular targets, two new symlinks), with no changes to the
+three existing links or config/provider/MCP/plugin/audio/auth/Git data. On a Linux
+fixture with three existing relative symlinks, R1 reproduces all three reported
+errors; R2 preflight/apply succeeds. Exact target bytes, preserved link strings and
+inodes, both new link resolutions and seven untouched sentinels pass. Reverse
+restores the exact initial file/link state; reapply and a conflicting targeted file
+are rejected without partial writes. Source bytes and input ZIP remain stable.
+The obsolete R1 artifact and task scratch were removed after verification. No live
+Mac config change, Mac runtime/model/MCP check, build, activation or commit occurred.
+
+## Goals/approach and superseded R1 Mac patch (2026-11-16)
+
+The home global AGENTS and corporate **personal** AGENTS now share a bounded
+goal/approach check before materially increasing complexity or scope. It surfaces
+a simpler viable alternative without vetoing learning/experimentation, requiring
+routine confirmation or repeatedly challenging an informed choice. Operational
+permissions/project constraints remain applicable. No plugin, hook, dependency,
+new instruction-loading mechanism or decision-support opt-in was introduced.
+The corporate team AGENTS still changes only its review/requirements section;
+both team and personal rules preserve the exact input baseline outside additions.
+
+`~/Downloads/opencode-mac-update-2026-11-16.patch` is a native Git patch against
+the unchanged `trf.zip`, not a replacement configuration or update to the old seed.
+SHA256: `f187bdbc4bdadaad1236a64129ff5423e33b6b4a31fad0bf3729b7f0188fff55`.
+It updates 19 unique paths: 14 regular-file targets and five team-to-personal
+symlinks encoded with native mode `120000`. Four personal source links are
+materialized as file content. The install guide and the 14 requirements-source /
+six approach scenarios are placed under `opencode-local/update-2026-11-16/`.
+No JSON/CLI/provider/MCP settings, credentials, plugins/audio, Git metadata or
+session history change; problem-brief already matches. Application from the common
+config parent uses `git apply --check` then `git apply`, without index/staging,
+commits, a script, extraction or manual symlink repair. The mistakenly prepared
+tar.gz was removed after the patch passed. Sources/instructions: `macos/trf-review/`.
+
+50 lightweight Node checks pass (the previous 47 plus three new text/parity/baseline
+guards), along with both Mac audio-policy checks. HM evaluation performs no
+realization and reports only the existing quota-source warning. These checks
+predate the delivery-format correction; the underlying policy/command/role bytes
+are unchanged. The generated native patch passed path allowlist/full-index/mode
+checks and actual Linux `git apply --check`, apply and reverse. All target bytes,
+types and five internal symlink resolutions match; seven unrelated config/CLI/env/
+Git/plugin/problem-brief sentinels remain unchanged. Reverse restores exact initial
+file bytes/types/modes. Reapplication is rejected. A deliberately conflicting
+baseline rejects even direct apply without partial writes; an already-restored
+symlink layout is explicitly rejected as a different baseline, without writes.
+This patch does not silently normalize arbitrary live layouts: its input is the
+flattened-link state in `trf.zip`, and Mac must run the documented preflight.
+Source stability and unchanged input archive hash passed. Native Mac discovery,
+real-model compliance and corporate MCP remain untested. Prettier is unavailable;
+no replacement installed. No Nix/OpenCode build, activation, restart, live config
+edit, Git index/history change or commit was performed.
+
+## Requirements-source preparation (2026-11-16; model/MCP acceptance pending)
+
+The shared `evidence-v5` analysis now includes `Requirements policy: sources-v1`.
+External task/specification requirements come from explicit applicable `AGENTS.md`
+or the user's selected review source, never MR/host/environment heuristics. Without
+such a rule, sufficient conversation/project requirements do not trigger a routine
+ticket/TZ question. Source selection validates the selected target, task linkage,
+contents and applicable revision; denied/ambiguous required sources stop completion
+or delegated launch, not silently become technical-only review or code defects.
+Delegated handoffs carry requirement sections/excerpts/provenance without changing
+`dr-scope-v1`. Passive historical Chrome audits keep their evidence boundary.
+
+`macos/trf-review/` is a durable source overlay against the user's `trf.zip`, not a
+package or update to the old Mac seed. The shared corporate `opencode/AGENTS.md`
+preserves the exact input bytes outside one added review/source section. Personal
+reviewer frontmatter preserves its original permissions/model inheritance; its
+body reads the shared analysis and delegated wrapper. Nine checked relative
+symlinks share current repository sources and preserve team-to-personal placement;
+the personal source links must be materialized only during a later approved export.
+No `.git`, credentials, private MCP data, personal AGENTS/JSONC or CLI state were
+imported from the input archive. Downloads and live Mac files remain unchanged.
+
+47 lightweight Node checks pass: the existing 39 review/HM-evaluation checks plus
+seven source-policy/wiring/baseline guards and one seeded behavior check. The
+fixture demonstrably mishandles a documented string result;
+that does not show a model finds it. Static guards are not an executable source
+resolver, model-ordering test or native Markdown-agent/policy-loading test.
+Fourteen source-selection scenarios and a paired corrected control are prepared
+in `tests/fixtures/review-requirements/EVALUATION.md` but not model-run. The cheap
+HM evaluation reports the existing quota-source warning; it performs no realization.
+Both existing Mac audio-policy tests also pass. Tracked diff/new-file whitespace,
+new local Markdown links and the unchanged input archive SHA256 were checked.
+No build, activation, service restart, native runtime/PTY/browser/model or live
+corporate MCP run. Prettier is unavailable; no substitute was installed.
+
 ## Same-session versus delegated review (2026-11-16; live routing unverified)
 
 The clarified contract replaces ordinary automatic delegation: ordinary review

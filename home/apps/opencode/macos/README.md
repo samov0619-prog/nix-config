@@ -1,5 +1,22 @@
 # OpenCode 2.1.4 — корпоративный Mac
 
+## Текущее обновление: R3 поверх применённого R2
+
+Пользователь уже применил R2. Файл
+`~/Downloads/opencode-mac-update-2026-11-16-r3.patch` применяется через `git apply`
+из `~/.config` **поверх R2**, без его отката. Подготовка лежит в
+[`trf-review/`](trf-review/README.md). В командном `AGENTS.md` остаётся только
+независимый выбор источника ТЗ; review-routing, анализ, delegated review и Chrome
+audit принадлежат `opencode-local`. **Goals and Approach** остаётся личным.
+Две ошибочные общие policy-ссылки R3 удаляет, три прежние discovery-ссылки команд/роли
+сохраняет. Роль и code-review-template читают policies напрямую из personal.
+Порядок проверки/применения — [`trf-review/INSTALL.md`](trf-review/INSTALL.md).
+Это точечный Git-патч, не полная конфигурация и не архив.
+Старый seed ниже и исходный `trf.zip` не изменены; не заменять ими новую базу.
+Model/MCP-приёмка и установка на Mac не выполнялись.
+
+## Предыдущий самостоятельный seed
+
 Архив содержит две соседние папки: командную `opencode/` и личную
 `opencode-local/`. База — снимок `opc.zip`; корпоративные Git/task-log правила,
 четыре skills, Copilot X5, локальный OpenAI proxy и три MCP сохранены.
