@@ -87,11 +87,19 @@ in
           Super+G             toggle floating
           Super+T             toggle Dwindle split
           Super+P             toggle pseudotile
-          Super+,             new Kitty window
-          Super+N             new Kitty nvim window
-          Super+E             new Yazi window
-          Super+Shift+E       sudo Yazi window
-          Super+W             semantic workspace/window switcher
+          In Kitty: Super+, / Super+E / Super+N
+                              new shell / Yazi / Neovim tab (home directory)
+          Super+Shift+,       new Kitty OS window
+          Super+Shift+E       new Yazi OS window (not sudo)
+          Super+Shift+N       new Neovim OS window
+          Ctrl+Tab            next Kitty tab
+          Ctrl+Shift+Tab      previous Kitty tab
+          Super+]             next Kitty tab
+          Super+[             previous Kitty tab
+          Super+Shift+[       move current Kitty tab left
+          Super+Shift+]       move current Kitty tab right
+          In Kitty: Super+W  close current tab (all its panes)
+          Terminal command: hypr-semantic-switcher-tofi
           Super+Space         live workspace canvas
           Canvas: H/J/K/L select, Tab/Shift+Tab monitor,
                   Ctrl+Tab/Ctrl+Shift+Tab move workspace next/previous,

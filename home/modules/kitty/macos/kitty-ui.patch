@@ -1,0 +1,115 @@
+diff --git a/kitty.conf b/kitty.conf
+--- a/kitty.conf
++++ b/kitty.conf
+@@ -13,6 +13,9 @@
+ map cmd+shift+0 launch --type=background /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --disable-web-security --disable-gpu --user-data-dir=/Users/user/cors
+ 
+ background #2C2E34
++
++# Keep tabs above the terminal.
++tab_bar_edge top
+ 
+ map kitty_mod+right next_window
+ map kitty_mod+left previous_window
+@@ -997,7 +1000,7 @@
+ #: start_resizing_window. The cells value is used for horizontal
+ #: resizing, and the lines value is used for vertical resizing.
+ 
+-window_border_width 1.5pt
++window_border_width 1px
+ 
+ #: The width of window borders. Can be either in pixels (px) or pts
+ #: (pt). Values in pts will be rounded to the nearest number of pixels
+@@ -1005,14 +1008,14 @@
+ #: to be pts. Note that borders are displayed only when more than one
+ #: window is visible. They are meant to separate multiple windows.
+ 
+-# draw_minimal_borders yes
++draw_minimal_borders no
+ 
+ #: Draw only the minimum borders needed. This means that only the
+ #: borders that separate the window from a neighbor are drawn. Note
+ #: that setting a non-zero window_margin_width overrides this and
+ #: causes all borders to be drawn.
+ 
+-# window_margin_width 0
++window_margin_width 0
+ 
+ #: The window margin (in pts) (blank area outside the border). A
+ #: single value sets all four sides. Two values set the vertical and
+@@ -1027,7 +1030,7 @@
+ #: set the vertical and horizontal sides. Three values set top,
+ #: horizontal and bottom. Four values set top, right, bottom and left.
+ 
+-# window_padding_width 0
++window_padding_width 4
+ 
+ #: The window padding (in pts) (blank area between the text and the
+ #: window border). A single value sets all four sides. Two values set
+@@ -1042,7 +1045,7 @@
+ #: set the vertical and horizontal sides. Three values set top,
+ #: horizontal and bottom. Four values set top, right, bottom and left.
+ 
+-# placement_strategy center
++placement_strategy center
+ 
+ #: When the window size is not an exact multiple of the cell size, the
+ #: cell area of the terminal window will have some extra padding on
+@@ -1058,7 +1061,7 @@
+ #: The color for the border of the active window. Set this to none to
+ #: not draw borders around the active window.
+ 
+-# inactive_border_color #cccccc
++inactive_border_color #cccccc
+ 
+ #: The color for the border of inactive windows.
+ 
+@@ -2019,7 +2022,8 @@
+ #: but less pretty.
+ #
+ window_title_bar top
+-window_title_bar_min_windows 1
++window_title_bar_min_windows 2
++window_title_bar_align left
+ 
+ macos_show_window_title_in none
+ 
+diff --git a/dark-theme.auto.conf b/dark-theme.auto.conf
+--- a/dark-theme.auto.conf
++++ b/dark-theme.auto.conf
+@@ -3,3 +3,11 @@
+ ## author: amtea
+ 
+ background #2C2E34
++
++# Shared by tabs and the built-in split title bars.
++active_tab_foreground #F5F6F8
++active_tab_background #4B6D79
++inactive_tab_foreground #C7CBD4
++inactive_tab_background #455360
++active_border_color #525866
++inactive_border_color #2C2E34
+diff --git a/light-theme.auto.conf b/light-theme.auto.conf
+--- a/light-theme.auto.conf
++++ b/light-theme.auto.conf
+@@ -6,11 +6,19 @@
+ ## blurb: Clean, vibrant and pleasing color scheme
+ 
+ foreground            #383A42
+-background            #FAFAFA
++background            #FFFFFF
+ selection_foreground  #383A42
+ selection_background  #BFCEFF
+ url_color             #F0F0F0
+ 
++# Shared by tabs and the built-in split title bars.
++active_tab_foreground #23272F
++active_tab_background #C7D0DF
++inactive_tab_foreground #444444
++inactive_tab_background #ECEEF2
++active_border_color #444444
++inactive_border_color #FAFAFA
++
+ # black
+ color0   #383A42
+ color8   #383A42

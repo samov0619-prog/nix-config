@@ -1,0 +1,32 @@
+diff --git a/kitty.conf b/kitty.conf
+--- a/kitty.conf
++++ b/kitty.conf
+@@ -1,8 +1,15 @@
+-map cmd+n  launch --type=tab --tab-title=nvim fish -l -c nvim 
+-map cmd+т  launch --type=tab --tab-title=nvim fish -l -c nvim 
+-map kitty_mod+n  launch --type=tab --tab-title=nvim fish -l -c nvim 
+-map cmd+e launch --type=tab --tab-title=yazi fish -l -c yazi
+-map cmd+у launch --type=tab --tab-title=yazi fish -l -c yazi
++# Command launches and tab controls, with EN/RU layout fallback.
++map --allow-fallback=shifted,ascii cmd+, new_tab
++map --allow-fallback=shifted,ascii cmd+shift+, no_op
++map --allow-fallback=shifted,ascii cmd+e launch --type=tab --cwd=~ --tab-title=yazi fish -l -c yazi
++map --allow-fallback=shifted,ascii cmd+shift+e no_op
++map --allow-fallback=shifted,ascii cmd+n launch --type=tab --cwd=~ --tab-title=nvim fish -l -c nvim
++map --allow-fallback=shifted,ascii cmd+shift+n no_op
++map --allow-fallback=shifted,ascii cmd+w close_tab
++map --allow-fallback=shifted,ascii cmd+[ previous_tab
++map --allow-fallback=shifted,ascii cmd+] next_tab
++map --allow-fallback=shifted,ascii cmd+shift+[ move_tab_backward
++map --allow-fallback=shifted,ascii cmd+shift+] move_tab_forward
+ # map cmd+shift+1 launch --type=background kitty --session session_background1
+ # map cmd+shift+2 launch --type=background kitty --session session_background2 
+ # map cmd+shift+9 launch --type=background kitty --session session_background3
+@@ -2436,7 +2443,6 @@
+ #: New tab
+ 
+ map kitty_mod+t new_tab
+-map cmd+,      new_tab
+ 
+ #: Close tab
+ 

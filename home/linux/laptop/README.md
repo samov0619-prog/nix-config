@@ -132,6 +132,27 @@ user verification; no running Blender session or preferences were modified.
 
 ## Checks and application
 
+The HM Kitty launch scheme is now tab-first: `Super+,`, `Super+E`, `Super+N`
+open Fish/Yazi/Neovim tabs in the focused Kitty at the home directory. Shift+comma/E/N
+open OS windows globally through Hyprland, using its normal launch cwd.
+The shifted launcher binds use physical keycodes for EN/RU, and the old unshifted
+aliases are removed. `Super+Shift+E` is ordinary Yazi, not sudo Yazi. The same
+launch migration applies to Acer/desktop; unrelated host controls are unchanged.
+See the [Kitty audit and checks](../../modules/kitty/README.md). Apply HM, reload
+Hyprland and reload Kitty's config before testing the new bindings; no NixOS
+change or reboot is needed for this follow-up.
+
+`Super+W` now closes the current Kitty tab, including all panes. Hyprland's
+textual-switcher W/Ц bindings are removed; `hypr-semantic-switcher-tofi` remains
+available as a terminal command. `Super+Space` is unchanged. This applies to the
+same three Linux profiles and is listed in F1 help.
+
+`Super+]` / `Super+[` switch to the next/previous Kitty tab.
+`Super+Shift+[` / `Super+Shift+]` move the current tab left/right. The shared
+Shift+comma/period tab mappings are removed. All four bracket controls use
+the same physical keys in EN/RU. `Ctrl+Tab` / `Ctrl+Shift+Tab` remain available.
+`Super+Shift+,` opens a new terminal OS window, including outside Kitty.
+
 Small implementation-path fixtures (hyprctl mocked, not a real input device):
 
 ```fish
