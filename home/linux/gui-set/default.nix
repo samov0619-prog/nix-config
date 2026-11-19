@@ -22,7 +22,6 @@
     # Without it gtk-theme=Adwaita-dark silently falls back to light Adwaita.
     gnome-themes-extra
     grim
-    slurp
     swappy
     pwvucontrol
     audacious

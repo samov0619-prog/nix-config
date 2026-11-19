@@ -132,6 +132,21 @@ user verification; no running Blender session or preferences were modified.
 
 ## Checks and application
 
+### Screenshot selection cursor
+
+The shared Linux screenshot workflow carries a small upstream Slurp backport
+so Hyprland can supply its own themed crosshair through `cursor-shape`. It does
+not force Adwaita or change global cursor settings, scale, capture resolution or
+Swappy. Diagnosis and live acceptance are in the
+[screenshot audit](../../../docs/laptop-audit/screenshots.md); the
+[package guide](../../../pkgs/slurp-cursor-shape/README.md) records checks and
+the removal contract. Apply HM and test F10 selection, Esc cancellation and
+completion into Swappy; no NixOS change, session restart or Hyprland reload is
+required for this package-only change. The user reports that the corrected setup
+works on Lenovo; this is user acceptance, not independent all-host/UI verification.
+
+### Other checks and application
+
 The HM Kitty launch scheme is now tab-first: `Super+,`, `Super+E`, `Super+N`
 open Fish/Yazi/Neovim tabs in the focused Kitty at the home directory. Shift+comma/E/N
 open OS windows globally through Hyprland, using its normal launch cwd.

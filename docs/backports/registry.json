@@ -6,6 +6,19 @@
   },
   "entries": [
     {
+      "id": "slurp-cursor-shape",
+      "kind": "upstream-backport",
+      "inputs": ["nixpkgs"],
+      "watch": ["pkgs/slurp-cursor-shape/default.nix", "pkgs/slurp-cursor-shape/tests/test_cursor_shape.py", "pkgs/slurp-cursor-shape/tests/test_install_check.py"],
+      "patches": ["pkgs/slurp-cursor-shape/cursor-shape.patch"],
+      "source": "slurp",
+      "sourceFiles": ["main.c"],
+      "contract": ["pkgs/slurp-cursor-shape/tests/test_cursor_shape.py", "{source}", "--check-upstream"],
+      "upstream": ["https://github.com/emersion/slurp/commit/0465f03a7949da338d90a0788451815a02b6f1d2"],
+      "removeWhen": "Unpatched registry-callback and cleanup/request contracts pass, then native themed/scaled crosshair, cancellation and completion into Swappy pass live; retain regression scenarios and Xcursor fallback.",
+      "details": "pkgs/slurp-cursor-shape/README.md"
+    },
+    {
       "id": "blueman-dialog-timeout",
       "kind": "local-bugfix",
       "inputs": ["nixpkgs"],

@@ -18,6 +18,7 @@ let
     waybar = stable.waybar.src;
     bluez-stable = stable.bluez.src;
     blueman = stable.blueman.src;
+    slurp = stable.slurp.src;
     portal-stable = stable.xdg-desktop-portal.src;
   };
 in

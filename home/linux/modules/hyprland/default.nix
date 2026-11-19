@@ -10,6 +10,7 @@ let
   nvimContext = pkgs.replaceVars ./nvim-context.lua { publisher = contextPublisher; };
   yaziContext = pkgs.replaceVars ./yazi-context.lua { publisher = contextPublisher; };
   onionbell = pkgs.callPackage ../../../../pkgs/onionbell { };
+  slurp = pkgs.callPackage ../../../../pkgs/slurp-cursor-shape { upstream = pkgs.slurp; };
   # With package = null, NixOS supplies pkgs.hyprland from the same flake input.
   hyprlandPackage =
     if config.wayland.windowManager.hyprland.package == null then
@@ -46,7 +47,7 @@ let
     name = "hypr-screenshot-region";
     runtimeInputs = [
       pkgs.grim
-      pkgs.slurp
+      slurp
       pkgs.swappy
     ];
     text = ''
@@ -84,6 +85,7 @@ in
     semanticSwitcher
     semanticSwitcherTofi
     screenshotRegion
+    slurp
     agentTodoOpen
     onionbell
   ];

@@ -1,7 +1,7 @@
 # Backports and temporary fixes
 
-The machine-readable inventory is [registry.json](registry.json). It covers **all
-19 active patch files**, their inline companions and temporary package selections.
+The machine-readable inventory is [registry.json](registry.json). It covers
+**20 registered patch files**, their inline companions and temporary package selections.
 It distinguishes upstream backports, an unmerged proposed backport, local bug
 fixes, packaging compatibility, customizations and test-only instrumentation.
 
@@ -9,6 +9,7 @@ fixes, packaging compatibility, customizations and test-only instrumentation.
 
 | IDs | Type / scope | Removal evidence |
 | --- | --- | --- |
+| `slurp-cursor-shape` | Upstream cursor-shape binding/cleanup backport, Linux HM GUI profiles | Unpatched registry callback and cleanup/request contracts, then native crosshair/cancel/Swappy acceptance |
 | `btintel-pm` | Two upstream kernel PM backports, Lenovo | Unpatched actual-function/table contracts, then real Bluetooth/Hibernate |
 | `pipewire-x11` | Upstream X11 cleanup backport, Lenovo | Unpatched four-case callback contract, then shutdown/audio |
 | `nvidia-init-root` | **Unmerged** NVIDIA PR #1512, Lenovo open module only | Unpatched config-open/probe contracts and conftests, then idle/offload/resume |

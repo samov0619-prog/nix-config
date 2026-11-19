@@ -42,6 +42,79 @@
 
 ## Проверки и применение
 
+### Курсор при выделении: upstream-fix Slurp
+
+На Lenovo с Hyprland 0.55.4 и масштабом 1.6 пользователь уточнил симптом:
+курсор маленький **во время выделения**, после Esc обычный размер возвращается.
+Постоянный сброс масштаба после скриншота не воспроизведён. Hyprland и GTK3 видят
+логический экран 2000×1250 при физических 3200×2000; PNG в физических пикселях
+сам по себе не означает неисправность масштабирования.
+
+Протокольный запуск установленного Slurp 1.5.0 подтвердил: Hyprland рекламирует
+`wp_cursor_shape_manager_v1` версии 2, но Slurp его не подключает и устанавливает
+собственную cursor surface с buffer scale 2. Без `XCURSOR_THEME` библиотека
+Wayland возвращает запасную стрелку 10×16 даже при запросе размера 48; buffer
+scale 2 уменьшает её дополнительно. Отдельный запуск с `XCURSOR_THEME=Adwaita`
+и обычным размером 24 дал буфер 48×48; пользователь сообщил, что крестик выглядит
+нормально. Снимки в этих двух сравнениях не создавались.
+
+Adwaita была только диагностикой: пользователь выбрал **курсор темы Hyprland**,
+а не отдельную тему для выделения. Поэтому настройка `XCURSOR_THEME` не добавлена.
+Общий HM-модуль использует [Slurp с upstream-backport](../../pkgs/slurp-cursor-shape/README.md)
+и для helper, и для ручного запуска `slurp`. Точный upstream commit
+[`0465f03a`](https://github.com/emersion/slurp/commit/0465f03a7949da338d90a0788451815a02b6f1d2)
+подключает уже реализованный `cursor-shape` и исправляет cleanup. Теперь Slurp
+сможет запросить crosshair у Hyprland, а тему и размер определит compositor.
+Fallback Xcursor для compositor без протокола остаётся прежним. После исправления
+installCheck пользователь подтвердил рабочее поведение; отдельная агентская
+проверка темы Rose Pine и размера собранного пакета не выполнялась.
+
+По проверенным upstream tags и рецепту nixpkgs unstable последний релиз — 1.5.0,
+без этого исправления. Связка grim/slurp/Swappy приведена в
+[wiki Hyprland](https://wiki.hypr.land/Useful-Utilities/Screenshots-and-Recording/).
+Hyprshot и Grimblast также вызывают Slurp, поэтому простая замена на них не
+устраняет причину. Переход на другой редактор или полный screenshot UI не нужен
+для согласованного сценария выделение → Swappy.
+
+Подготовка исправления: локальный patch byte-for-byte совпал с upstream;
+четыре source/callback contracts проходят на 1.5.0 с backport и на исходнике
+самого upstream-fix. На неизменённом 1.5.0 воспроизводятся три ожидаемых отказа:
+нет binding, guard темы и cleanup manager. Семь helper fixtures и selected
+merged Nix declarations **только Lenovo** проходят; проверено наличие ровно
+одного исправленного Slurp. Это маленький C callback harness с заглушками,
+не сборка Slurp и не проверка живого compositor. Nix-файлы обработаны `nix fmt`;
+Ruff/Prettier отсутствуют, Python syntax и локальные ссылки документации проверены.
+
+Точечный removal probe корректно различает релиз без исправления и upstream-fix.
+Полный inventory-check пока заблокирован посторонними незарегистрированными
+`home/modules/kitty/macos/kitty-keybindings-fix.patch`, `kitty-keybindings.patch`
+и `kitty-ui.patch`; они не изменялись в этой задаче. Общий checker не объявляется
+успешным; его прежние fingerprints не обновлялись.
+
+Первая пользовательская сборка Slurp дошла до installCheck и упала на поиске
+`/build/source/build/main.c`: Meson оставляет текущий каталог в `source/build`,
+а добавленная проверка ошибочно принимала `$PWD` за корень исходников. Путь
+исправлен на `$NIX_BUILD_TOP/$sourceRoot`, сама проверка не отключена. Новый
+shell fixture проходит для обычного sourceRoot и имени с пробелами. Реально
+вычисленная Nix-фаза также исполнена из временного `source/build` на исправленном
+исходнике 1.5.0: четыре contracts проходят, заглушены только `runHook`. Повторная
+сборка пакета и проверка живого курсора агентом не запускались.
+
+После повторной попытки пользователь подтвердил: «все ок работает». Это
+пользовательская приёмка исправленного сценария на Lenovo, не независимая
+проверка полного protocol/UI/save/copy matrix или остальных хостов.
+
+После review и включения новых файлов в Git-backed flake пользователь применяет
+`home-manager switch --flake /home/samov/nix-config#samov-laptop`. Только для этой
+правки NixOS rebuild, restart сессии и `hyprctl reload` не нужны. Проверить:
+
+1. F10/Print: крестик обычного размера из темы compositor на масштабе 1.6.
+2. Esc: Swappy не открывается, обычный курсор восстанавливается.
+3. Завершить безопасное выделение: Swappy открывается; ручное сохранение и
+   копирование работают как раньше, размер PNG не изменён этой правкой.
+
+### Исходные проверки screenshot helper
+
 ```fish
 python3 -B home/linux/modules/hyprland/tests/test_screenshot.py
 nix eval --impure --offline --json --option allow-import-from-derivation false --file home/linux/modules/hyprland/tests/test-screenshot.nix

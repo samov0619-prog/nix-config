@@ -23,8 +23,9 @@ class ScreenshotTests(unittest.TestCase):
         definition = source.split(opening, 1)[1].split("\n  };", 1)[0]
         body = definition.split("text = ''\n", 1)[1].split("\n    '';", 1)[0]
         self.assertNotIn("${", body)
-        for dependency in ("pkgs.grim", "pkgs.slurp", "pkgs.swappy"):
+        for dependency in ("pkgs.grim", "slurp", "pkgs.swappy"):
             self.assertIn(dependency, definition)
+        self.assertIn("pkgs.callPackage ../../../../pkgs/slurp-cursor-shape", source)
 
         with tempfile.TemporaryDirectory(
             prefix="screenshot-test-", dir="/tmp/opencode"
@@ -36,25 +37,32 @@ class ScreenshotTests(unittest.TestCase):
             (root / "fixture.bin").write_bytes(FIXTURE)
             scripts = {
                 "slurp": """
+                    import json
                     import os
                     import sys
                     from pathlib import Path
                     Path("slurp.called").touch()
+                    Path("slurp-theme.json").write_text(json.dumps(os.environ.get("XCURSOR_THEME")))
+                    Path("slurp-size.json").write_text(json.dumps(os.environ.get("XCURSOR_SIZE")))
                     sys.stdout.write(Path("geometry.txt").read_text())
                     sys.exit(int(os.environ["SELECTION_EXIT"]))
                 """,
                 "grim": """
                     import json
+                    import os
                     import sys
                     from pathlib import Path
                     Path("grim-argv.json").write_text(json.dumps(sys.argv[1:]))
+                    Path("grim-theme.json").write_text(json.dumps(os.environ.get("XCURSOR_THEME")))
                     sys.stdout.buffer.write(Path("fixture.bin").read_bytes())
                 """,
                 "swappy": """
                     import json
+                    import os
                     import sys
                     from pathlib import Path
                     Path("swappy-argv.json").write_text(json.dumps(sys.argv[1:]))
+                    Path("swappy-theme.json").write_text(json.dumps(os.environ.get("XCURSOR_THEME")))
                     Path("received.bin").write_bytes(sys.stdin.buffer.read())
                 """,
             }
@@ -73,17 +81,25 @@ class ScreenshotTests(unittest.TestCase):
                     "PATH": str(binaries),
                     "HOME": str(root),
                     "SELECTION_EXIT": str(selection_exit),
+                    "XCURSOR_THEME": "parent-theme",
+                    "XCURSOR_SIZE": "32",
                 },
                 capture_output=True,
                 timeout=5,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertTrue((root / "slurp.called").exists())
+            self.assertEqual(json.loads((root / "slurp-theme.json").read_text()), "parent-theme")
+            self.assertEqual(json.loads((root / "slurp-size.json").read_text()), "32")
             arguments = {}
             for name in ("grim", "swappy"):
                 path = root / f"{name}-argv.json"
                 if path.exists():
                     arguments[name] = json.loads(path.read_text())
+                    self.assertEqual(
+                        json.loads((root / f"{name}-theme.json").read_text()),
+                        "parent-theme",
+                    )
             received = root / "received.bin"
             return arguments, received.read_bytes() if received.exists() else None
 

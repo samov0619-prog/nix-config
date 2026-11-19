@@ -7,6 +7,7 @@ let
     let
       config = flake.homeConfigurations.${name}.config;
       packages = map lib.getName config.home.packages;
+      slurpPackage = lib.findFirst (package: lib.getName package == "slurp") null config.home.packages;
       helperCount = builtins.length (
         builtins.filter (package: package == "hypr-screenshot-region") packages
       );
@@ -30,6 +31,13 @@ let
           "swappy"
           "wl-clipboard"
         ]
+        && builtins.length (builtins.filter (name: name == "slurp") packages) == 1
+        # getFlake copies local paths into the store; compare the actual patch bytes.
+        && lib.any (
+          patch:
+          builtins.readFile patch
+          == builtins.readFile ../../../../../pkgs/slurp-cursor-shape/cursor-shape.patch
+        ) slurpPackage.patches
       );
     {
       screenshotHelper = gui;

@@ -1,0 +1,47 @@
+From 0465f03a7949da338d90a0788451815a02b6f1d2 Mon Sep 17 00:00:00 2001
+From: sewn <sewn@disroot.org>
+Date: Sat, 16 Mar 2024 18:19:26 +0300
+Subject: [PATCH] fix handling cursor_shape_manager
+
+previously, cursor_shape_manager was not handled and registered, which
+can lead to slurp incorrectly loading the entire cursor theme, despite
+the compositor supporting cursor_shape_manager
+---
+ main.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/main.c b/main.c
+index 135c98a..51789cd 100644
+--- a/main.c
++++ b/main.c
+@@ -551,7 +551,9 @@ static void destroy_output(struct slurp_output *output) {
+ 	wl_list_remove(&output->link);
+ 	finish_buffer(&output->buffers[0]);
+ 	finish_buffer(&output->buffers[1]);
+-	wl_cursor_theme_destroy(output->cursor_theme);
++	if (output->cursor_theme) {
++		wl_cursor_theme_destroy(output->cursor_theme);
++	}
+ 	zwlr_layer_surface_v1_destroy(output->layer_surface);
+ 	if (output->xdg_output) {
+ 		zxdg_output_v1_destroy(output->xdg_output);
+@@ -690,6 +692,9 @@ static void handle_global(void *data, struct wl_registry *registry,
+ 	} else if (strcmp(interface, zxdg_output_manager_v1_interface.name) == 0) {
+ 		state->xdg_output_manager = wl_registry_bind(registry, name,
+ 			&zxdg_output_manager_v1_interface, 2);
++	} else if (strcmp(interface, wp_cursor_shape_manager_v1_interface.name) == 0) {
++		state->cursor_shape_manager = wl_registry_bind(registry, name,
++			&wp_cursor_shape_manager_v1_interface, 1);
+ 	}
+ }
+ 
+@@ -1096,6 +1101,9 @@ int main(int argc, char *argv[]) {
+ 	if (state.xdg_output_manager != NULL) {
+ 		zxdg_output_manager_v1_destroy(state.xdg_output_manager);
+ 	}
++	if (state.cursor_shape_manager != NULL) {
++		wp_cursor_shape_manager_v1_destroy(state.cursor_shape_manager);
++	}
+ 	wl_compositor_destroy(state.compositor);
+ 	wl_shm_destroy(state.shm);
+ 	wl_registry_destroy(state.registry);
