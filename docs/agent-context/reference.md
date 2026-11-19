@@ -982,6 +982,81 @@ limitations and recovery. Acer is unchanged.
   ordinary audits. The old `~/.config/llm-secrets/env` is no longer loaded and is
   not automatically migrated/deleted. See `docs/laptop-audit/fish-local-env.md`.
 
+### nsh: temporary packages in Fish (Linux and macOS)
+
+`home/core-set/shell.nix` registers the `nsh` Fish function from
+`home/core-set/nsh.fish`. It runs `nix shell` with the current Fish executable
+and `--interactive`, without clearing the environment or overriding HOME/XDG.
+The nested shell loads the normal Fish configuration, including history, Atuin,
+Zoxide and the optional personal environment above. This is a temporary package
+environment, not `nix develop` or a security sandbox.
+
+```fish
+nsh jq ripgrep
+nsh stable jq
+nsh unstable jq ripgrep
+```
+
+- Stable is the default; `stable`, `-s` and `--stable` explicitly select it.
+  `unstable`, `-u` and `--unstable` select unstable. The selector must be first
+  and applies to every package in that invocation.
+- Packages are attribute paths in the selected package set, such as `jq` or
+  `python3Packages.requests`, not flake installables such as `nixpkgs#jq`.
+  A missing package argument prints usage and returns status 2.
+- Both channels evaluate the local flake at `$HOME/nix-config` by default,
+  independently of the current directory. An exported `NSH_FLAKE` overrides this
+  with an absolute path to another local flake; unset or empty uses the default.
+- Stable selects `inputs.nixpkgs.legacyPackages`; unstable selects
+  `inputs.nixpkgs-unstable.legacyPackages`. Both use `builtins.currentSystem`,
+  selecting native Linux or Darwin packages rather than Lenovo's package set.
+  Versions follow the local flake's inputs, not necessarily the currently
+  activated system or the global `nixpkgs` registry. Host-specific overlays and
+  NixOS/HM package settings are not inherited. A package must exist and support
+  the selected platform; the helper does not provide Linux emulation on macOS.
+- Run `exit` to leave the nested Fish and return to the original shell.
+
+#### Connecting another host or checkout
+
+All current HM profiles, including `samov-mac`, already import `home/core-set`
+and therefore register `nsh`; no per-host NixOS module or platform constant is
+needed. For another HM profile in this repository, include `./home/core-set` in
+its `modules` through the existing `mkHM` helper in `flake.nix`. The selected
+runtime flake must provide `nixpkgs` and `nixpkgs-unstable` inputs with
+`legacyPackages` for the native platform.
+
+For a checkout outside `~/nix-config`, add this to your manually maintained Fish
+configuration (for example, `~/.config/fish/local-env.fish`):
+
+```fish
+set -gx NSH_FLAKE "$HOME/Projects/nix-config"
+```
+
+This path is read when `nsh` runs, not embedded at HM build time. It can contain
+spaces; it must be absolute. No override is needed for `/home/samov/nix-config`
+on Linux or `/Users/samov/nix-config` on macOS.
+
+1. Review the changes and apply HM for the target, for example
+   `home-manager switch --flake "$HOME/nix-config#samov-laptop"` on Lenovo or
+   `home-manager switch --flake "$HOME/nix-config#samov-mac"` on Mac. For another
+   checkout, use its absolute path in the activation command too.
+2. Open a new Fish session so the function and any `NSH_FLAKE` setting are loaded.
+3. Try `nsh jq`, check `jq --version` inside, exit, and repeat with
+   `nsh unstable jq`.
+
+No NixOS activation is needed. Small fixture checks can be run from the checkout
+with `python3 -B home/core-set/tests/test_nsh.py`: these exercise the actual HM
+function body, channel aliases, argument forwarding, custom checkout paths and
+native package-set selection for Linux/Darwin using tiny local flake inputs.
+Darwin is an evaluator fixture, not a macOS runtime test. These checks do not
+establish real package realization or interactive Fish integration on either
+platform; those remain manual acceptance checks.
+
+The user tested and accepted the interactive workflow on Lenovo, reporting
+`jq-1.8.2` in both sessions, including `nsh unstable jq`. Equal package versions
+can occur in both inputs and do not identify the selected channel; input
+selection is covered by the fixture tests above. This is user-reported Linux
+acceptance, not independent verification of every Fish integration or macOS.
+
 ### Yazi archives
 
 - Shared `home/core-set/shell.nix` patches compress 0.6 to abort password-mode

@@ -9,6 +9,10 @@
 
   programs.fish = {
     enable = true;
+    functions.nsh = {
+      description = "Nix shell with native Fish environment";
+      body = builtins.readFile ./nsh.fish;
+    };
     interactiveShellInit = ''
       # Optional trusted Fish code, intentionally not managed by Nix/Home Manager.
       # Manual setup (preserves existing content):
