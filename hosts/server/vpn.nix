@@ -447,7 +447,15 @@ in
         EOF
 
         if [ -f "$config" ]; then
-          awk -v RS="" '$0 ~ "^[[:space:]]*\\[Peer\\]" { print "\n" $0 }' "$config" >> "$temporary"
+          # Section boundaries do not require blank lines. Normalize separators
+          # so the client list/removal commands can still read named peers.
+          awk '
+            /^[[:space:]]*\[/ {
+              peer = ($0 ~ /^[[:space:]]*\[Peer\][[:space:]]*(#.*)?$/)
+              if (peer) print ""
+            }
+            peer && NF { print }
+          ' "$config" >> "$temporary"
         fi
         mv "$temporary" "$config"
         trap - EXIT

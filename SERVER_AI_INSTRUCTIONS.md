@@ -1,5 +1,9 @@
 # Server Configuration Instructions
 
+For routine administration, restart commands, lost-client diagnostics, and the
+update/settings workflow, start with the short Russian
+[server operator guide](hosts/server/README.md).
+
 ## Goals
 
 - Run AmneziaWG 3.1, AdGuard Home, and NaiveProxy without Docker.
@@ -218,9 +222,10 @@ wrong disk.
   `egress = "routed"` only when the provider routes `vpnNetwork` to this VPS.
   Static IPv6 is deliberately explicit because DHCPv6 and router-advertisement
   provider setups need their own tested branch.
-- Existing AWG runtime state is mutable and never rewritten automatically.
-  When changing an installed server from IPv4-only to dual-stack, reissue and
-  replace all client profiles; they need IPv6 addresses. A future migration
+- `amneziawg-bootstrap` reconciles server `[Interface]` fields but preserves
+  existing `[Peer]` records. It does not migrate peer addresses or reissue client
+  files. When changing an installed server from IPv4-only to dual-stack, reissue
+  and replace all client profiles; they need IPv6 addresses. A future migration
   helper must update both the persistent AWG config and live peers before it
   can safely automate that transition.
 
@@ -640,6 +645,11 @@ Run step 1 first; run steps 2-4 after the temporary root SSH setup below.
   rather than skip them. Nix builds and SSH are mocked, and the real scripts
   and lazy flake wiring are exercised. This does not verify a built closure
   or the live VPS.
+- AWG state regression tests: `python3 -B hosts/server/tests/test_awg_state.py`.
+  These evaluate the actual Nix-rendered bootstrap/list/remove scripts and run
+  them against temporary files with AWG, OpenSSL, and ownership changes mocked.
+  They cover section separators, retained keys/peers/profiles, repeated starts,
+  listing/removal, and fresh initialization, not live VPN/systemd integration.
 - Run `nix flake check` and build the exact server closure before a server
   deploy or replacement install, with the same external input override for both.
 - Confirm `wg-quick-awg0`, `adguardhome`, and `sshd` are healthy. Confirm

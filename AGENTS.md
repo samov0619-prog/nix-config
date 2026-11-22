@@ -73,7 +73,7 @@
 | Hotkeys, resize, command keys, Lenovo Waybar      | [HM leaf](home/linux/laptop/README.md), [command keys](home/linux/laptop/command-keys/README.md), [Waybar](home/linux/laptop/waybar/README.md)                         |
 | OpenCode: plugins, patches, commands, skills, Mac | [README](home/apps/opencode/README.md), [проверки и accounting](home/apps/opencode/BENCHMARK.md), [Mac](home/apps/opencode/macos/README.md)                            |
 | Обновления и backports                            | [Registry и contracts](docs/backports/README.md), [update/apply справочник](docs/agent-context/reference.md#обновление-flake-и-конфигураций)                           |
-| Server / Disko / VPN                              | [Server instructions](SERVER_AI_INSTRUCTIONS.md), [Disko](hosts/disko/README.md), [Amnezia](pkgs/amnezia-vpn/README.md), [installer VPN](pkgs/installer-vpn/README.md) |
+| Server / Disko / VPN                              | [Server guide](hosts/server/README.md), [Server instructions](SERVER_AI_INSTRUCTIONS.md), [Disko](hosts/disko/README.md), [Amnezia](pkgs/amnezia-vpn/README.md), [installer VPN](pkgs/installer-vpn/README.md) |
 | Desktop: темы, portals, звук, Yazi, GC, Minecraft | [Тематическая карта](docs/agent-context/README.md#desktop-и-приложения)                                                                                                |
 
 ## Форматирование
