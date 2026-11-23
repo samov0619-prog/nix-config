@@ -114,6 +114,13 @@ export default Plugin.define({
         JSON.stringify({
           pid: process.pid,
           route,
+          hydrated:
+            route.type === "session" &&
+            Boolean(context.data.session.get(route.sessionID)),
+          tabs: context.ui.tabs.list().map((tab) => ({
+            sessionID: tab.sessionID,
+            hydrated: Boolean(context.data.session.get(tab.sessionID)),
+          })),
           plugins: true,
           todo,
           frame,

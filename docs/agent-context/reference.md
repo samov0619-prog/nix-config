@@ -491,10 +491,18 @@ live SSH does not persist and the target does not enable an SSH server.
 
 ### Home OpenCode
 
-- Shared exploration policy lives in `home/apps/opencode/config/AGENTS.md`. Use native
+- Shared exploration policy lives in `home/apps/opencode/config/AGENTS.common.md`. Use native
   glob/grep/read and tool-output artifacts; mechanical extraction needs no extra
   model. RLM is archived under `archive/rlm-disabled`, excluded from installation
-  and normal tests. Home changes do not update the corporate Mac profile.
+  and normal tests. `config/instructions.nix` provides `homeBase` (common + home)
+  and `homePersonal` (personal + review); HM installs them separately and registers
+  personal roles/commands through `opencode-local/opencode.jsonc` via OPENCODE_CONFIG.
+  Home providers/safety/compaction stay in the base; Linux HM build/activation and
+  user-reported Free/Paid/theme/history/MCP-connection smoke acceptance passed on
+  2.4.0 (see the component benchmark for limits). Standalone corporate exports use only `corporate`
+  and `corporatePersonal`, never the installed home AGENTS. The pure corporate
+  team file is not installed by HM. Home changes do not update the live corporate
+  Mac profile or the historical R3 patch; see the Mac guide for future exports.
 
 - Ручной порт на корпоративный Mac: актуальный снимок `~/.config/opencode`
   → объединить общие Linux-улучшения с корпоративными особенностями → полный
@@ -601,12 +609,16 @@ live SSH does not persist and the target does not enable an SSH server.
   HM installs the guide outside commands. Briefs supplement full reports, never
   replace evidence or independent-review handoffs. See the module README.
 - Глобального formatter и его CLI-зависимостей в OpenCode нет. Короткое правило в
-  `config/AGENTS.md` требует использовать объявленный проектом CLI только для
+  `config/AGENTS.common.md` требует использовать объявленный проектом CLI только для
   изменённых файлов; без правил сохранять оформление, без global fallback или
   форматирования моделью. Runtime smoke проверяет отсутствие автоформатирования.
-- `decision-support.nix` — явный домашний opt-in через
-  `programs.opencode.decisionSupport.enable`: короткие configured instructions,
-  on-demand `decision-check` и `agent-todo-v2`. Todo — ручной Markdown/Git в
+- `todo.nix` — явный домашний opt-in через `programs.opencode.todo.enable`:
+  `opencode-local/plugins/agent-todo`, его правила и schemas доступны только Build/Plan, без глобального
+  instruction или нового skill. Запрос «добавь в todo» не требует slash-команды;
+  автосохранение идей без запроса/согласия не добавлено. Decision Support и
+  `decision-check` сохранены в `home/apps/opencode/archive/decision-support/` и не
+  устанавливаются; старый combined option выдаёт пояснение миграции.
+  Todo — ручной Markdown/Git в
   `~/agent-todo/todo.md`, не HM-managed content. Native question показывает изменения
   и ручные правки; запись/локальный коммит только после согласия, Plan guard
   независим от session grants. Stable IDs и hash user-message в Markdown

@@ -8,6 +8,7 @@ export default Plugin.define({
   setup(api) {
     const rpc = api.client.rpc(Limits);
     const [status, setStatus] = createSignal<any>();
+    const [autoCompact, setAutoCompact] = createSignal<boolean>();
     const [now, setNow] = createSignal(Date.now());
     let disposed = false;
     let pending: Promise<void> | undefined;
@@ -36,6 +37,44 @@ export default Plugin.define({
         });
       return pending;
     };
+    let configPending: Promise<void> | undefined;
+    let configAgain = false;
+    const syncCompaction = () => {
+      if (disposed) return Promise.resolve();
+      if (configPending) {
+        configAgain = true;
+        return configPending;
+      }
+      configPending = api.client.config
+        .get({ location: location() })
+        .then((entries) => {
+          // Config entries are ordered low → high priority. A later buffer or
+          // background setting does not erase an earlier explicit auto=false.
+          const enabled = entries.reduce(
+            (auto, entry) =>
+              entry.type === "document"
+                ? (entry.info.compaction?.auto ?? auto)
+                : auto,
+            true,
+          );
+          if (!disposed) setAutoCompact(enabled);
+        })
+        .catch(() => {
+          if (!disposed) setAutoCompact(undefined);
+        })
+        .finally(() => {
+          configPending = undefined;
+          if (configAgain && !disposed) {
+            configAgain = false;
+            void syncCompaction();
+          }
+        });
+      return configPending;
+    };
+    const stopConfig = api.data.on("config.updated", () => {
+      void syncCompaction();
+    });
+    void syncCompaction();
     // Use the host's reconnecting stream, not rpc.events.on's one-shot
     // subscription, which ends permanently on a transport disconnect in 2.1.4.
     const stop = api.data.on("rpc.local.limits.updated", () => {
@@ -60,11 +99,27 @@ export default Plugin.define({
       if (event.data.sessionID === sessionID()) syncCheckpoint();
     });
     const stopConnected = api.data.on("server.connected", () => {
-      // Events missed while disconnected are not replayed. Re-read both states
+      // Events missed while disconnected are not replayed. Re-read the states
       // once after reconnect, without introducing idle polling.
       void sync();
       syncCheckpoint();
+      void syncCompaction();
+      const id = sessionID();
+      if (id && !disposed) {
+        api.data.session.message.invalidate(id);
+        void api.data.session.message.sync(id).catch(() => {});
+      }
     });
+    const compacting = () => {
+      const id = sessionID();
+      if (!id) return false;
+      // The host projects native compaction events into this reactive cache;
+      // use its latest attempt instead of maintaining another event lifecycle.
+      const latest = api.data.session.message
+        .list(id)
+        .findLast((message) => message.type === "compaction");
+      return latest?.type === "compaction" && latest.status === "running";
+    };
     const ready = () => {
       const id = sessionID();
       return (
@@ -90,14 +145,11 @@ export default Plugin.define({
     const Status = () => (
       <box flexDirection="row" flexWrap="wrap" gap={1}>
         <text fg={api.theme.text.muted}>
-          {status()?.reason === "token-sharing-quota-unavailable"
-            ? "Limits: "
-            : "Limits left: "}
           {status()?.snapshot?.windows?.length
             ? status().snapshot.windows.map((item: any, index: number) => (
                 <span>
                   {index ? " · " : ""}
-                  {`${windowLabel(item.seconds)} ${Math.round(item.remaining)}% `}
+                  {`${item.seconds === 604800 ? "" : `${windowLabel(item.seconds)} `}${Math.round(item.remaining)}% `}
                   <Show
                     when={
                       status()?.windowModes?.[item.key] === "warn" ||
@@ -121,7 +173,7 @@ export default Plugin.define({
             : status()?.reason === "token-sharing-quota-unavailable"
               ? "not exposed by token sharing"
               : "unavailable"}
-          {text()} | Checkpoint
+          {text()} |
         </text>
         <Show
           when={ready()}
@@ -136,6 +188,17 @@ export default Plugin.define({
             }
           >
             ✓
+          </text>
+        </Show>
+        <Show when={autoCompact() === true || compacting()}>
+          <text
+            fg={
+              compacting()
+                ? (api.theme.text.feedback.info.base ?? "#61afef")
+                : api.theme.text.muted
+            }
+          >
+            ≋
           </text>
         </Show>
       </box>
@@ -217,6 +280,7 @@ export default Plugin.define({
       stop();
       stopMetadata();
       stopConnected();
+      stopConfig();
       slots.forEach((remove) => remove());
     };
   },

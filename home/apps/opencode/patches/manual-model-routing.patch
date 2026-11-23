@@ -261,18 +261,18 @@
      if (cur && list.includes(cur)) {
 --- a/packages/core/src/session/runner/model.ts
 +++ b/packages/core/src/session/runner/model.ts
-@@ -88,7 +88,7 @@
-           root = parent
-         }
-         const role = session.agent ?? (yield* agents.select(undefined)).id
--        const routed = routedModel(root.metadata, role)
-+        const routed = routedModel(root.metadata, role, session.id, root.id)
-         if (routed) session = { ...session, model: Model.Ref.make(routed) }
-         // Location plugins populate and filter the catalog asynchronously during layer startup.
-         if (!session.model) {
+@@ -106,7 +106,7 @@
+       }
+       // Auxiliary calls carry their role separately from the session agent.
+       const role = request?.kind === "generate" ? "summary" : (request?.agent ?? session.agent ?? (yield* agents.select(session.agent)).id)
+-      const routed = routedModel(root.metadata, role)
++      const routed = routedModel(root.metadata, role, session.id, root.id)
+       if (routed) session = { ...session, model: Model.Ref.make(routed) }
+       const find = (ref: Model.Ref) =>
+         available().pipe(
 --- a/packages/tui/src/component/prompt/index.tsx
 +++ b/packages/tui/src/component/prompt/index.tsx
-@@ -1236,6 +1236,7 @@
+@@ -1233,6 +1233,7 @@
        const newSessionID = args.takeNewSessionID()
        const created = data.session.create({
          id: newSessionID,
@@ -282,7 +282,7 @@
          model: {
 --- a/packages/tui/src/app.tsx
 +++ b/packages/tui/src/app.tsx
-@@ -496,6 +496,7 @@
+@@ -499,6 +499,7 @@
    const renderer = useRenderer()
    const dialog = useDialog()
    const local = useLocal()

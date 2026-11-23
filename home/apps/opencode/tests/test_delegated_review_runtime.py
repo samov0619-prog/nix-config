@@ -23,6 +23,8 @@ import urllib.parse
 import urllib.request
 
 from test_v2_runtime import MockResponses, SOURCE
+from test_personal_layers_runtime import materialize, text_values
+from test_todo_scope_runtime import evaluate
 
 
 class RecoveryMock(MockResponses):
@@ -30,6 +32,8 @@ class RecoveryMock(MockResponses):
 
     mode = None
     parent_step = 0
+    launched = False
+    continued = False
     child_started = False
     failures = 0
     child_id = None
@@ -37,18 +41,22 @@ class RecoveryMock(MockResponses):
     fixture = None
     violation = None
     lock = threading.Lock()
+    final_reply = threading.Event()
 
     @classmethod
     def reset(cls, mode, fixture):
         cls.mode = mode
         cls.fixture = str(fixture)
         cls.parent_step = 0
+        cls.launched = False
+        cls.continued = False
         cls.child_started = False
         cls.failures = 0
         cls.child_id = None
         cls.terminal_seen_at = None
         cls.violation = None
         cls.requests = []
+        cls.final_reply.clear()
 
     @classmethod
     def decide(cls, body):
@@ -57,13 +65,13 @@ class RecoveryMock(MockResponses):
         cls.next_tool_skill = None
         cls.fail_next = False
         cls.reply = "Mock recovery fixture"
-        text = json.dumps(body, ensure_ascii=False)
+        text = "\n".join(text_values(body))
         names = {tool.get("name") for tool in body.get("tools", [])}
         if "subagent" in names and "Orchestrate an independent review of" in text:
             assert "$ARGUMENTS" not in text
-            step = cls.parent_step
             cls.parent_step += 1
-            if step == 0:
+            if not cls.launched:
+                cls.launched = True
                 cls.next_tool = (
                     "subagent",
                     {
@@ -72,16 +80,20 @@ class RecoveryMock(MockResponses):
                         "prompt": "DR_CHILD_SCOPE_V1: read only " + cls.fixture,
                     },
                 )
-            elif cls.mode == "terminal" and step == 1:
-                assert cls.failures == 11, "parent woke before native retries exhausted"
-                assert "Subagent failed" in text, "expected an actual native tool error"
-                ids = set(re.findall(r"sessionID[:=\s\"\\]+(ses_[A-Za-z0-9]+)", text))
+            elif "DR_CHILD_COMPLETE" in text:
+                cls.reply = "DR_PARENT_COMPLETE (scripted mock, not a real review verdict)"
+            elif cls.mode == "terminal" and 'state="error"' in text and cls.terminal_seen_at is None:
+                assert cls.failures == 11, "terminal report before native retries exhausted"
+                # 2.4 returns immediately from subagent. Failure arrives later as
+                # a native background report, not an error on the original tool.
+                ids = set(re.findall(r'<background-result kind="subagent" sessionID="(ses_[A-Za-z0-9]+)" state="error"', text))
                 assert len(ids) == 1, ids
                 cls.child_id = ids.pop()
                 cls.terminal_seen_at = time.monotonic()
                 cls.next_tool = ("shell", {"command": "sleep 20", "timeout": 25000})
-            elif cls.mode == "terminal" and step == 2:
+            elif cls.terminal_seen_at is not None and not cls.continued:
                 assert time.monotonic() - cls.terminal_seen_at >= 20
+                cls.continued = True
                 cls.next_tool = (
                     "subagent",
                     {
@@ -92,9 +104,9 @@ class RecoveryMock(MockResponses):
                     },
                 )
             else:
-                assert step == (3 if cls.mode == "terminal" else 1)
-                assert "DR_CHILD_COMPLETE" in text
-                cls.reply = "DR_PARENT_COMPLETE (scripted mock, not a real review verdict)"
+                # A launch receipt is not completion. The parent may finish its
+                # turn while the child retries, then wake on the native report.
+                cls.reply = "Child is working in the background; awaiting native completion."
         elif "DR_CHILD_SCOPE_V1" in text and "read" in names:
             if not cls.child_started:
                 cls.child_started = True
@@ -104,6 +116,7 @@ class RecoveryMock(MockResponses):
                 cls.fail_next = True
                 cls.fail_status = 429
             else:
+                assert cls.mode == "native" or cls.continued, "child retried beyond the pinned native budget"
                 # The evidence comes from an actual native read tool result.
                 # It is preserved reading, NOT proof of a completed review unit.
                 assert "DR_PRESERVED_READ_EVIDENCE" in text
@@ -121,6 +134,8 @@ class RecoveryMock(MockResponses):
             # Reuse the existing Responses/SSE emitter, including its real HTTP 429.
             self.rfile = io.BytesIO(raw)
             super().do_POST()
+            if type(self).reply.startswith("DR_PARENT_COMPLETE"):
+                type(self).final_reply.set()
 
 
 def main(binary):
@@ -171,11 +186,12 @@ def run_fixture(binary, provider):
     for server in settings.get("mcp", {}).get("servers", {}).values():
         server["disabled"] = True
     (config / "opencode.json").write_text(json.dumps(settings))
-    commands = config / "commands"
-    commands.mkdir()
-    (commands / "delegated-review.md").write_bytes(
-        (SOURCE / "commands/delegated-review.md").read_bytes()
-    )
+    # Use the current generated personal layer and explicit command registration,
+    # not legacy commands/ discovery. Base Common remains a local provider fixture.
+    personal = root / "config/opencode-local"
+    layer = evaluate(SOURCE / "config/personal-layers.nix", "f: f { todoEnabled = false; personalDirectory = "
+                     + json.dumps(str(personal)) + "; }")["home"]
+    materialize(personal, layer["files"])
     plugin = config / "plugins/model-calls"
     plugin.mkdir(parents=True)
     (plugin / "index.ts").write_bytes((SOURCE / "plugins/model-calls.ts").read_bytes())
@@ -193,6 +209,7 @@ def run_fixture(binary, provider):
         XDG_CACHE_HOME=str(root / "cache"),
         XDG_RUNTIME_DIR=str(runtime),
         OPENCODE_CONFIG_DIR=str(config),
+        OPENCODE_CONFIG=str(personal / "opencode.jsonc"),
         OPENCODE_DISABLE_PROJECT_CONFIG="1",
         OPENCODE_DISABLE_MODELS_FETCH="1",
         OPENCODE_PASSWORD="isolated-recovery-fixture",
@@ -235,6 +252,17 @@ def run_fixture(binary, provider):
             if isinstance(part, dict) and part.get("type") == "tool"
         ]
 
+    def children(sid):
+        result = []
+        path = f"session?parentID={sid}&limit=50"
+        while True:
+            page = api(path)
+            result.extend(page["data"])
+            cursor = page.get("cursor", {}).get("next")
+            if not page["data"] or not cursor:
+                return result
+            path = f"session?parentID={sid}&limit=50&cursor=" + urllib.parse.quote(cursor, safe="")
+
     def run_case(mode):
         RecoveryMock.reset(mode, fixture)
         sid = api(
@@ -250,31 +278,49 @@ def run_fixture(binary, provider):
             },
         )["data"]["id"]
         api(f"session/{sid}/command", {"name": "delegated-review", "text": "fixture.txt"})
+        # wait() covers one agent-loop period, not a whole chain of later
+        # background reports/recovery. Synchronize on the final provider reply,
+        # then let native wait() finish that known active period. No idle polling
+        # or arbitrary settling delay, and no extra prompt to the child.
+        assert RecoveryMock.final_reply.wait(timeout=180), {
+            "violation": RecoveryMock.violation, "failures": RecoveryMock.failures,
+            "continued": RecoveryMock.continued,
+        }
+        api(f"experimental/session/{sid}/wait", {})
+        assert RecoveryMock.violation is None, RecoveryMock.violation
+        spawned = children(sid)
+        assert len(spawned) == 1, spawned
+        child_id = spawned[0]["id"]
+        api(f"experimental/session/{child_id}/wait", {})
         api(f"experimental/session/{sid}/wait", {})
         assert RecoveryMock.violation is None, RecoveryMock.violation
         parent = messages(sid)
-        children = api(f"session?parentID={sid}&limit=50")["data"]
-        assert len(children) == 1, children
-        child_id = children[0]["id"]
         child = messages(child_id)
         tools = tool_parts(parent)
         calls = [part for part in tools if part.get("name") == "subagent"]
         assert len(calls) == (2 if mode == "terminal" else 1), calls
         assert calls[0]["state"]["metadata"]["sessionID"] == child_id
-        assert calls[-1]["state"]["status"] == "completed"
+        assert all(call["state"]["status"] == "completed" for call in calls), calls
+        assert all("model" not in call["state"]["input"] for call in calls), calls
+        reports = [message for message in parent if message["type"] == "synthetic"
+                   and message.get("metadata", {}).get("source") == "subagent"]
+        assert [message["metadata"]["state"] for message in reports] == (["error", "completed"] if mode == "terminal" else ["completed"]), reports
+        assert all(message["metadata"]["childID"] == child_id for message in reports), reports
         if mode == "terminal":
-            assert calls[0]["state"]["status"] == "error", calls[0]
+            assert "fixture unavailable" in reports[0]["text"], reports[0]
             assert calls[1]["state"]["input"]["sessionID"] == child_id
             assert RecoveryMock.child_id == child_id
             sleeps = [part for part in tools if part.get("name") == "shell"]
             assert len(sleeps) == 1 and sleeps[0]["state"]["status"] == "completed"
-            assert calls[1]["time"]["created"] - calls[0]["time"]["completed"] >= 20000
+            assert sleeps[0]["time"]["created"] >= reports[0]["time"]["created"]
+            assert calls[1]["time"]["created"] - reports[0]["time"]["created"] >= 20000
         reads = [part for part in tool_parts(child) if part.get("name") == "read"]
         assert len(reads) == 1 and reads[0]["state"]["status"] == "completed"
         assert "DR_PARENT_COMPLETE" in json.dumps(parent)
         assert "DR_CHILD_COMPLETE" in json.dumps(child)
         assert RecoveryMock.failures == (11 if mode == "terminal" else 1)
         assert all(request["model"] == "big-pickle" for request in RecoveryMock.requests)
+        assert len(children(sid)) == 1, "continuation created a replacement child"
         for name, value in [("parent", parent), ("child", child), ("requests", RecoveryMock.requests)]:
             path = root / f"{mode}-{name}.json"
             path.write_text(json.dumps(value, ensure_ascii=False, indent=2))
@@ -333,6 +379,7 @@ def run_fixture(binary, provider):
         debug.write_text(json.dumps({
             "mode": RecoveryMock.mode,
             "parent_step": RecoveryMock.parent_step,
+            "continued": RecoveryMock.continued,
             "child_id": RecoveryMock.child_id,
             "failures": RecoveryMock.failures,
             "violation": RecoveryMock.violation,

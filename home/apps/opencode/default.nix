@@ -8,7 +8,27 @@
 }:
 let
   json = pkgs.formats.json { };
-  settings = import ./config/v2-settings.nix { inherit lib; };
+  settings = import ./config/v2-base-settings.nix { };
+  personal =
+    (import ./config/personal-layers.nix {
+      todoEnabled = config.programs.opencode.todo.enable;
+      personalDirectory = "${config.xdg.configHome}/opencode-local";
+      todoDirectory = "${config.home.homeDirectory}/agent-todo";
+    }).home;
+  # The combined todo plugin is installed as one directory by todo.nix, so Bun's
+  # realpath containment check and relative imports see one coherent store root.
+  personalFiles = builtins.listToAttrs (
+    map
+      (name: {
+        name = "opencode-local/${name}";
+        value = personal.files.${name};
+      })
+      (
+        builtins.filter (name: !(lib.hasPrefix "plugins/agent-todo/" name)) (
+          builtins.attrNames personal.files
+        )
+      )
+  );
   # Static, local reminder: never inspect credentials or query GitHub at evaluation.
   quotaApiReminder = ''
     OPENCODE QUOTA API: percentages currently require Codex OAuth (legacy).
@@ -78,15 +98,15 @@ let
   };
 in
 {
-  imports = [ ./decision-support.nix ];
+  imports = [ ./todo.nix ];
   warnings = [ quotaApiReminder ];
   # Also show for a cached generation's activation; warnEcho uses yellow in a
   # color-capable terminal and respects NO_COLOR. No state change or network.
   home.activation.opencodeQuotaApiReminder = lib.hm.dag.entryBefore [ "writeBoundary" ] ''
     warnEcho ${lib.escapeShellArg quotaApiReminder}
   '';
-  # Explicit home-only opt-in; set false to disable guidance and todo tools.
-  programs.opencode.decisionSupport.enable = lib.mkDefault true;
+  # Home-only notes; decision guidance is archived, not coupled to this opt-in.
+  programs.opencode.todo.enable = lib.mkDefault true;
   programs.opencode = {
     enable = true;
     package = opencodePackage;
@@ -96,10 +116,11 @@ in
       ripgrep
       fd
     ];
-    skills.discussion-map = ./skills/discussion-map/SKILL.md;
     skills.git-regression-rollback = ./skills/git-regression-rollback/SKILL.md;
     # V2 uses a mutable cli.json; the old tui.json/plugin option stays empty.
   };
+  # Native config overlay: the server must inherit this environment on startup.
+  home.sessionVariables.OPENCODE_CONFIG = "${config.xdg.configHome}/opencode-local/opencode.jsonc";
 
   # Native /settings writes cli.json atomically. Seed it once rather than putting
   # an immutable Home Manager symlink in the way of sound/volume preferences.
@@ -113,10 +134,8 @@ in
   xdg.configFile = {
     # Keep HM's merged settings/source; only rename the installed config path.
     "opencode/opencode.json".target = "opencode/opencode.jsonc";
-    "opencode/AGENTS.md".source = ./config/AGENTS.md;
-    "opencode/review-analysis.md".source = ./config/review-analysis.md;
-    "opencode/commands/delegated-review.md".source = ./commands/delegated-review.md;
-    "opencode/commands/delegated-review-chrome.md".source = ./commands/delegated-review-chrome.md;
+    # Personal rules/commands/policies are registered only by the adjacent JSONC.
+    "opencode/AGENTS.md".text = (import ./config/instructions.nix).homeBase;
     "opencode/commands/problem-brief.md".source = ./commands/problem-brief.md;
     "opencode/problem-brief.README.md".source = ./problem-brief.README.md;
     "opencode/plugins/model-routing" = {
@@ -143,6 +162,7 @@ in
     "opencode/sounds/completion.mp3".source = ./sounds/completion-sound.mp3;
     "opencode/sounds/error.mp3".source = ./sounds/error-sound.mp3;
   }
+  // personalFiles
   // lib.optionalAttrs pkgs.stdenv.isLinux {
     "opencode/plugins/workspace-context/tui.ts".source = ./plugins/workspace-context.ts;
     "opencode/plugins/quiet-urgency" = {

@@ -1,14 +1,15 @@
 diff --git a/packages/core/src/tool/plugin/question.ts b/packages/core/src/tool/plugin/question.ts
 --- a/packages/core/src/tool/plugin/question.ts
 +++ b/packages/core/src/tool/plugin/question.ts
-@@ -4,5 +4,6 @@ import type { Context } from "@opencode/plugin/effect/plugin"
- import { ToolFailure } from "@opencode/ai"
+@@ -4,6 +4,7 @@
+ import { ToolFailure } from "@opencode/ai/effect"
  import { Effect, Schema } from "effect"
  import { Form } from "../../form.js"
 +import { Location } from "../../location.js"
  import { Permission } from "../../permission.js"
  import { Question } from "@opencode/schema/question"
-@@ -109,6 +110,9 @@ export const Plugin = {
+ 
+@@ -107,6 +108,9 @@
                      metadata: { answers: output.answers },
                    })
                  }),

@@ -1,11 +1,12 @@
 # /delegated-review
 
-Домашний HM-модуль устанавливает `commands/delegated-review.md` как
-`~/.config/opencode/commands/delegated-review.md`. Профиль `agents.review` объединяет
-`config/review-analysis.md` и `config/review-system.md`, сохраняя model routing и permissions.
+Домашний HM-модуль регистрирует команду в личном JSONC и устанавливает её тело как
+`~/.config/opencode-local/commands/delegated-review.md` (с учётом `xdg.configHome`).
+Профиль `agents.review` личного JSONC подключает тело из
+`config/review-analysis.md` + `config/review-system.md`, сохраняя model routing и permissions.
 Это config-only изменение, без binary patch, плагина или нового сервиса.
 Исходные файлы в Downloads и живая корпоративная конфигурация не меняются.
-Исходники переноса на новую корпоративную базу — в
+Исторические исходники переноса review на корпоративную базу — в
 [`macos/trf-review/`](macos/trf-review/README.md); единый переносимый Git-патч и
 порядок установки описаны там. Это не обновление старого Mac seed.
 Родитель и reviewer не создают временные scripts/manifests/reports/directories,
@@ -305,7 +306,7 @@ loopback mock/server, фиктивные credentials, отключённые MCP
 только имеющийся model-calls logger. Приватные артефакты остаются под
 `/tmp/opencode/delegated-review-runtime-*`. Native-фаза ограничена 240 с плюс
 короткая подготовка/cleanup. 11 HTTP failures / 10 native retries — контракт
-текущего pin, не повод молча
+того pin 2.1.4, не повод молча
 менять ожидание при обновлении. Сценарий не проверяет реальную модель, последующие
 backoff-ступени, исчерпание семи вызовов или десятиминутного окна, missing-ID,
 replacement и всю команду end-to-end. Scripted decisions не доказывают prompt
@@ -314,6 +315,38 @@ compliance. Запускать только после отдельного со
 ```fish
 python3 -B home/apps/opencode/tests/test_delegated_review_runtime.py (command -v opencode)
 ```
+
+### Повторный native mock на upstream 2.4.0 (2026-11-23)
+
+После отдельного разрешения оба сценария прошли на собранной
+`2.4.0+44aed4f` из `/home/samov/result/home-path/bin/opencode` с настоящим generated
+home personal layer и явной JSONC-регистрацией команды, без legacy discovery.
+В 2.4 subagent всегда фоновый: tool сразу возвращает receipt, а ошибка/результат
+приходят позже synthetic report с child ID. Оба subagent tool calls поэтому
+`completed`; terminal failure подтверждается `state=error` в native report,
+не ошибкой исходного вызова. Production-код и команда не менялись.
+
+- Один HTTP 429: один child, один subagent-вызов, один read и completed report.
+- 11 HTTP 429: десять native retries исчерпаны; error report → настоящий `sleep 20`
+  → продолжение того же child ID → completed report. Между error report и
+  continuation **20.107 с**; один read, прежний read result сохранён.
+- Все 6/19 HTTP-запросов соответственно остались на локальном mock `big-pickle`,
+  без paid fallback или model override. Четыре дешёвых unit-теста fixture проходят.
+
+Первый прогон выявил раннее чтение итоговой истории самим тестом: native `wait`
+ждёт один цикл agent loop, а не всю цепочку будущих background reports/recovery.
+Ожидание исправлено на сигнал последнего mock-provider reply и завершение этого
+цикла через native wait, без polling и искусственной settling-паузы. Повторный
+прогон прошёл в пределах 240 с. Это доказательство native transport/retry/continuity,
+не модельного соблюдения recovery policy или завершённого независимого анализа.
+Последующие backoff-ступени, исчерпание полного бюджета и replacement не проверялись.
+
+Логи: `/tmp/opencode/opencode-240-compat-m8h7d_us/delegated-recovery-240-rerun.log`;
+приватные parent/child/request fixtures:
+`/tmp/opencode/delegated-review-runtime-u5bjjdd2/`.
+Долговременный итог и границы — здесь и в [BENCHMARK.md](BENCHMARK.md).
+Builds, activation, shared service, реальные credentials/MCP и живые данные
+не затронуты; дополнительных mock-сценариев этот результат не требует.
 
 ## Аналитическая доработка после сравнения R1/R2 (2026-11-13)
 
@@ -495,9 +528,10 @@ README пакета содержит таблицу всех путей. Ста�
    ```
 
    Пользователь применяет только нужный HM-профиль:
-    `home-manager switch --flake /home/samov/nix-config#samov-laptop`
-    (либо `samov-laptop-old`/`samov-desktop`).
+   `home-manager switch --flake /home/samov/nix-config#samov-laptop`
+   (либо `samov-laptop-old`/`samov-desktop`).
    NixOS не меняется; агент не выполняет сборку или activation.
+
 2. Проверить наличие `/delegated-review` в TUI, при необходимости `/reload`.
    Для этого config-only изменения restart сервиса и переоткрытие binary не нужны.
 3. На небольшом согласованном scope проверить обычное «поревьюй»: тот же поток,

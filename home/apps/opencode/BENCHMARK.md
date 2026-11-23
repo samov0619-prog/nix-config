@@ -1,8 +1,691 @@
 # OpenCode V2 verification and accounting
 
-Pinned upstream: 2.1.4, `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`.
+Current expressions and lock select the separate **upstream v2.4.0 flake**,
+commit `44aed4fd144611879046ae923c25541f913780ad`. The user confirmed a successful
+Linux HM build and the rebuild after the accounting fix; isolated target
+runtime/PTY checks below now pass, including the refreshed report wrapper.
+Real-backup copy migration and old-binary native reads of a fresh restore copy also
+pass within the boundaries below. The user subsequently confirmed home HM
+activation, `opencode v2.4.0+44aed4f`, and service start/status at
+`http://127.0.0.1:13420` (2026-11-23), then working Free/Paid requests, correct theme
+switching, retained history/attachments and MCP server connection. This is
+user-reported live smoke acceptance, not all MCP tools, effort/quota/recovery
+coverage. Installation restore and Mac remain separate stages; the agent did not
+activate or modify live service/data.
+See the [transition checklist](CONFIG-CHECKLIST.md#домашний-переход-на-upstream-flake-v240--план-небольшими-пакетами)
+and [data/rollback procedure](UPGRADE-240.md).
 Historical model-quality experiments and V1 behavior are retained in
 [archive/v1/BENCHMARK.md](archive/v1/BENCHMARK.md). They do not measure V2 quality.
+
+## Built Linux 2.4.0 isolated acceptance (2026-11-23)
+
+### Real-backup working-copy migration (2026-11-23)
+
+After separate approval, native built 2.4.0 migrated only a private DB/WAL/SHM copy
+of `/home/samov/backups/opencode/261123tNov111795463834z`. The user reported the
+stopped snapshot, checksum verification and SQLite integrity check on a disposable
+copy. Agent rechecked the backup manifest and original DB hashes after acceptance.
+
+**Pass:** 50 → 64 exact expected migration IDs; all 81 sessions and 11,809 messages
+retained. All 18 retained non-journal tables match original-column row hashes,
+including inline attachments, metadata, events and five untouched inbox rows.
+The removed pending table was empty; new time_busy is NULL and part/blob/job/
+automation/machine tables remain empty. Integrity is `ok`, foreign-key violations 0.
+A second native open leaves logical data, schema and migration journal unchanged.
+
+Native `serve --stdio` (not managed service) runs in user/mount/network/PID namespaces
+with live HOME/runtime hidden and separate empty config/state/environment. No
+restart lifecycle, copied config/registrations, API calls, models or MCP. Crucially,
+the source copy has no schedule/automation tables; migrations create them empty,
+so the always-started automation runner has no work or admission to recover.
+Both startups exit cleanly on stdin EOF; syscall traces show no IPv4/IPv6 connects
+or tool/MCP executables, only local nscd lookups. Provider use is additionally denied.
+
+Full scope, source boundary and limitations: [UPGRADE-240.md](UPGRADE-240.md#снимок-и-миграция-рабочей-копии--2026-11-23).
+Private temporary DB/probes/digests/logs: `/tmp/opencode/opencode-240-migration-872kpr8y/`.
+This does **not** verify full installation restore, UI media, live models/MCP or Mac.
+The immutable backup, live DB/service and HM generation were not modified.
+
+### Fresh pre-upgrade restore and old-native reads (2026-11-23)
+
+A separately approved fresh **full snapshot copy**, not the migrated DB, passes
+file manifest hashes, all 27 literal symlink targets and their present Nix-store
+availability, old generation 65 availability and ordinary-file `cli.json`.
+Old binary **2.1.4+68bc26b** runs against its restored Data only, with separate empty
+runtime config/state/cache, masked live HOME/runtime, no managed lifecycle,
+project discovery/model fetch disabled and provider use denied. Restored original
+config/plugins/MCP/registrations/PTY state are not activated.
+
+**Native read pass:** 207 read-only GETs decode all 81 sessions / 11,809 messages
+through real pagination. Session IDs/metadata/models/variants and message IDs/types/
+order match SQLite expectations; active is 0 before/after. Payloads stay in memory,
+with only a response digest saved. Clean EOF shutdown, empty stderr, no native
+outbound IPv4/IPv6 connects or tool/MCP execs. Schema, 50 migration IDs, history,
+inbox and all non-project table row hashes remain unchanged; integrity/FK pass.
+
+**Strict whole-DB invariance did not pass:** two project rows gained only
+`time_archived`. The old native archive sweep sees canonical directories as missing
+because HOME is masked; both directories exist on the host. Source confirms this
+startup sweep. All other project columns match. This observed isolation effect is
+recorded, not suppressed by weakening the original assertion or adding a workaround.
+It does not establish that full live restore is verified or that all startup
+behavior is read-only.
+
+Private inventory/digests/API result/trace and verification:
+`/tmp/opencode/opencode-240-migration-872kpr8y/restore/`.
+Backup manifest rechecked unchanged after the run. Full restored-environment
+activation, UI/media/tabs and live model/MCP behavior remain untested; see
+[UPGRADE-240.md](UPGRADE-240.md#изолированная-restore-репетиция--2026-11-23).
+
+### Synthetic runtime and PTY checks
+
+The user confirmed the retry of
+`nix build /home/samov/nix-config#homeConfigurations.samov-laptop.activationPackage`
+completed successfully. This covers that target's HM merge and realization at
+build time, not Darwin or activation. The tested entrypoint is
+`/home/samov/result/home-path/bin/opencode`, resolving to
+`/nix/store/56hic3v2ayr9ki4a5cywia1w69v9bs7y-opencode-wrapped-2.4.0+44aed4f/bin/opencode`;
+the binary reports **2.4.0+44aed4f**.
+
+Completed checks use temporary private HOME/XDG/config/DB, explicit localhost
+servers and mock model responses only. Project discovery/model fetching are
+disabled; no credentials, live DB, managed service, MCP or browser are used.
+
+| Check                                                                                                           | Result and boundary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test_personal_layers_runtime.py`                                                                               | All five generated-file cases pass: Common-only, home, corporate, home-no-todo and custom-XDG/store-like home-hm-layout. Native registration, `{file:...}`, role permissions/models, manual-only skill advertisement and Build/Plan-only todo context. Home/corporate additionally pass 48 native command invocations (four commands × three active roles × exact/empty arguments × two layers), retaining agent/model/low variant without children. Corporate native review/research inherit the parent model/variant without overrides and perform actual scripted policy/evidence reads; minimal Common, not real-model policy reasoning. |
+| `test_v2_runtime.py`                                                                                            | Pass: paid/free/child/title/generate/textual-compaction routing and efforts, provider failure without paid fallback, retry, stored aliases, exact read-only accounting, Git-deny over saved Always, private permission/skill/call journals, todo native form transport/atomic fixture commits and Plan write denial.                                                                                                                                                                                                                                                                                                                         |
+| `test_v2_runtime.py --native`                                                                                   | Pass: mock native streamed checkpoints retain the context provider/model/variant, including Plan XHigh rather than textual-summary High. This test-only setting does not enable native compaction in production.                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `test_v2_runtime.py --limits`                                                                                   | Pass: metadata-free prompts/tools and checkpoint ready/reset through actual native runtime hooks. This is not visual acceptance of every limits status/percentage.                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Default and `--limits` with `OPENCODE_TEST_HM_GENERATION=/home/samov/result`                                    | Both pass with the built plugin directories. Default additionally exercises native write/edit/patch without global formatting and verifies the disabled model-call logger stays absent. It uses fixture settings and the source reporting script, not a full installed-personal environment; the refreshed report wrapper is tested separately below.                                                                                                                                                                                                                                                                                        |
+| `test_theme_mode_tui.py`                                                                                        | Both fresh-cache control and stale-cache regression pass in a real PTY, including repeated light/dark transitions and unchanged mutable CLI preferences.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `test_attention_tui.py` with that HM generation                                                                 | Full two-client PTY run passes using built todo/urgency plugins: ownership/background tabs, permission and child/parent completion isolation, owner transfer, home navigation, 140×40/160×48/80×24 todo rendering, scrolling/navigation/scoped feedback, Submit/Reject/Escape, route/replacement/reload cancellation, abrupt disconnect and reconnect. Native attention requests and Kitty escape sequences are observed; real audio/compositor behavior is not tested.                                                                                                                                                                      |
+| `test_task_report.py` with `OPENCODE_TEST_REPORT_WRAPPER=/home/samov/result/home-path/bin/opencode-task-report` | All **13 tests pass**, including the actual installed wrapper against a private split-part DB: exact tool/error/token accounting, no raw output disclosure and byte-identical DB after reading. The wrapper's store script also matches the source byte-for-byte.                                                                                                                                                                                                                                                                                                                                                                            |
+| `test_personal_limits_tui.py` with that HM generation                                                           | Home and corporate generated layers pass in native PTYs with the built limits closure. Real autocomplete/Tab selection/Enter loads manual `@discussion-map` into the stored user attachment and model request without a model skill-tool call. Rendered spans/colors verify idle auto muted, auto disabled absent, native running blue even with auto off, other-session isolation, completion clearing, re-enabled muted and home-footer muted; `Active: 0` and pending/ready handoff marks also render. No real quota identity, nonzero Active count, percentages/countdowns or real-model reasoning is tested.                            |
+| `test_delegated_review_runtime.py`                                                                              | Both native background recovery cases pass with the actual generated home command layer. One 429 is absorbed by native retry with one child/invocation; eleven 429s exhaust ten native retries, deliver a terminal error report, then a real `sleep 20` precedes same-child continuation. Error → completed reports correlate to the same child; only one actual read occurs and its evidence survives. All 6/19 HTTP requests use the local `big-pickle` mock. Four cheap fixture unit tests also pass; this is not real-model recovery policy obedience or coverage of every budget/replacement path.                                      |
+
+Initial legacy-fixture failures were investigated, not ignored. In 2.4, even
+API-created child sessions report to and wake their parent
+(`session/execution/subagent-report.ts`); fixtures now wait for that report and
+parent execution before arming the next one-shot mock response. The accounting
+expectation adds exactly three parent replies: ten samples × (20 input + 4 output)
+= **240 processed tokens**, with two compactions. Attention checks wait for actual
+tab/cache readiness and new lifecycle events, not a previous event for the same
+session, and assert both child and resumed-parent notifications in the owner only.
+No production attention/routing policy or timing delay was changed.
+
+The recovery fixture was adapted to 2.4's always-background subagent contract:
+both launch tool calls complete immediately; terminal failure arrives in a later
+synthetic report. Its first target run passed the native-retry case and reached
+successful same-child continuation, but read the final parent history too early.
+`experimental.session.wait` waits for one agent-loop period, not all later report/
+recovery periods. The fixture now waits for its final mock-provider reply before
+native wait finishes that known period, without idle polling or a settling delay.
+The corrected rerun passes both cases within the 240-second native-phase limit.
+Terminal report → continuation is **20.107 seconds**; preserved reading is not
+evidence of completed independent analysis. No production code or settings changed.
+The focused source/command suite also passes **14 tests, zero skips/failures**;
+both changed Python fixtures parse, and scoped whitespace/Prettier checks pass.
+The full Node suite was not rerun for these test/documentation-only changes.
+
+One actual compatibility fix was required: `scripts/task-report.py` previously
+read only inline assistant content and omitted tool/text parts stored separately
+by 2.4. It now follows native `SessionHistory.withParts`: ordinal `session_part`
+rows first, then any inline tail; databases without that table remain supported.
+The 13 accounting tests pass, including mixed split/inline ordering, exact
+tokens, tools and output privacy. The full default runtime also checks **four
+actual shell tool calls and three denials** in the read-only report. No blob bytes
+are loaded or new raw source text included in reports.
+
+After the fixture/report changes, the full Node suite was rerun: **256 pass,
+zero skips/failures**. All four changed Python files pass AST parsing and scoped
+diff whitespace checks pass. Changed TS/Markdown were formatted with the installed
+Prettier 3.10.1; Ruff remains unavailable, so Python layout is preserved without
+substituting another formatter. The backport inventory limitations below remain.
+
+**Rebuild boundary closed:** the user confirmed the requested rebuild after the
+reporting fix. The refreshed wrapper resolves to
+`/nix/store/63p21j902pbvx3r33mgv50a3s17flaad-opencode-task-report/bin/opencode-task-report`
+and executes `/nix/store/y365kpr5hdz12shknqhbri5s2qsf1icv-task-report.py`, which matches
+the corrected source and passes the CLI fixture. The binary is unchanged. This
+follow-up changes tests/docs only and does not require another runtime rebuild.
+Builds remain user-run. Changes are uncommitted; no activation or live-service/data
+mutation occurred. Fixture commits are only in disposable todo repositories under
+temporary HOME, never the project or real notes.
+
+Still unverified: real-model command/reviewer reasoning and policy obedience,
+full recovery-budget exhaustion, later backoff steps, missing-ID/replacement paths,
+real model/MCP/browser/voice/audio/
+clipboard behavior, live quota percentages/countdowns/nonzero Active rendering,
+full backup recoverability/installation restore, UI history/media, and live Mac
+file types/integrations. Real-history copy migration is covered separately above.
+Temporary passing logs are in `/tmp/opencode/opencode-240-compat-m8h7d_us/`
+(`personal-240-runtime.log`, `v2-240-runtime.log`, `v2-240-native-runtime.log`,
+`v2-240-limits-runtime.log`, `v2-240-installed-runtime.log`,
+`v2-240-installed-limits-runtime.log`, `theme-240-pty.log`, `attention-240-pty.log`,
+`personal-240-execution.log`, `personal-limits-240-pty.log`,
+`delegated-recovery-240-rerun.log`; the first failed run is `delegated-recovery-240.log`).
+The follow-up PTY frame/color snapshots are retained in the private directory
+`/tmp/opencode/personal-limits-pty-svr6lsvq/{home,corporate}/snapshots.json`.
+Passing recovery parent/child/request fixtures are retained privately under
+`/tmp/opencode/delegated-review-runtime-u5bjjdd2/`.
+This section is the durable evidence summary; `/tmp` is not deployment storage.
+
+## Implemented upstream package, shared selection and Mac export (2026-11-23)
+
+This section supersedes the **implementation status**, not the historical evidence,
+of earlier research entries below. Both Linux/Darwin outputs now use upstream's
+own nixpkgs `e21fec321d73511849707a7585e4ea155ee4bf40`, without new follows.
+The separately approved lock update changed only OpenCode and its nested nixpkgs;
+shared unstable did not change. Approved sequential bounded evaluations passed:
+version **2.4.0+44aed4f**, Bun **1.4.4**, Node **24.22.2**, native env/hooks/completions
+retained, Linux libstdc++/ALSA/PulseAudio added alongside native Wayland/PATH.
+These are package metadata evaluations, not realization or library-loading tests.
+
+U3 now puts canonicalization/live root policy/scoped overrides/role selection in
+shared `select`; `resolve` retains model hooks and initialization. Preflight and
+requests agree, including a session without stored agent using native default Plan.
+Native compaction preserves the original provider/model identity; unavailable
+textual routed summaries fail closed rather than silently switching providers.
+Default background compaction, models/profiles and numerical buffer are unchanged.
+All five production patches apply with `--fuzz=0` to the actual evaluated package
+source `/nix/store/m6h2k5pxjj5bi5cihqa31bz1w6kwa8c1-source` (offsets permitted).
+
+Durable tests: `test_nixpkgs_upgrade.mjs` has 13 passing patched-function/package
+contracts; `test_upgrade_state.mjs` has five passing XDG/namespace/migration-journal/
+message-source contracts. `test_upstream_package.mjs` adds three passing pin/output/
+hook/wrapper fixture contracts. These use extracted source and effect/catalog/store
+mocks, not full Effect, provider integration, typechecking or target binary execution.
+U5 documents persisted routing/reset behavior, stopped-service backup and coordinated
+binary/DB/config/state rollback. At that source-only stage real DB version, backup
+completeness, migration on real history and restoration were untested. The later
+working-copy migration above supersedes that migration status, not restore coverage.
+
+`macos/export.nix` and `scripts/export-macos.py` produce ordinary staging files,
+not a live installer. Protected fresh-`trf` settings/plugins/manifests/report and
+five historical acceptance artifacts retain SHA-256 guards. Six export contracts
+pass: neutral Common/seven MCPs, explicit personal registration/model inheritance,
+custom-XDG paths, excluded mutable/private/voice state, manifest hashes and refusal
+to overwrite/live-config destinations. The backup procedure is included in the
+package. Old seed/R3 and Dasha EXAMPLE ONLY archives are untouched. Mac live path
+types, post-snapshot changes, service env, MCP/browser/voice/CLI behavior remain open.
+
+At that source-check stage no build/runtime acceptance had run; the later Linux
+acceptance above supersedes that status. No activation, live service/data changes
+or task commit. Historical 2.1.4 runtime and mocked limits rendering below are not
+target 2.4.0 acceptance.
+
+### Final source/unit checks and open repository blockers
+
+All **256 Node tests pass, zero skips** across `tests/test_*.mjs`, with the actual
+package source above and installed TypeScript parser explicitly supplied. This
+includes the 21 upgrade/state/package contracts, six Mac-export contracts and all
+existing routing, limits, todo, instruction, workflow and permission fixtures.
+Two old HM test stubs needed the newly required todo/home/XDG inputs and `hasPrefix`;
+their production assertions were retained. No real model/service was used.
+The backport checker suite passes **24 synthetic tests**. Changed Python files
+parse successfully; Ruff is unavailable. Pinned `nix fmt` and installed Prettier
+3.10.1 were used on changed authored files, excluding preserved snapshots/archives.
+
+Final Mac staging materialization contains **40 ordinary files**, including install
+and backup/rollback instructions. Rebuild staging from repository sources before
+transfer; `/tmp` is disposable, not the sole recovery copy or a deployment source.
+
+The repository-wide inventory check is **blocked**, not passed: three existing
+unregistered patches under `home/modules/kitty/macos/` (`kitty-keybindings-fix.patch`,
+`kitty-keybindings.patch`, `kitty-ui.patch`) cause `Patch coverage mismatch`.
+No Kitty files or inventory exceptions were changed to bypass that check, and no
+reviewed fingerprints were acknowledged. The automatic update helper will still
+stop at this inventory error until it is separately resolved.
+
+`git diff --check` reports single-space blank unified-diff context lines in
+`model-variants.patch` and `question-location.patch` (also patch EOF context).
+The non-patch diff whitespace check passes. These context lines were not stripped
+to silence Git: the full stack's no-fuzz application is the relevant patch check.
+
+Reproduce the Node checks from this checkout (Fish; no build/runtime acceptance):
+
+```fish
+cd /home/samov/nix-config
+begin
+    set -lx OPENCODE_TEST_SOURCE (nix eval --offline --raw path:/home/samov/nix-config#packages.x86_64-linux.opencode.src)
+    set -lx OPENCODE_TEST_TYPESCRIPT /home/samov/.local/share/nvim/mason/packages/typescript-language-server/node_modules/typescript/lib/typescript.js
+    node --test home/apps/opencode/tests/test_*.mjs
+end
+python3 -B scripts/tests/test_backport_review.py
+```
+
+## User build: upstream node_modules hash correction (2026-11-23)
+
+The first user-run Linux HM build failed in the fixed-output dependency, before
+OpenCode's local patches/compilation. The actual derivation uses the pinned Bun
+1.4.4, unpatched package source and native install/canonicalization scripts; no
+local routing patch changes this dependency. Native `installPhase` completed, but
+the tree hash was `sha256-sdMjb/l8SIthDbBJO3VzpyoOL9auoFGjVb6HdlxkQGg=` rather than
+the tag's `sha256-1YrR3eb2bEvJZx3q3iIpcQHk36nULYu1gs3X6nBEj8o=`.
+
+Merged upstream [PR #65824](https://github.com/anomalyco/opencode/pull/65824), commit
+`7268011db4b9871f74403f4167c5f3f63d9fbb5f`, contains exactly this Linux replacement
+and Darwin `sha256-3d3c6tnTD/fTefdrxUACkLLqKeXDDijLg2cp3yhz67Q=`. The PR reports a
+successful x86_64-linux OpenCode build; ARM hashes come from the upstream bot run
+linked in its description. This is upstream evidence, not our local Darwin build.
+Both recursive Git trees were non-truncated: all 71 selected dependency inputs
+(package manifests, bun.lock, bunfig/.npmrc, patches, node_modules recipe/scripts,
+flake.nix/lock) have identical blob IDs between our tag and the hash-fix revision.
+GitHub's three-dot compare uses a merge base and is not endpoint identity evidence;
+the direct tree comparison supplies that check.
+
+The minimal repair keeps the existing input/lock/source/toolchain and uses the
+upstream `node_modules.override { hash = ...; }` argument inside the local package
+override, for the two configured platforms only. No fakeHash, disabled hash check,
+custom installer or Bun/lock update. Advancing the whole upstream input would also
+change application code and expand acceptance scope unnecessarily. The temporary
+override and its removal contract are registered as `opencode-node-modules-hashes`.
+Package fixtures check both platform hashes and preserve the native recipe/hooks.
+
+After this correction, sequential bounded evaluations of the actual Linux/Darwin
+packages select their respective corrected hashes, retain the same dependency/main
+source path and version, and confirm native `configurePhase` references the replaced
+dependency. All 256 Node tests pass without skips; the checker suite passes 24 tests.
+Scoped whitespace checks pass. These evaluations and fixtures do not build the
+fixed-output dependency or confirm its reproducibility locally.
+
+No retry build or activation was run by the agent. The first user attempt was a
+**failed build**; the user subsequently confirmed the corrected Linux HM build
+completed successfully. The built binary passed the isolated acceptance above.
+This does not establish Darwin build success or repeated-build reproducibility.
+Earlier source/unit success alone did not verify fixed-output hashes.
+
+## 2.4.0 source preflight, not a retargeted package (2026-11-23)
+
+Historical preflight, before the implemented package/selection changes above.
+
+The user confirmed the corporate Mac already runs **2.4.0** and is considering
+aligning home with it. Home repository patches still target the prepared 2.3.0
+baseline; no lock, package or production patch was changed by this preflight.
+Ten allowlisted source files from each upstream tag were downloaded over HTTPS
+(not a Git checkout). Existing patches were probed on disposable copies only.
+
+The 2.4.0 runner exports its existing `select` through `Service.of`. That new
+context line rejects one hunk in session-routing and one in model-variants;
+manual-model-routing then also fails because it depends on session-routing.
+Question/attention patches apply unchanged. Updating only the two context hunks
+in a scratch candidate allows the entire five-patch sequence with `--fuzz=0`
+(some hunks have offsets). All six existing `test_nixpkgs_upgrade.mjs` contracts
+then pass against 2.4.0: actual patched resolver logic with mocks, stored aliases,
+compaction/question source contracts, native title helper and package-env/guard
+fixtures. This is not typechecking, a build, full integration or real TUI acceptance.
+
+One material upstream behavior change is confirmed in source and the
+[V2 compaction guide](https://opencode.ai/v2/docs/compaction): background summary
+preparation is now enabled by default. An unused summary can still cost tokens;
+native compaction skips this path. The supported opt-out is
+`compaction.background: false`; no such setting was added without agreement.
+Direct use of the newly exposed `select` outside the patched resolver was not
+covered by those six fixtures; the later U3 investigation below found a tool-policy
+mismatch there. Plugin/CLI integration also needs target-version coverage before
+home 2.4.0 can be declared compatible. The initial source comparison was
+bounded to the ten selected files, not the entire release delta. A GitHub compare
+query hit its 300-file cap and cannot establish absence of other affected callers.
+
+Retained disposable evidence/candidate:
+`/tmp/opencode/opencode-240-compat-m8h7d_us/`. This directory is not a durable
+deliverable or an installation source. The findings and check limits above are
+recorded independently of its retention. No builds/activation or task commit.
+
+## 2.4.0 upstream toolchain source check (2026-11-23)
+
+U2 in the [transition checklist](CONFIG-CHECKLIST.md#u2-зависимости-и-toolchain--linux-собран-darwin-только-evaluation)
+records the independently read v2.4.0 lock, dependency/hash expressions and CLI
+build helpers. Upstream pins nixpkgs `e21fec321d73511849707a7585e4ea155ee4bf40`:
+Bun is 1.4.4, matching the root package manager, and default Node is 24.22.2.
+Both target platforms have declared node_modules hashes; no fixed-output build
+was run to verify them. The normal CLI build also builds/embeds the web app and
+embeds the platform PTY asset. Package version includes a revision suffix.
+
+The proposed local wrapper package set is upstream's own nixpkgs, without new
+follows. No package/patch/lock implementation, Nix evaluation, build, target
+runtime/PTY or live library-loading check was performed in this batch. Source
+agreement is not proof of reproducibility, binary ABI compatibility or cache
+availability; the checklist keeps those acceptance gaps open.
+
+## 2.4.0 routing preflight mismatch reproduced (2026-11-23)
+
+U3 in the [transition checklist](CONFIG-CHECKLIST.md#u3-публичный-select-и-routing--найден-функциональный-пробел-кандидата)
+records the call paths and scenarios. A non-truncated GitHub tree for v2.4.0
+commit `44aed4fd144611879046ae923c25541f913780ad` supplied all 537 code files
+under `packages/core/src` (3,790,784 bytes). Static reference/import inspection
+found one external direct `SessionRunnerModel.select` call, in SessionContext's
+tool preflight. This bounded core scan is not the earlier capped release comparison
+or a whole-repository/plugin audit.
+
+Native `select` does not read our routing metadata; the candidate still applies
+that policy only in `resolve`. SessionContext therefore can hide editing tools for
+the durable model while the primary request uses another model. Actual native
+modelTools chooses patch for GPT-5+ identities and edit/write otherwise. A Free
+family's new general child can store its configured Sol model, receive a GPT tool
+snapshot, then send its actual request through Big Pickle. TUI submission can
+align a particular durable model, but is not a family-wide fix. Permissions remain
+separate; no permission bypass or universal editing failure is claimed.
+
+The scratch five-patch candidate again applies with no fuzz (offsets present).
+Seven new source-fixtures pass: four reproduce mismatches, one checks role/effort/
+override/live-root request routing, one is an aligned-model control and one checks
+raw-select versus patched-resolve handling of a legacy alias. They execute actual
+select/resolve/modelTools functions with mocked generator effects/catalog/store/
+hooks, not full Effect, SessionContext, tool execution, a model or TUI. Passing
+reproduction tests do not mean the defect is fixed. The old six upgrade fixtures
+were not rerun in this batch, and their earlier success did not cover this path.
+
+Candidate acceptance now requires a functional selection-policy adaptation plus
+regression coverage, not only the two context adjustments. No production package,
+patch or lock was edited, and no build or target-runtime/PTY was run. Disposable
+inventory, patch log and reproduction script are under
+`/tmp/opencode/opencode-240-compat-m8h7d_us/u3/`; the durable findings and limitations
+are in the checklist and this section.
+
+## 2.4.0 compaction policy source check (2026-11-23)
+
+U4 in the [transition checklist](CONFIG-CHECKLIST.md#u4-compaction-и-стоимость--source-пути-проверены-background-оставляем)
+compares the V2 compaction guide, v2.4.0 core source, our candidate and prepared
+home settings. Ordinary/background summaries share selectModel and the compaction
+role. Paid selects Sol high; Free selects Big Pickle; no profile/explicit agent
+model preserves the session model identity. Root routing metadata takes precedence
+over agents.compaction.model, and summary is a separate session-generate policy.
+
+The configured Sol/Luna input cap is 244k despite the 1.05M context value; with our
+32k buffer the primary ceiling is 212k. Smaller summary windows can force lossy
+transcript shortening. Output budgeting is not a universal hard cap: the native
+OpenAI hook removes maxTokens. Template/finish checks do not prove semantic quality.
+Prompt-cache eligibility is not a measured hit or a cross-model guarantee. Held
+text summaries can survive model/profile changes, and background=false is not a
+cancellation API for existing work. No cost/quality/cache experiment was run.
+
+The local patch also removes upstream's unresolved-agent-model fallback and may
+reroute native compaction away from its original session model. Native is not
+enabled by the prepared settings; the latter is a conditional source-contract
+gap, not a demonstrated live failure or an established new 2.4.0 regression.
+
+Final ten source-fixtures pass after correcting initial harness extraction errors.
+They execute actual budget/TTL/history-selection/helper/hook code with mocks;
+model resolution uses the repository routing helper, not full Effect/provider
+integration. Some fixtures demonstrate patch incompatibilities, not their repair.
+Script: `/tmp/opencode/opencode-240-compat-m8h7d_us/u4/test-compaction-policy.mjs`.
+Only documentation and disposable research artifacts changed. No production
+settings/package/patch/lock, build, real model calls, activation or task commit.
+The user subsequently chose to retain default background compaction and observe
+actual usage before considering an opt-out. No background=false setting is added;
+any cheaper-model experiment remains a separate decision.
+
+## Compact limits display and auto-compaction indicator (2026-11-23)
+
+The limits TUI drops the `Limits left`/`Limits`, `Checkpoint` and weekly `week`
+labels while preserving both percentages/reset countdowns, independent warning
+markers, active-worker count and the blue `+` / green `✓` handoff status.
+One muted `≋` means configured automatic compaction is enabled; the same icon is
+blue while the current session is compacting, including manual compaction with
+auto disabled. Otherwise disabled or unreadable configuration hides that icon.
+It does not indicate a running or held background preparation.
+
+The existing TUI plugin uses native `client.config.get({ location })`, initially,
+on `config.updated` and after reconnect. The v2.4.0 generated client/types and
+server config handler were checked at commit `44aed4fd144611879046ae923c25541f913780ad`:
+the response is ordered Config.Entry documents/directories, not a merged object.
+The indicator folds only explicit auto values in priority order, retaining the
+native true default; a later background/buffer setting cannot erase auto=false.
+Reads coalesce with one follow-up and are ignored after disposal. No idle config
+polling, server-plugin change, new binary patch, dependency or model call is added.
+
+The activity extension reads the latest compaction message through public
+`data.session.message.list`, not a second start/end map. The same v2.4.0 revision's
+`packages/client/src/solid/data.ts` projects compaction started/ended/failed events
+into running/completed/failed messages. Current-session messages are invalidated
+and synced after reconnect; ordinary rendering/tab changes read the reactive
+host cache. Background precompute in core emits no matching lifecycle pair, so
+the plugin makes no attempt to infer its activity/readiness.
+
+All **19 limits/TUI tests passed**, without skips, using the installed TypeScript
+parser for the existing TSX public-API fixture. Coverage includes both slots,
+default/layered/disabled/error config, background independent from auto, live
+config events, reconnect, burst coalescing, disposal, native projected activity
+states, session/home routing, manual compaction with auto disabled, and the
+existing per-window warnings/manual checkpoint behavior.
+This is mocked rendering/transpilation, not native event-to-cache integration,
+full typechecking, real Solid/OpenTUI/PTY, glyph/font or target-binary acceptance.
+Formatting uses installed Prettier 3.10.1 with project configuration. No build,
+activation, package/lock change or task commit; the home migration remains pending.
+
+## Neutral instruction core and declarative home wiring (2026-11-23)
+
+`AGENTS.common.md` contains environment-neutral engineering/evidence, formatting,
+verification and artifact rules, without Samov's roles/routing, Goals or Fish.
+`instructions.nix` exposes homeBase/homePersonal, their combined regression view
+home, and corporate/corporatePersonal. Corporate Git/requirements/task-log contracts
+are preserved; the old automatic discussion-map rule is intentionally removed.
+The original home 68-bullet/hash guard passes after narrowly reversing only the
+documented path/delegation migrations, with separate comment guidance coverage.
+
+`default.nix` now installs only homeBase globally, retains all provider/safety/
+compaction settings through `v2-base-settings.nix`, and installs generated personal
+files plus `home.sessionVariables.OPENCODE_CONFIG`. Old global personal command/
+policy/skill declarations are removed. Home role models remain unchanged in the
+personal JSONC. Todo permissions live there too; `todo.nix` installs one coherent
+four-file directory at `opencode-local/plugins/agent-todo`, not escaping file links.
+Paths use actual `xdg.configHome` and home directory.
+
+127 focused Node tests pass. Actual-module composition tests cover Linux/Darwin,
+custom XDG, both todo states, old-entrypoint absence and base/model preservation.
+They use lazy/stubbed package constructors, not the full pinned HM module merge.
+Installed `opencode v2.1.4+68bc26b` passes five generated-files runtime cases:
+Common-only, home, corporate, home-no-todo and custom-XDG home-hm-layout. The last
+uses a store-like directory link; it does not realize a Nix derivation. Local
+mock requests include actual new base/personal instruction texts and confirm
+todo context only for Build/Plan and no manual-skill advertisement. Registries
+confirm command bodies/metadata, systems/permissions/models and active plugin IDs.
+Settings remain a minimal fixture, not full Common/seven-MCP corporate integration.
+
+Python AST and layer-file whitespace checks pass. Broader `git diff --check` still
+reports pre-existing whitespace in model-variants/question-location patch files;
+those lines were not changed by this layer batch. Full-runtime fixture consumers
+now select the personal todo/skill paths and manual-only skill metadata; skill-tool
+accounting uses auto-invoked git-regression-rollback, not manual discussion-map.
+These fixture edits passed syntax checks only; full runtime/PTY was not rerun.
+Changed Nix files were formatted
+with pinned `nix fmt --offline --no-write-lock-file`; `flake.lock` is unchanged.
+Prettier/Ruff are unavailable. Full pinned-HM evaluation, builds, full runtime/PTY,
+2.3.0 runtime, live Mac, command execution/arguments, delegated inheritance/review,
+manual skill/TUI, new todo TUI placement, real-model intent recognition and browser
+acceptance remain pending. No activation, note writes, real model/MCP/browser,
+live service mutation or task commit. See `PERSONAL-LAYER.md` for acceptance order.
+
+## Earlier generated personal-layer source package (2026-11-23)
+
+`config/personal-layers.nix` defines home/corporate settings and file records for
+native `OPENCODE_CONFIG` loading. Metadata lives in JSONC; asserted fixed headers
+are removed from the four command sources before `{file:...}` interpolation.
+Home retains all role models/systems/permissions; corporate review/research have
+no model overrides. Policies remain files in the personal directory, problem-brief
+stays common, discussion-map is manual-only, and only home contains the explicit
+relative todo plugin and its four-file server/TUI source closure. No CLI, voice,
+provider or MCP configuration is copied into the overlay.
+
+87 focused Node tests pass, including seven new pure source/evaluation contracts.
+`test_personal_layers_runtime.py` materializes actual generator `.files` without
+rewriting generated JSONC. Installed `opencode v2.1.4+68bc26b` passes four private
+server cases from an unrelated CWD: Common-only, home, corporate and home without
+todo. There are no discovery symlinks. Native registries/config documents confirm
+command bodies/metadata, role systems/denials/home model references and manual
+skill path/autoinvoke state. The relative plugin loads as active `local.agent-todo`;
+the actual shared `local.git-offline` plugin stays active in all four cases.
+
+Local mock-provider requests confirm personal instruction loading, no manual-skill
+advertisement and note tools/full guidance only for Build/Plan. Explicit session
+model selection keeps all requests local without changing generated role settings;
+it does not test delegated model inheritance. Common-only ignores adjacent personal
+definitions. The Common base is a minimal neutral fixture, not the complete final
+Common or seven-MCP corporate setup. Reviewer policies are checked as packaged
+files/systems, not by executing the delegated workflow. No note tool or command
+ran. No real model/MCP/browser, user data, live service mutation or activation.
+
+At that source-only stage, instruction neutralization, Common/HM wiring and
+old-discovery removal were still pending; the later batch above supersedes this
+status, not the historical test evidence. No 2.3.0 binary, live Mac, command arguments/execution, TUI/manual invocation,
+real-model todo selection or browser acceptance. Python syntax/changed-file whitespace
+checks pass; Prettier/Ruff are unavailable. No build, installation, lock change or
+task commit. See `PERSONAL-LAYER.md` for scope and the remaining acceptance order.
+
+## Decision Support archived; todo scoped to Build/Plan (2026-11-23)
+
+The user requested archiving Decision Support/decision-check while preserving the
+ordinary natural-language "add to todo" workflow. The old combined module,
+instruction, skill (including the Russian quotation) and manual scenarios moved
+byte-for-byte into `archive/decision-support/`; SHA-256 guards verify preservation.
+They are no longer installed. `todo.nix` is the independent home opt-in via
+`programs.opencode.todo.enable`; the removed combined option reports migration
+guidance instead of silently changing an old override's meaning.
+
+`config/todo-settings.nix` denies both custom tool actions by default and allows
+them only for Build/Plan, without granting edits. Full note guidance is attached
+to the existing proposal tool through `agent-todo-instructions.ts`, not a global
+instruction or new skill/hook. Native consent, store/Git implementation and Plan's
+edit guard are unchanged. No unsolicited task creation or automatic idea saving was
+added. This scopes model context/tools, not arbitrary filesystem access.
+
+80 focused Node checks pass: todo store/consent/Plan/manual edits, module/archival
+contracts, instruction layers, Git approvals/offline, review requirements and the
+two command sources. A new focused isolated runtime fixture passes on installed
+`opencode v2.1.4+68bc26b`: actual local mock-provider requests include note tools
+and their guidance for Build/Plan and omit them for general/explore/research/review.
+Decision Support instructions and decision-check are absent. No todo tool ran,
+no notes were written and no real model/MCP or live service was used. The private
+server stopped and its disposable data were cleaned. This does not establish
+real-model intent recognition or native browser/TUI behavior on the new generation.
+
+Python syntax passes for the focused runtime, full runtime and attention PTY
+fixtures; their dependency copying now includes the note-guidance module. Full
+runtime/PTY and the pinned-HM config-target evaluation were not rerun. The latter
+now selects the independent todo option rather than the archived combined one.
+Nix files were formatted with pinned `nix fmt`; its incidental lock-file pruning
+was restored exactly, leaving `flake.lock` unchanged. Prettier/Ruff are unavailable.
+No project build, activation, remote Git operation or task commit was performed.
+
+## nixpkgs-unstable transition preparation (2026-11-22)
+
+The dedicated OpenCode input was removed from flake wiring; both Linux and HM
+Darwin packages now wrap `nixpkgs-unstable.opencode`. Build channel `prod` is kept
+through the native build environment (nixpkgs defaults to `latest`), preserving
+the existing TUI storage and service namespace. The lock is intentionally
+unchanged until the user's update. An explicit >=2.3.0 guard rejects the currently
+locked 2.2.5 before applying incompatible patches. The independent corporate Mac
+distribution and existing uncommitted instruction-layer work remain unchanged.
+
+Five local patches apply to selected pristine v2.3.0 files with GNU patch,
+`--fuzz=0`. Backend routing now uses native request kind/agent, preserving title,
+compaction and summary routing before the new native same-provider model hook.
+Canonical aliases, manual model/effort policy and explicit Question Location stay.
+Notification patching retains native direct-child completion and both quota-error
+exclusions. The original theme-cache patch remains as a reference but is no longer
+applied: 2.3.0 contains the exact priority expression. Its source-policy controls
+now execute the native block; native PTY acceptance is still pending.
+
+34 focused Node source/fixture checks pass, including six new upgrade contracts:
+actual backend resolver routing with request kinds/live-root metadata, stored alias
+compatibility, compaction/question source guards and native terminal-title cleanup
+for the reported tab-containing title, plus actual local Nix override evaluation
+for channel/env preservation and rejection of 2.2.5. Attention coverage also checks native child
+completion and free/go-limit suppression. Another 62 plugin/config/instruction
+fixture checks pass; one limits TSX fixture is skipped because TypeScript is not
+installed. Fixtures do not establish real plugin discovery/API compatibility,
+native OpenTUI operation, complete TypeScript checking or model behavior.
+
+Read-only package evaluation with the old lock fails with the intended update
+instruction. The backport inventory command is blocked by existing unregistered
+Kitty Mac patches outside this task, before reaching the selected OpenCode entries;
+no unrelated registry entries or accepted fingerprints were changed.
+
+Changed Nix files were formatted with the project's pinned `nix fmt`; Prettier
+is unavailable, so Markdown/JSON/JS formatting was not run and no replacement
+formatter was installed. Non-patch whitespace checks pass; blank context lines
+inside unified patches remain intact as patch syntax.
+
+No OpenCode/HM build, new-binary runtime/PTY, activation, service mutation or commit.
+Full merged HM evaluation after the user's input update is pending. Follow the
+ordered update/build/isolated-test/backup/activation procedure in README.md. Older
+entries below describe 2.1.4 (`68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`), unless
+they explicitly identify another version, and are not new-version acceptance.
+
+## Corporate tracker instructions and overlay registration (2026-11-23)
+
+Future corporate instruction sources now select XTracker for current tasks and
+optional task-log keys. Samov's personal Mac rules require confirmed `FBDC-<number>`
+keys for new branches/commits; older Git history controls only the remaining style.
+The corporate-only `skills/task-summary-log/SKILL.md` source uses full keys, checks
+legacy filenames/task identity before creating a log and updates existing logs in
+place without automatic renames. It is not installed by HM. The fresh archive,
+historical seed/R3, MCP configuration, permissions and git-offline are unchanged.
+
+29 focused Node checks pass: instruction layers, Git approvals/offline policy and
+review requirements. The layer guard now allows only the two specified tracker
+text replacements relative to R3 rather than requiring obsolete byte equality;
+the rest of the team file remains byte-identical. New guards cover personal key
+precedence, log migration and absence of corporate rules/skills in HM output.
+Prettier is unavailable; no replacement formatter installed. No build or activation.
+
+In the same task, a disposable isolated registration fixture passed on installed
+`opencode v2.1.4+68bc26b`, using private servers/HOME/XDG and an unrelated CWD.
+Common plus explicit personal `OPENCODE_CONFIG` resolved relative `{file:...}`
+bodies and registered four personal commands and a reviewer with its metadata and
+denials, without symlinks. Common-only omitted those personal entries. The registry
+required a bounded readiness wait; both servers were stopped. Existing delegated
+review command bodies were real, but the new procedures and reviewer system were
+markers. No session, model/MCP call or command execution occurred. This is not
+argument-expansion, model preservation, delegation/browser, 2.3.0 or live Mac
+acceptance. Both new personal procedures are agreed as commands, not skills; the
+broader layer split is still pending. Details and scratch
+fixture location are recorded in CONFIG-CHECKLIST.md.
+
+Follow-up: the two English command sources and separate short Russian guides
+`task-analysis.README.md` and `browser-verification.README.md` are now prepared.
+Six source-contract tests pass for
+current-session metadata, read-only analysis, API/deployment distinctions, live
+versus passive browser scope, shared-browser safety and evidence/coverage limits.
+The isolated 2.1.4 registration fixture was rerun successfully with the actual
+bodies and descriptions of both new commands instead of markers. The reviewer
+system remains a fixture marker. No command execution or model/MCP calls occurred;
+neither HM wiring nor a real personal overlay was changed. Runtime behavior,
+arguments, agent/model preservation and browser acceptance remain untested.
+The combined focused suite passes all 35 checks. Whitespace/fence checks pass;
+Prettier remains unavailable. No commit, build, activation or live service mutation.
+
+## Instruction layers: HM versus standalone corporate (2026-11-19)
+
+`config/instructions.nix` explicitly composes three outputs: common personal +
+home for HM on either platform; pure corporate team policy; common personal +
+corporate-personal routing for the independent port. HM uses native
+`xdg.configFile.text`, not an extra loader/hook or an OS-based export switch.
+Nix/nsh, local checkout, scratch directories and home review paths stay home-only;
+corporate task sources/MCP/tickets/logs stay out of HM. Generic comment guidance
+previously in corporate personal is now shared. Decision-support/todo remains
+separately home-only, including in the updated source runtime fixture.
+
+58 lightweight Node checks pass across instruction layers, goal/approach,
+delegated review/Chrome, Git approvals, requirements and optional-logger wiring.
+The new seven layer checks evaluate the actual composition, test both module
+platform branches without realization, enforce negative cross-contamination
+guards, preserve the 68 pre-split home bullets by count/hash and compare the pure
+corporate file byte-for-byte with the R3 team baseline. They also preserve the
+corporate personal review/comment sections. An obsolete `.source`-shape assertion
+was updated to the requested merged `.text` wiring; behavioral guards remain.
+These are source/evaluation fixtures, not complete merged HM evaluation, native
+OpenCode instruction discovery, model compliance or live corporate Mac acceptance.
+
+The source runtime fixture now uses the composed variants and no longer injects
+home decision-support/todo into Mac mode. Its Python syntax passes; the full
+runtime/PTY check was not run. Nix files were formatted through pinned `nix fmt`
+(nixfmt 1.5.0). Prettier/Ruff remain unavailable; no substitutes installed.
+No build, activation, service restart, commit, new Mac patch or live Mac mutation.
+Historical seed/R3 policy bytes and the released patch remain unchanged; future
+exports use the allowlisted outputs documented in the Mac guide.
 
 ## Acceptance status (2026-11-17)
 
@@ -907,7 +1590,7 @@ changes. Ordinary config edits still reload normally. Runtime smoke with
 `OPENCODE_TEST_HM_GENERATION` verifies fresh-process loading of real store-directory
 links, not live symlink retargeting in the same process.
 
-`decision-check-scenarios.md` supplies behavioral fixtures for manual/model
+Historical `archive/decision-support/tests/decision-check-scenarios.md` supplies behavioral fixtures for manual/model
 evaluation, including negative cases. They are not an automated semantic classifier
 test, and passing implementation tests does not establish model precision or helpfulness.
 Live Kitty/F3/Neovim require target-host verification. Form controls are English,

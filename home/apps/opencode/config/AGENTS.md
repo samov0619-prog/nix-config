@@ -1,4 +1,4 @@
-# Global Rules
+# Samov's Personal Rules
 
 ## Goals and Approach
 
@@ -19,29 +19,6 @@
   settled objections unless new material facts appear. This does not waive project
   constraints, permissions or the need for operational approval.
 
-## Engineering Choices — High Priority
-
-- Apply this rule before proposing an approach, designing a solution or making
-  changes. Among solutions that meet the requirements, prefer the supported,
-  conventional approach over a custom one even when the custom implementation
-  seems quicker or more familiar. Any departure requires the justification below;
-  do not wait for the user to request this comparison.
-- Default to built-in, officially supported capabilities and documented public APIs
-  before adding custom code, wrappers, hooks, patches or dependencies. Choose the
-  simplest maintained solution that meets the actual requirements.
-- Follow established project conventions and current upstream recommendations for
-  the version in use. Treat best practices as contextual guidance, not a reason
-  to overengineer, expand scope or rewrite working code; do not copy a known-bad
-  pattern just because it already exists.
-- Before taking a custom or unsupported path, identify the concrete requirement,
-  bug or compatibility constraint that the supported approach cannot satisfy.
-  Explain the evidence and maintenance trade-off; ask before introducing a
-  significant long-term maintenance burden. Do not invent missing API capabilities
-  or treat an undocumented workaround as supported.
-- Prefer these defaults without requiring reminders from the user. Explicit task
-  requirements and verified project constraints take precedence; preserve accepted
-  fixes unless their removal conditions are met.
-
 ## Meaning and Technical Precision — High Priority
 
 - State the central meaning relevant to the user's task directly, and organize
@@ -61,160 +38,19 @@
 - This presentation guidance does not replace required step-by-step procedures,
   supporting evidence or verbatim artifacts.
 
-## Tools
-
-- ALWAYS use OpenCode's `grep` and `glob` tools for file searches; they are backed by `rg`.
-- In shell commands, ALWAYS use `rg` instead of `grep` and `fd` instead of `find`.
-
 ## Shell
 
 - The user's interactive shell is Fish. When providing commands for the user to run,
   write Fish syntax: use `set name value` for variables and `(command)` for command
   substitution. Do not use POSIX `name=value`, `$()` or Bash-only syntax unless the
   command is explicitly prefixed with `bash -c`.
-- For user-facing temporary Nix environments, preserve the user's normal Fish,
-  config, history, Atuin and Zoxide. For interactive `nix shell`, prefer
-  `nix shell nixpkgs#<package> --command (status fish-path) --interactive`;
-  `(status fish-path)` is expanded by the original user Fish before Nix runs.
-- Do not clear the environment, disable shell configuration, or override HOME/XDG
-  paths without a concrete need and an explanation. `nix shell` is not a security
-  sandbox; use appropriate isolation when the task requires it.
-- For one-shot commands, run the program directly with `--command`, without an
-  unnecessary nested shell.
-- The interactive Fish template is for user-facing commands, not the agent's
-  shell tool, which runs Bash.
-- Make Nix commands safe to copy from `~`: use an absolute flake path or explicitly
-  set the working directory before relative flake references such as `./.`.
 
-## Source Exploration
+## Personal Delegation Preferences
 
-- Use `glob` for filename discovery, `grep` for targeted content searches, and
-  `read` for small, selected passages. Continue direct lookups while they narrow
-  the search or verify a concrete finding; there is no tool-call quota.
-- If exploration repeats without new evidence or a narrower scope, change the
-  approach: test a specific hypothesis or narrow the source and query. Reuse prior
-  findings instead of repeatedly retrieving the same material.
-- Keep large source files and logs out of the conversation. When a tool saves a
-  large result as an artifact, extract only the relevant evidence from that
-  artifact. Select the narrowest useful source, never a home directory just to
-  discover a filename.
-- Use native tool-output artifacts with targeted `grep` and `read`; do not reload
-  a large result just because a preview was truncated. A partial search cannot
-  establish absence; state coverage gaps and inspect missing sources when needed.
-- Use tools for mechanical extraction, counting and transformation, without an
-  extra model call. Delegate bounded fact collection to `explore`, substantive
-  source synthesis to `research`, and independent correctness checks to `review`
-  only when separate analysis is justified and delegation is permitted. Give the
-  child a source scope, question and expected evidence; avoid duplicating its work.
-- Load a skill only when its advertised description matches the current task or
-  the user explicitly requests it. Reuse instructions already in the current
-  context unless the skill has changed; do not reload it for every follow-up.
-  Keep skill permission restrictions intact; a subagent is not a permission bypass.
-
-## Explicit Review Requests
-
-- An explicit ordinary review request (for example, "поревьюй", "сделай ревью", or
-  "review these changes") runs in the current conversation, with its existing
-  context, agent and model unchanged. Do not launch a child, fork the session or
-  temporarily switch roles merely to perform that review. Review alone authorizes
-  no fixes, builds, installation or commits; keep active Plan restrictions intact.
-- Before ordinary review, read `review-analysis.md` in OpenCode's active global
-  config directory (normally `~/.config/opencode`; respect `XDG_CONFIG_HOME`).
-  Reuse it if already loaded and unchanged. The configured `review` system prompt
-  includes this same analysis policy; do not maintain a second checklist here.
-  If the policy is unavailable, report the limitation rather than invent its rules.
-- Route by intent, not keyword matching. Discussion of review policy, quoted text,
-  a future or negated request, ordinary implementation/debugging, and routine
-  self-checks do not trigger a separate review workflow. A request to develop
-  something does not authorize an extra review child when implementation finishes.
-  Requesting a correctness/regression assessment without explicit delegation also
-  stays in the current conversation; a request to run a check alone is not a review.
-- Delegate only on an explicit request for a separate reviewer/delegated review,
-  including `/delegated-review`, or the passive Chrome-audit workflow below.
-  For ordinary-language requests for delegated code review, first read and follow
-  the applicable installed `commands/delegated-review.md` template with the user's
-  scope as arguments, respecting project overrides. Keep its default scope selection,
-  fingerprint, handoff and recovery rules; do not invent a parallel workflow.
-- Distinguish code review from an explicit
-  request to audit whether recorded Chrome-MCP tests support the reported results.
-  For the latter, the parent must first read and follow the applicable installed
-  `commands/delegated-review-chrome.md` orchestration template, respecting project
-  overrides and using the user's evidence/run target as its arguments. Do not
-  launch an ordinary code-review child first, invoke a slash command recursively,
-  or invent a shell command to run it. If the applicable template is unavailable,
-  report the limitation rather than improvise an audit. Preserve its export/privacy
-  restrictions and native permissions; never drive the browser or re-test during
-  this passive audit. Mentioning Chrome/MCP in a code task or requesting a live
-  browser test does not select this audit workflow.
-- For delegated review, give the reviewer the concrete target/version, requirements with their sources,
-  relevant constraints and check results with their limitations, in a minimal
-  factual handoff, not the development transcript or parent's preferred verdict.
-  Clarify materially ambiguous scope before launching. Invoke configured `review`
-  without a model/provider/effort override; its configured routing policy applies.
-  Keep the parent session's agent and model unchanged. Return findings without
-  silently changing severity or verdict. If `review` is unavailable or delegation is forbidden,
-  explain rather than silently choosing another agent or substituting the parent's
-  own review.
-- An active review command or workflow owns its reviewer invocation; do not launch
-  a second child because its prompt also says "review". Reviewers do not delegate
-  recursively. Review authorizes neither fixes nor builds, installation or commits.
-- Start a new delegated review task with a fresh child, without `sessionID`; do not search
-  old sessions for a reviewer to reuse before this task's initial launch. Continue
-  a child only for the same active logical task with verified identity/scope, or
-  when the user explicitly requests resuming that earlier task. User cancellation
-  ends automatic recovery. `/reload` alone neither authorizes resumption nor turns
-  an old child's work into a new review. Never relabel a recovery as a fresh task
-  to reset budgets without an explicit user request for a fresh independent review.
-
-## Working Files and Artifacts
-
-- Put disposable files in one uniquely named task directory under `/tmp/opencode`;
-  reuse it within the task. Respect tool-owned storage and project-required
-  build/test directories instead of relocating them.
-- Keep durable source, tests and documentation in the project when in scope.
-  Use an agreed persistent location for external artifacts needed for recovery or
-  handoff: `/tmp` retention is not guaranteed.
-- Do not use `~/.opencode` as general scratch space. Use `~/.opencode/plan` only
-  for explicitly requested plans/handoffs, subject to the active mode's rules.
-- Minimize sensitive diagnostic data and restrict access to private directories
-  and files. Do not include secrets in reports or transferable packages.
-- Clean up only known disposable files created for the current task, subject to
-  normal permissions. Never broadly clean old/other tasks' files or delete the
-  only copy of a needed result.
-- Report useful retained artifacts with their paths and purpose, not every
-  scratch file. These rules do not authorize writes in read-only tasks or Plan.
-
-## Formatting
-
-- Use the project's declared formatter, configuration and version through its CLI,
-  only on changed files. Do not replace tooling with model-generated reformatting.
-- If no formatter is declared for that file type, preserve the existing layout;
-  do not choose a global fallback. Keep lint fixes separate from formatting.
-
-## Verification and Resources
-
-- Leave pre-commit and pre-push verification builds to the user. Requests to
-  review, verify, or commit if everything looks good do not authorize builds.
-- Obtain explicit approval for the command and scope before running
-  resource-intensive checks. Announce the approved work before starting it;
-  never launch it silently in the background or in parallel.
-- Small local unit tests, lint, and static checks that do not build the project
-  may run without separate approval. Ask first when the resource cost is unknown.
-- Reuse verification already performed by the user. If later changes invalidate
-  its coverage, explain the gap and provide a manual verification command instead
-  of starting another build.
-- Clearly distinguish completed checks from checks not run. Never describe
-  unbuilt or untested changes as fully verified.
-- Define expected behavior using agreed requirements, documented contracts,
-  known-good examples, or justified invariants—not solely the current
-  implementation's output.
-- Add fixtures and reproducible scenarios where they provide useful coverage.
-  Reuse suitable test infrastructure and extend it when needed.
-- Exercise actual implementation paths. Distinguish fixture/mock coverage from
-  evidence about real integration, user interfaces, and target environments.
-- Do not weaken checks or change expected results merely to make tests pass.
-  Justify changed expectations through changed requirements or evidence that
-  the previous expectation was incorrect.
+- When delegation is permitted and separate analysis is justified, use `explore`
+  for bounded fact collection, `research` for substantive source synthesis and
+  configured `review` for an explicitly requested independent correctness check.
+  These preferences do not authorize delegation or require unavailable roles.
 
 ## Collaboration and Technical Understanding
 
@@ -250,9 +86,4 @@
   wrappers or combined options to bypass approval. Inspection and comparisons do
   not need mutation approval.
 - Before creating a branch or commit, ALWAYS inspect the user's style with `git log --author="$(git config user.name)" --oneline --branches --remotes -n 15` and follow it.
-- ONLY ask for a task or ticket number when that history establishes it as the user's convention.
 - NEVER run Git operations against a remote, including `git push`, `git pull`, and `git fetch`. The user performs all remote operations, including those that require authentication. Ask the user to sync when remote state is required.
-
-## User Actions
-
-- When the user needs to take an action after agent work, ALWAYS provide a clear, ordered plan for verification, deployment, diagnosis, or other follow-up. Aim for no more than 10 steps.

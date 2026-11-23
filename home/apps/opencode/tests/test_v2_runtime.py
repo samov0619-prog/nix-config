@@ -1,4 +1,4 @@
-"""Opt-in isolated V2 smoke test: python3 .../test_v2_runtime.py /path/to/opencode.
+"""Opt-in isolated V2 2.4 smoke test: python3 .../test_v2_runtime.py /path/to/opencode.
 
 No user credentials, database, config or background service are used.
 """
@@ -264,6 +264,8 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
             ("skill-stats", "skill-stats.ts"),
             ("agent-todo", "agent-todo.ts"),
         ]
+        if mac:
+            entries = [entry for entry in entries if entry[0] != "agent-todo"]
         if limits_only:
             entries = [("limits", "limits/index.ts")]
         for name, entry in entries:
@@ -275,8 +277,9 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                 plugin.parent.mkdir(parents=True, exist_ok=True)
                 plugin.symlink_to(
                     Path(generation)
-                    / "home-files/.config/opencode/plugins"
-                    / f"{name}-v2",
+                    / ("home-files/.config/opencode-local/plugins/agent-todo"
+                       if name == "agent-todo"
+                       else f"home-files/.config/opencode/plugins/{name}-v2"),
                     target_is_directory=True,
                 )
             else:
@@ -291,37 +294,75 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                         )
                 if name == "agent-todo":
                     for source, target in [
+                        ("agent-todo-instructions.ts", "agent-todo-instructions.ts"),
                         ("agent-todo-review.ts", "agent-todo-review.ts"),
                         ("agent-todo-tui.tsx", "tui.tsx"),
                     ]:
                         (plugin / target).write_text(
                             (SOURCE / "plugins" / source).read_text()
                         )
-        for skill_id in ["discussion-map", "git-regression-rollback", "decision-check"]:
+        skill_ids = ["discussion-map", "git-regression-rollback"]
+        for skill_id in skill_ids:
             skill = config / "skills" / skill_id / "SKILL.md"
             skill.parent.mkdir(parents=True)
             if generation:
                 skill.symlink_to(
                     Path(generation)
-                    / "home-files/.config/opencode/skills"
+                    / ("home-files/.config/opencode-local/skills"
+                       if skill_id == "discussion-map"
+                       else "home-files/.config/opencode/skills")
                     / skill_id
                     / "SKILL.md"
                 )
+            elif skill_id == "discussion-map":
+                # Exercise the actual personal output's manual-only metadata,
+                # not the auto-invoked source kept for historical consumers.
+                skill.write_text(json.loads(subprocess.check_output(
+                    ["nix", "eval", "--offline", "--json", "--file",
+                     str(SOURCE / "config/personal-layers.nix"), "--apply",
+                     'f: (f {}).home.files."skills/discussion-map/SKILL.md".text'],
+                    text=True,
+                )))
             else:
                 skill.write_text(
                     (SOURCE / "skills" / skill_id / "SKILL.md").read_text()
                 )
         rules = config / "AGENTS.md"
-        # Resolve the home-only configured instruction inside the isolated HOME.
-        settings["instructions"] = [str(config / "decision-support.md")]
+        # Resolve notes only for HM, never for the standalone corporate port.
+        if not mac:
+            todo_settings = json.loads(
+                subprocess.check_output(
+                    [
+                        "nix", "eval", "--offline", "--json", "--file",
+                        str(SOURCE / "config/todo-settings.nix"), "--apply",
+                        "f: f { todoDirectory = " + json.dumps(str(root / "agent-todo")) + "; }",
+                    ],
+                    text=True,
+                )
+            )
+            settings.setdefault("permissions", []).extend(todo_settings["permissions"])
+            for agent, info in todo_settings["agents"].items():
+                settings.setdefault("agents", {}).setdefault(agent, {}).setdefault(
+                    "permissions", []
+                ).extend(info["permissions"])
         (config / "opencode.json").write_text(json.dumps(settings))
-        (config / "decision-support.md").write_text(
-            (SOURCE / "config/decision-support.md").read_text()
-        )
-        if generation:
+        if generation and not mac:
             rules.symlink_to(Path(generation) / "home-files/.config/opencode/AGENTS.md")
         else:
-            rules.write_text((SOURCE / "config/AGENTS.md").read_text())
+            rules.write_text(
+                subprocess.check_output(
+                    [
+                        "nix",
+                        "eval",
+                        "--offline",
+                        "--raw",
+                        "--file",
+                        str(SOURCE / "config/instructions.nix"),
+                        "corporate" if mac else "home",
+                    ],
+                    text=True,
+                )
+            )
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             port = sock.getsockname()[1]
@@ -347,10 +388,23 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
         if mac:
             personal = root / "config/opencode-local"
             personal.mkdir()
-            for name in ["opencode.json", "AGENTS-personal.md"]:
-                (personal / name).write_text(
-                    (SOURCE / "macos/opencode-local" / name).read_text()
+            (personal / "opencode.json").write_text(
+                (SOURCE / "macos/opencode-local/opencode.json").read_text()
+            )
+            (personal / "AGENTS-personal.md").write_text(
+                subprocess.check_output(
+                    [
+                        "nix",
+                        "eval",
+                        "--offline",
+                        "--raw",
+                        "--file",
+                        str(SOURCE / "config/instructions.nix"),
+                        "corporatePersonal",
+                    ],
+                    text=True,
                 )
+            )
             work = root / "project"
             work.mkdir()
             (work / "opencode.json").write_text(
@@ -502,7 +556,6 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                 for skill_id in [
                     "discussion-map",
                     "git-regression-rollback",
-                    "decision-check",
                 ]:
                     expected = next(
                         line.removeprefix("description: ")
@@ -515,8 +568,10 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                         skill_id
                     ]
                 assert "For multi-turn planning or discussion" not in rules.read_text()
+                assert by_skill["discussion-map"]["autoinvoke"] is False
+                assert "decision-check" not in by_skill
                 print(
-                    "PASS: native skill discovery advertises scoped descriptions; no blanket discussion-map rule"
+                    "PASS: native skill registry preserves descriptions and manual-only discussion-map"
                 )
                 if catalog_only:
                     catalog = api("model")
@@ -547,18 +602,42 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                         rows
                     )
 
-                def prompt(sid, expected_model, effort=None, title=False):
+                def parent_snapshot(sid):
+                    parent = api(f"session/{sid}")["data"].get("parentID")
+                    return parent, ({m["id"] for m in api(f"session/{parent}/message?limit=100")["data"]}
+                                    if parent else set())
+
+                def settle_parent(snapshot, child):
+                    parent, before = snapshot
+                    if not parent:
+                        return
+                    # 2.4 reports even API-created children and wakes their parent.
+                    # Do not let that request consume the next fixture's mock tool/error.
+                    deadline = time.monotonic() + 10
+                    while not any(
+                        m["id"] not in before and m.get("metadata", {}).get("childID") == child
+                        for m in api(f"session/{parent}/message?limit=100")["data"]
+                    ):
+                        assert time.monotonic() < deadline, "child report was not delivered"
+                        time.sleep(0.02)
+                    api(f"experimental/session/{parent}/wait", {}, "POST")
+
+                def prompt(sid, expected_model, effort=None, title=False, parent_model=None):
+                    snapshot = parent_snapshot(sid)
                     start = len(MockResponses.requests)
                     api(f"session/{sid}/prompt", {"text": "Reply briefly."})
                     api(f"experimental/session/{sid}/wait", {}, "POST")
+                    settle_parent(snapshot, sid)
                     requests = MockResponses.requests[start:]
                     assert requests, "no provider request"
                     title_model = "gpt-6-luna" if title is True else title
+                    allowed = {expected_model}
+                    if title:
+                        allowed.add(title_model)
+                    if parent_model:
+                        allowed.add(parent_model)
                     assert all(
-                        req["model"]
-                        in (
-                            {expected_model, title_model} if title else {expected_model}
-                        )
+                        req["model"] in allowed
                         for req in requests
                     ), requests
                     if effort:
@@ -588,19 +667,14 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                     )
 
                 def last_tool(sid):
-                    with sqlite3.connect(
-                        f"file:{root / 'data/opencode/opencode.db'}?mode=ro", uri=True
-                    ) as db:
-                        tools = [
-                            part
-                            for (data,) in db.execute(
-                                "SELECT data FROM session_message WHERE session_id=? AND type='assistant' ORDER BY seq",
-                                (sid,),
-                            )
-                            for part in json.loads(data).get("content", [])
-                            if part["type"] == "tool"
-                        ]
-                    return tools[-1]["state"]
+                    # API hydration includes 2.4's split parts as well as legacy inline rows.
+                    return next(
+                        part["state"]
+                        for message in api(f"session/{sid}/message?limit=100")["data"]
+                        if message["type"] == "assistant"
+                        for part in reversed(message.get("content", []))
+                        if part["type"] == "tool"
+                    )
 
                 if limits_only:
                     assert (
@@ -707,6 +781,7 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                     {"parentID": session_id, "agent": "explore", "title": "Child"},
                 )["data"]["id"]
                 prompt(child, "big-pickle")
+                snapshot = parent_snapshot(child)
                 start = len(MockResponses.requests)
                 MockResponses.fail_next = True
                 api(f"session/{child}/prompt", {"text": "Error fixture"})
@@ -714,10 +789,14 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                     api(f"experimental/session/{child}/wait", {}, "POST")
                 except urllib.error.HTTPError as error:
                     assert error.code == 503, error
+                settle_parent(snapshot, child)
                 assert (
-                    len(MockResponses.requests[start:]) == 1
-                    and MockResponses.requests[-1]["model"] == "big-pickle"
-                )
+                    len(MockResponses.requests[start:]) == 2
+                    and all(r["model"] == "big-pickle" for r in MockResponses.requests[start:])
+                    and api(f"session/{child}")["data"]["outcome"] == "failed"
+                ), {"models": [r["model"] for r in MockResponses.requests[start:]],
+                    "session": api(f"session/{child}"),
+                    "messages": api(f"session/{child}/message?limit=5")}
                 print("PASS: provider error does not fall back to a paid provider")
                 paid = json.loads(
                     (SOURCE / "plugins/model-routing/routing-models.json").read_text()
@@ -736,7 +815,7 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                     },
                     "PATCH",
                 )
-                prompt(child, "gpt-6-luna", "max")
+                prompt(child, "gpt-6-luna", "max", parent_model="gpt-6.1-sol")
                 api(f"session/{session_id}/agent", {"agent": "plan"})
                 prompt(session_id, "gpt-6.1-sol", "xhigh")
                 start = len(MockResponses.requests)
@@ -759,9 +838,10 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                     compact_requests and compact_requests[0]["model"] == "gpt-6.1-sol"
                 ), compact_requests
                 assert (
-                    compact_requests[0].get("reasoning", {}).get("effort") == "high"
+                    compact_requests[0].get("reasoning", {}).get("effort") == ("xhigh" if native else "high")
                 ), compact_requests
-                print("PASS: paid compaction uses High after Plan XHigh")
+                print("PASS: paid native compaction preserves Plan XHigh" if native else
+                      "PASS: paid textual compaction uses High after Plan XHigh")
                 if native:
                     assert any(
                         item.get("type") == "compaction_trigger"
@@ -782,40 +862,35 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                     )
                 )
                 assert report["storage"] == "v2", report
+                # Seven original usage samples plus three resumed-parent replies.
                 assert (
-                    report["totals"]["input"] == 140
-                    and report["totals"]["output"] == 28
+                    report["totals"]["input"] == 200
+                    and report["totals"]["output"] == 40
                 ), report["totals"]
                 assert (
-                    report["processed_total_tokens"] == 168
+                    report["processed_total_tokens"] == 240
                     and report["compactions"] == 2
                 ), report
                 calls = report["model_calls"]
-                assert {row["kind"] for row in calls} == {
-                    "primary",
-                    "title",
-                    "generate",
-                    "compaction",
-                }, calls
-                assert any(
-                    row["kind"] == "title"
-                    and row["wireModel"] == "gpt-6-luna"
-                    and row["effort"] == "low"
-                    for row in calls
-                ), calls
-                assert any(
-                    row["sessionID"] == child
-                    and row["agent"] == "explore"
-                    and row.get("http_status") == 400
-                    for row in calls
-                ), calls
-                assert all(row.get("http_status") in (200, 400) for row in calls), calls
-                assert any(
-                    row["kind"] == "primary"
-                    and row.get("variant") == "xhigh"
-                    and row.get("effort") == "xhigh"
-                    for row in calls
-                ), calls
+                if model_calls_enabled:
+                    assert {row["kind"] for row in calls} == {
+                        "primary", "title", "generate", "compaction",
+                    }, calls
+                    assert any(
+                        row["kind"] == "title" and row["wireModel"] == "gpt-6-luna"
+                        and row["effort"] == "low" for row in calls
+                    ), calls
+                    assert any(
+                        row["sessionID"] == child and row["agent"] == "explore"
+                        and row.get("http_status") == 400 for row in calls
+                    ), calls
+                    assert all(row.get("http_status") in (200, 400) for row in calls), calls
+                    assert any(
+                        row["kind"] == "primary" and row.get("variant") == "xhigh"
+                        and row.get("effort") == "xhigh" for row in calls
+                    ), calls
+                else:
+                    assert calls == [], calls
                 recent = json.loads(
                     subprocess.check_output(
                         [
@@ -861,10 +936,10 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                         env=env,
                     )
                 )
-                assert any(
+                assert (any(
                     row["kind"] == "title" and row["wireModel"] == "big-pickle"
                     for row in free_report["model_calls"]
-                ), free_report["model_calls"]
+                ) if model_calls_enabled else free_report["model_calls"] == []), free_report["model_calls"]
                 retry_session = api("session", {"title": "Retry fixture"})["data"]["id"]
                 start = len(MockResponses.requests)
                 MockResponses.fail_next, MockResponses.fail_status = True, 429
@@ -885,10 +960,9 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                         env=env,
                     )
                 )
-                assert [r.get("http_status") for r in retry_report["model_calls"]] == [
-                    429,
-                    200,
-                ], retry_report["model_calls"]
+                assert [r.get("http_status") for r in retry_report["model_calls"]] == (
+                    [429, 200] if model_calls_enabled else []
+                ), retry_report["model_calls"]
                 if not native:
                     sid = api(
                         "session",
@@ -927,29 +1001,23 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                     ]:
                         MockResponses.next_tool_command = command
                         prompt(sid, "gpt-6.1-sol", "high")
-                        with sqlite3.connect(
-                            f"file:{root / 'data/opencode/opencode.db'}?mode=ro",
-                            uri=True,
-                        ) as db:
-                            tools = [
-                                part
-                                for (data,) in db.execute(
-                                    "SELECT data FROM session_message WHERE session_id=? AND type='assistant' ORDER BY seq",
-                                    (sid,),
-                                )
-                                for part in json.loads(data).get("content", [])
-                                if part["type"] == "tool"
-                            ]
+                        state = last_tool(sid)
                         assert (
-                            tools
-                            and (tools[-1]["state"]["status"] == "error") == denied
-                        ), tools[-1:]
+                            (state["status"] == "error") == denied
+                        ), state
                         assert not marker.exists(), (
                             "compound command executed before policy denial"
                         )
                     print(
                         "PASS: native shell parser enforces Git policies over saved Always, including compound/-C and cached show -n"
                     )
+                    tool_report = json.loads(subprocess.check_output(
+                        [sys.executable, str(SOURCE / "scripts/task-report.py"),
+                         "--session", sid, "--json"], env=env,
+                    ))
+                    assert tool_report["tools"]["shell"]["calls"] == 4, tool_report["tools"]
+                    assert tool_report["tools"]["shell"]["errors"] == 3, tool_report["tools"]
+                    print("PASS: read-only accounting hydrates actual split tool parts (four calls, three denials)")
                     history = root / "state/opencode/permission-history.jsonl"
                     rows = [
                         json.loads(line) for line in history.read_text().splitlines()
@@ -975,7 +1043,9 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                         ],
                     },
                 )["data"]["id"]
-                for skill_id in ["discussion-map", "missing-fixture-skill"]:
+                # Tool-invocation accounting uses an auto-invoked skill. Manual
+                # @discussion-map/TUI execution is separate pending acceptance.
+                for skill_id in ["git-regression-rollback", "missing-fixture-skill"]:
                     MockResponses.next_tool_skill = skill_id
                     prompt(skill_session, "gpt-6.1-sol", "high")
                 skill_report = json.loads(
@@ -991,7 +1061,7 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
                     )
                 )
                 observed = {row["skill"]: row for row in skill_report["skills"]}
-                assert observed["discussion-map"]["completed"] == 1, skill_report
+                assert observed["git-regression-rollback"]["completed"] == 1, skill_report
                 assert observed["missing-fixture-skill"]["error"] == 1, skill_report
                 assert len(skill_report["examples"]) == 2, skill_report
                 assert all(
@@ -1350,6 +1420,11 @@ def main(binary, catalog_only=False, mac=False, native=False, limits_only=False)
             except Exception:
                 log.flush()
                 text = log_path.read_text()
+                artifacts = os.environ.get("OPENCODE_TEST_ARTIFACT_DIR")
+                if artifacts:
+                    target = Path(artifacts)
+                    target.mkdir(parents=True, exist_ok=True, mode=0o700)
+                    (target / "v2-server.log").write_text(text)
                 print(text[-7000:], file=sys.stderr)
                 raise
             finally:

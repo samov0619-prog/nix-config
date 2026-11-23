@@ -64,9 +64,12 @@ before/after, не точная токенная разбивка источни
 - [Mac README](../../home/apps/opencode/macos/README.md) — отдельный корпоративный
   перенос. Сохранять corporate models/proxy/MCP/permissions/voice и стандартные
   звуки; не копировать home routing/quota/custom audio или auth/`.git` в пакет.
-- `home/apps/opencode/config/AGENTS.md` — **устанавливаемые домашние глобальные
-  правила**, не корневой файл этого репозитория. `config/v2-settings.nix` — native
-  settings; `default.nix` — установка; `package.nix` — патчи binary.
+- `home/apps/opencode/config/AGENTS.md` — переносимые личные правила, не корневой
+  файл этого репозитория и не готовый HM output. `config/instructions.nix` явно
+  собирает общий + `AGENTS.home.md` для HM (Linux/Mac); отдельные corporate и
+  corporate-personal варианты предназначены только для самостоятельного порта.
+  `config/v2-settings.nix` — native settings; `default.nix` — установка;
+  `package.nix` — патчи binary. Состав и границы — в README компонента.
 - [Прежний подробный контекст](reference.md#home-opencode) — редкие migration,
   metadata, cached-plugin и TUI детали. RLM/V1 — архив, не активные компоненты.
 

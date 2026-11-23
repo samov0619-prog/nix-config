@@ -107,6 +107,29 @@ class ReviewTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unknown watched input"):
             review.snapshot(self.root, self.registry)
 
+    def test_nested_toolchain_pin_is_watched_independently(self):
+        lock = json.loads((self.root / "flake.lock").read_text())
+        lock["nodes"]["root"]["inputs"]["opencode"] = "oc"
+        lock["nodes"]["oc"] = {"locked": {"rev": "release"}, "inputs": {"nixpkgs": "stable"}}
+        self.write("flake.lock", json.dumps(lock))
+        self.entry["inputs"] = ["opencode", "opencode/nixpkgs"]
+        before = review.snapshot(self.root, self.registry)
+        self.assertEqual(before["inputs"]["opencode/nixpkgs"], before["inputs"]["nixpkgs"])
+        lock["nodes"]["stable"]["locked"]["rev"] = "new-toolchain"
+        self.write("flake.lock", json.dumps(lock))
+        after = review.snapshot(self.root, self.registry)
+        self.assertEqual(before["inputs"]["opencode"], after["inputs"]["opencode"])
+        self.assertNotEqual(before["inputs"]["opencode/nixpkgs"], after["inputs"]["opencode/nixpkgs"])
+        # The same lookup works if the nested input follows a root input.
+        lock["nodes"]["oc"]["inputs"]["nixpkgs"] = ["nixpkgs"]
+        self.write("flake.lock", json.dumps(lock))
+        self.assertEqual(review.snapshot(self.root, self.registry), after)
+
+    def test_unknown_nested_input_is_error(self):
+        self.entry["inputs"] = ["nixpkgs/typo"]
+        with self.assertRaisesRegex(ValueError, "Unknown watched input"):
+            review.snapshot(self.root, self.registry)
+
     def test_unknown_source_is_error(self):
         result = self.command("--source", f"typo={self.source}")
         self.assertEqual(result.returncode, 1)

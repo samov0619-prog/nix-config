@@ -23,13 +23,13 @@
 
 ## Разделение слоёв
 
-| Слой | Содержание |
-| --- | --- |
-| `opencode/AGENTS.md` | Только новый **Requirements Sources**: поиск источника задачи/ТЗ, связь с target, применимость, ревизия, доступ и scoped exceptions |
-| `opencode-local/AGENTS-personal.md` | Личные review-workflows и Goals and Approach; уже подключён существующим personal JSONC |
-| `opencode-local/review-analysis.md`, `review-system.md` | Личные policies анализа и delegated read-only выполнения |
-| `opencode-local/commands/delegated-review*.md`, `agents/review.md` | Личные templates и reviewer; прямое чтение личных policy-путей |
-| Три прежних симлинка в `opencode/commands/` и `opencode/agents/` | Только native discovery; сохраняются без пересоздания |
+| Слой                                                               | Содержание                                                                                                                          |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `opencode/AGENTS.md`                                               | Только новый **Requirements Sources**: поиск источника задачи/ТЗ, связь с target, применимость, ревизия, доступ и scoped exceptions |
+| `opencode-local/AGENTS-personal.md`                                | Личные review-workflows и Goals and Approach; уже подключён существующим personal JSONC                                             |
+| `opencode-local/review-analysis.md`, `review-system.md`            | Личные policies анализа и delegated read-only выполнения                                                                            |
+| `opencode-local/commands/delegated-review*.md`, `agents/review.md` | Личные templates и reviewer; прямое чтение личных policy-путей                                                                      |
+| Три прежних симлинка в `opencode/commands/` и `opencode/agents/`   | Только native discovery; сохраняются без пересоздания                                                                               |
 
 В новом командном разделе нет имён личных файлов/команд, routing/recovery,
 Chrome-аудита или зависимости от личного reviewer. Он должен работать с любым
@@ -45,6 +45,12 @@ R3 удаляет только два ошибочно добавленных R2
 
 ## Исходники и перенос
 
+Этот overlay фиксирует выпущенный R3 и не пересобирается при каждой домашней
+правке. Для будущих instruction-файлов использовать явные варианты
+[`config/instructions.nix`](../../config/instructions.nix) по
+[новой схеме экспорта](../README.md#исходники-инструкций),
+не копировать домашний установленный `AGENTS.md`. R3-патч от этого не меняется.
+
 Это **source overlay**, не папка для копирования на Mac. Personal analysis/wrapper
 и Chrome-template здесь связаны с общими исходниками Nix-репозитория; при экспорте
 они материализованы в обычные личные файлы. Code-review-template — обычный Mac
@@ -53,11 +59,11 @@ source: отличается от общей команды только пря�
 
 Командные discovery-ссылки:
 
-| Путь в `opencode/` | Цель |
-| --- | --- |
-| `commands/delegated-review.md` | `../../opencode-local/commands/delegated-review.md` |
+| Путь в `opencode/`                    | Цель                                                       |
+| ------------------------------------- | ---------------------------------------------------------- |
+| `commands/delegated-review.md`        | `../../opencode-local/commands/delegated-review.md`        |
 | `commands/delegated-review-chrome.md` | `../../opencode-local/commands/delegated-review-chrome.md` |
-| `agents/review.md` | `../../opencode-local/agents/review.md` |
+| `agents/review.md`                    | `../../opencode-local/agents/review.md`                    |
 
 JSON/CLI config, providers/MCP, plugins, аудио, auth, `.git`, permissions,
 `OPENCODE_CONFIG` и `/problem-brief` не меняются. Личные файлы и discovery-ссылки

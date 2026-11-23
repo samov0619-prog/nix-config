@@ -17,10 +17,11 @@
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-26.05";
     nixpkgs-unstable.url = "nixpkgs/nixpkgs-unstable";
+    # Keep OpenCode's supported build/toolchain pin independent of desktop unstable.
+    opencode.url = "github:anomalyco/opencode/v2.4.0";
     # Lenovo kernel only: released stable kernels can precede channel promotion.
     # linux_latest selects a released kernel, never linux_testing/RC.
     nixpkgs-kernel.url = "github:NixOS/nixpkgs/master";
-    opencode.url = "github:anomalyco/opencode/v2.1.4";
 
     home-manager = {
       url = "github:nix-community/home-manager/release-26.05";
@@ -61,6 +62,7 @@
       self,
       nixpkgs,
       nixpkgs-unstable,
+      opencode,
       nixpkgs-kernel,
       home-manager,
       browser-previews,
@@ -70,7 +72,6 @@
       nix-gc-env,
       xremap-flake,
       hermes-agent,
-      opencode,
       server-settings,
       ...
     }:
@@ -160,12 +161,12 @@
         meta.description = "Temporary userspace AWG 3.1 tunnel for the live installer";
       };
       packages.x86_64-linux.opencode = import ./home/apps/opencode/package.nix {
-        upstream = opencode.packages.x86_64-linux.opencode;
-        pkgs = pkgsFor systems.linux [ ];
+        upstream = opencode.packages.${systems.linux}.opencode;
+        pkgs = opencode.inputs.nixpkgs.legacyPackages.${systems.linux};
       };
       packages.aarch64-darwin.opencode = import ./home/apps/opencode/package.nix {
-        upstream = opencode.packages.aarch64-darwin.opencode;
-        pkgs = pkgsFor systems.mac [ ];
+        upstream = opencode.packages.${systems.mac}.opencode;
+        pkgs = opencode.inputs.nixpkgs.legacyPackages.${systems.mac};
       };
 
       overlays = {

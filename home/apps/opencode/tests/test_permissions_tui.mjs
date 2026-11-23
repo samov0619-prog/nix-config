@@ -141,8 +141,16 @@ test("HM co-locates plain TypeScript modules; no JSX, private UI imports or UI p
         `f: (f {
       pkgs = { stdenv.isLinux = true; formats.json = _: {};
         runCommand = name: attrs: script: { inherit name script; }; };
-      lib.optionalAttrs = condition: attrs: if condition then attrs else {};
-      config = {}; opencodePackage = null;
+      lib = {
+        optionalAttrs = condition: attrs: if condition then attrs else {};
+        hasPrefix = prefix: text: builtins.substring 0 (builtins.stringLength prefix) text == prefix;
+      };
+      config = {
+        programs.opencode.todo.enable = true;
+        home.homeDirectory = "/home/fixture";
+        xdg.configHome = "/home/fixture/.config";
+      };
+      opencodePackage = null;
     }).xdg.configFile."opencode/plugins/permissions".source`,
       ],
       { timeout: 10000 },

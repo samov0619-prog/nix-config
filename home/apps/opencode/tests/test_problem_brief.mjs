@@ -17,12 +17,20 @@ required by the user's request.`;
 // Reconstruct the initial artifacts by reversing only the authorized edits.
 // This bounds textual changes; it does not test real-model scope selection.
 test("prompt retains the original bytes outside Scope and the local-reading rule", () => {
-  const scope = commandText.match(/^## Scope\n[\s\S]*?\n\n(?=## Priorities)/m)?.[0];
+  const scope = commandText.match(
+    /^## Scope\n[\s\S]*?\n\n(?=## Priorities)/m,
+  )?.[0];
   assert.ok(scope);
   assert.ok(commandText.includes(localReading));
   const original = commandText
-    .replace(scope, "Focus: $ARGUMENTS\nIf no focus is provided, use the latest relevant report or discussion\nin the current session.\n\n")
-    .replace(localReading, "Do not perform new research, run tests, or modify files.");
+    .replace(
+      scope,
+      "Focus: $ARGUMENTS\nIf no focus is provided, use the latest relevant report or discussion\nin the current session.\n\n",
+    )
+    .replace(
+      localReading,
+      "Do not perform new research, run tests, or modify files.",
+    );
   const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
   assert.equal(
     hash(original),
@@ -42,7 +50,8 @@ test("scope covers the preceding response, explicit requests and read-only local
     "status or summary of completed work, report it directly",
     "Do not conduct external research, run tests, or modify files",
     "required by the user's request",
-  ]) assert.ok(flat.includes(marker), marker);
+  ])
+    assert.ok(flat.includes(marker), marker);
   assert.doesNotMatch(commandText, /Focus:|If no focus is provided/);
 });
 
@@ -51,7 +60,8 @@ test("guide documents the new scope without changing the original example or qua
     "/problem-brief по всей текущей сессии",
     "/problem-brief перечисли последние 5 коммитов и кратко объясни изменения",
     "/problem-brief что осталось незавершённым в авторизации",
-  ]) assert.ok(guideText.includes(example), example);
+  ])
+    assert.ok(guideText.includes(example), example);
   const original = guideText
     .replace(/^### Область анализа и аргументы\n[\s\S]*?(?=### Пример)/m, "")
     .replace(
@@ -87,14 +97,20 @@ test("selected HM declarations install exact sources with guide outside commands
     execFileSync(
       "nix",
       [
-        "eval", "--offline", "--json", "--file",
+        "eval",
+        "--offline",
+        "--json",
+        "--file",
         fileURLToPath(new URL("../default.nix", import.meta.url)),
         "--apply",
         `f: let
           files = (f {
             pkgs.stdenv.isLinux = true;
             lib.optionalAttrs = condition: attrs: if condition then attrs else {};
-            config = {};
+            lib.hasPrefix = prefix: text: builtins.substring 0 (builtins.stringLength prefix) text == prefix;
+            config.programs.opencode.todo.enable = true;
+            config.xdg.configHome = "/home/fixture/.config";
+            config.home.homeDirectory = "/home/fixture";
             opencodePackage = null;
           }).xdg.configFile;
         in {

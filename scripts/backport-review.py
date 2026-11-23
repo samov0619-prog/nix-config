@@ -51,7 +51,15 @@ def snapshot(root, registry):
     for entry in registry["entries"]:
         for name in entry["inputs"]:
             if name not in inputs:
-                raise ValueError(f"Unknown watched input: {name}")
+                # Nested pins can change without their parent's source revision
+                # changing (for example an overridden upstream build toolchain).
+                node = root_node
+                try:
+                    for component in name.split("/"):
+                        node = resolve(node["inputs"][component])
+                except KeyError as error:
+                    raise ValueError(f"Unknown watched input: {name}") from error
+                inputs[name] = digest(json.dumps(node.get("locked", {}), sort_keys=True).encode())
     files = sorted({p for entry in registry["entries"] for p in entry["watch"] + entry["patches"]})
     return {
         "inputs": inputs,

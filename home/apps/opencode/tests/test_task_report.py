@@ -1,8 +1,11 @@
 import importlib.util
 from contextlib import closing
 import json
+import os
 from pathlib import Path
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -140,6 +143,36 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(result["by_model"]["opencode/big-pickle"]["input"], 35)
         self.assertNotIn("private", json.dumps(result))
 
+    def test_v240_split_parts_precede_inline_without_losing_tools_or_duplicating_tokens(self):
+        self.db.executescript("""
+          CREATE TABLE session_v2(id TEXT, parent_id TEXT, time_created INTEGER);
+          CREATE TABLE session_message(id TEXT, session_id TEXT, type TEXT, seq INTEGER, time_created INTEGER, data TEXT);
+          CREATE TABLE session_part(message_id TEXT, session_id TEXT, ordinal INTEGER, data TEXT);
+          INSERT INTO session_v2 VALUES ('root',NULL,0);
+        """)
+        info = {"model": {"providerID": "p", "id": "m"}, "time": {"completed": 99},
+                "tokens": self.assistant(10)["tokens"], "cost": 0,
+                "content": [{"type": "text", "text": "inline"}]}
+        self.db.execute("INSERT INTO session_message VALUES ('a','root','assistant',1,1,?)", (json.dumps(info),))
+        parts = [
+            {"type": "text", "text": "split"},
+            {"type": "tool", "name": "read", "state": {
+                "status": "completed", "content": [{"type": "text", "text": "private output"}]}},
+            {"type": "tool", "name": "shell", "state": {"status": "error", "content": []}},
+        ]
+        # Insertion order is deliberately not ordinal order.
+        for ordinal in [2, 0, 1]:
+            self.db.execute("INSERT INTO session_part VALUES ('a','root',?,?)", (ordinal, json.dumps(parts[ordinal])))
+        loaded = module.load_messages(self.db, "root", v2=True)[0][2]["_parts"]
+        self.assertEqual([part["type"] for part in loaded], ["text", "tool", "tool", "text"])
+        result = module.report(self.db, "root", self.path)
+        self.assertEqual(result["totals"]["input"], 10)
+        self.assertEqual(result["totals"]["assistant_text_chars"], 11)
+        self.assertEqual(result["tools"]["read"]["stored_output_chars"], 14)
+        self.assertEqual(result["tools"]["shell"]["calls"], 1)
+        self.assertEqual(result["tools"]["shell"]["errors"], 1)
+        self.assertNotIn("private", json.dumps(result))
+
     def test_recent_sessions_merge_versions_without_duplicate_legacy_copies(self):
         self.db.executescript("""
           ALTER TABLE session ADD COLUMN version TEXT DEFAULT '1';
@@ -151,6 +184,39 @@ class ReportTests(unittest.TestCase):
         self.assertEqual([row["id"] for row in rows], ["new", "root", "native"])
         self.assertEqual(rows[1]["version"], "2")
         self.assertEqual(len(module.recent_sessions(self.db, 1)), 1)
+
+    def test_cli_split_parts_and_readonly_database(self):
+        self.db.executescript("""
+          CREATE TABLE session_v2(id TEXT, parent_id TEXT, time_created INTEGER);
+          CREATE TABLE session_message(id TEXT, session_id TEXT, type TEXT, seq INTEGER, time_created INTEGER, data TEXT);
+          CREATE TABLE session_part(message_id TEXT, session_id TEXT, ordinal INTEGER, data TEXT);
+          INSERT INTO session_v2 VALUES ('root',NULL,0);
+        """)
+        info = {"model": {"providerID": "p", "id": "m"}, "time": {"completed": 99},
+                "tokens": self.assistant(10)["tokens"], "cost": 0, "content": []}
+        self.db.execute("INSERT INTO session_message VALUES ('a','root','assistant',1,1,?)", (json.dumps(info),))
+        part = {"type": "tool", "name": "shell", "state": {
+            "status": "error", "content": [{"type": "text", "text": "PRIVATE OUTPUT"}]}}
+        self.db.execute("INSERT INTO session_part VALUES ('a','root',0,?)", (json.dumps(part),))
+        self.db.commit()
+        target = self.path / "fixture.db"
+        with closing(sqlite3.connect(target)) as disk:
+            self.db.backup(disk)
+        before = target.read_bytes()
+        wrapper = os.environ.get("OPENCODE_TEST_REPORT_WRAPPER")
+        command = [wrapper] if wrapper else [sys.executable, "-B", str(Path(module.__file__))]
+        # Explicit fixture paths keep the installed wrapper away from live data.
+        output = subprocess.check_output(command + [
+            "--db", str(target), "--session", "root", "--usage-dir", str(self.path / "usage"),
+            "--calls-dir", str(self.path / "calls"), "--json",
+        ], text=True, timeout=10)
+        result = json.loads(output)
+        self.assertEqual(result["storage"], "v2")
+        self.assertEqual(result["totals"]["input"], 10)
+        self.assertEqual(result["tools"]["shell"]["calls"], 1)
+        self.assertEqual(result["tools"]["shell"]["errors"], 1)
+        self.assertNotIn("PRIVATE", output)
+        self.assertEqual(target.read_bytes(), before)
 
     def test_model_calls_include_title_children_and_attempts_without_adding_tokens(self):
         calls = self.path / "calls"

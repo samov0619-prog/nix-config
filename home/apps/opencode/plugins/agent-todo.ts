@@ -14,6 +14,7 @@ import {
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
+import { TODO_INSTRUCTIONS } from "./agent-todo-instructions.ts";
 import {
   reviewQuestions,
   reviewAnswer,
@@ -1027,7 +1028,9 @@ export async function setupTodo(
       name: "agent_todo_propose",
       options: { codemode: false },
       description:
-        "Propose todo changes after agent_todo_read. Default to English content even for non-English requests; use Russian only when explicitly requested. Preserve supplied artifacts in their original language and wording unless translation of that specific artifact is requested. Prefer changes.add with a short title, meaningful one-sentence summary, goal, returnWhen and optional notes; code generates Markdown and metadata without copying unrelated notes. Use changes.replace for exact unique content edits and changes.update for explicit status/priority changes by stable ID. Priority is High/Normal/Low (default Normal), independent of Visits; status is Todo/In progress/Done. Set sort=true only on request: In progress first, Todo next (priority, visits descending, oldest created first), Done last (newest completed first). Code handles totals and dates. Omit changes for revisit-only proposals; revisited lists deliberate returns only, not reads/retries. Content is only for explicitly requested whole-file restructuring. The TUI shows one scrollable note per tab. Only final Submit without feedback saves the batch in one local commit. Any feedback blocks writing; preserve unaffected drafts and request fresh approval. Reject/Escape declines everything; do not reopen unless asked or bypass confirmation. Stale proposals need rereading and renewed consent.",
+        "Propose todo changes after agent_todo_read. Default to English content even for non-English requests; use Russian only when explicitly requested. Preserve supplied artifacts in their original language and wording unless translation of that specific artifact is requested. Prefer changes.add with a short title, meaningful one-sentence summary, goal, returnWhen and optional notes; code generates Markdown and metadata without copying unrelated notes. Use changes.replace for exact unique content edits and changes.update for explicit status/priority changes by stable ID. Priority is High/Normal/Low (default Normal), independent of Visits; status is Todo/In progress/Done. Set sort=true only on request: In progress first, Todo next (priority, visits descending, oldest created first), Done last (newest completed first). Code handles totals and dates. Omit changes for revisit-only proposals; revisited lists deliberate returns only, not reads/retries. Content is only for explicitly requested whole-file restructuring. The TUI shows one scrollable note per tab. Only final Submit without feedback saves the batch in one local commit. Any feedback blocks writing; preserve unaffected drafts and request fresh approval. Reject/Escape declines everything; do not reopen unless asked or bypass confirmation. Stale proposals need rereading and renewed consent." +
+        "\n\n" +
+        TODO_INSTRUCTIONS,
       input: {
         type: "object",
         properties: {

@@ -4,13 +4,14 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
+import { instructions } from "./instructions.mjs";
 
 const source = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 const command = source("../commands/delegated-review.md");
 const analysis = source("../config/review-analysis.md");
 const reviewer = source("../config/review-system.md");
 const system = analysis + "\n" + reviewer;
-const globalRules = source("../config/AGENTS.md");
+const globalRules = instructions.home;
 const settings = JSON.parse(
   execFileSync(
     "nix",
@@ -28,7 +29,9 @@ const settings = JSON.parse(
 );
 
 test("review config loads the shared prompt and retains the native model/permission policy", () => {
-  const routes = JSON.parse(source("../plugins/model-routing/routing-models.json"));
+  const routes = JSON.parse(
+    source("../plugins/model-routing/routing-models.json"),
+  );
   const route = routes.review ?? routes["*"];
   assert.equal(
     settings.agents.review.model,
@@ -60,10 +63,7 @@ test("the command stays with the orchestrator and has no model override or eager
   assert.doesNotMatch(frontmatter, /^(agent|model|subtask):/m);
   assert.doesNotMatch(command, /!`/);
   const module = source("../default.nix");
-  assert.match(
-    module,
-    /"opencode\/commands\/delegated-review\.md"\.source = \.\/commands\/delegated-review\.md;/,
-  );
+  assert.match(module, /personal-layers\.nix/);
   assert.doesNotMatch(module, /"opencode\/commands\/README\.md"/);
 });
 
@@ -93,14 +93,20 @@ test("recovery instructions preserve identity, cap retries and forbid false comp
   assert.match(command, /Never send a duplicate prompt,/);
   assert.match(command, /Do not bypass a user's cancellation or denied access/);
   assert.match(command, /Native completion\/text alone is insufficient/);
-  assert.match(command, /wait for the actual command or an explicit request to begin/);
+  assert.match(
+    command,
+    /wait for the actual command or an explicit request to begin/,
+  );
   assert.match(command, /Do not guess serialization variants or brute-force/);
   assert.doesNotMatch(command, /Before any invocation/);
 });
 
 test("parent and reviewer prohibit temporary review artifacts, not native runtime storage", () => {
   for (const prompt of [command, system]) {
-    assert.match(prompt, /Do not create temporary helper scripts, manifests, reports or/);
+    assert.match(
+      prompt,
+      /Do not create temporary helper scripts, manifests, reports or/,
+    );
     assert.match(prompt, /even\s+outside the repository/);
     assert.match(prompt, /inline interpreter code/);
     assert.match(prompt, /runtime-managed session\/log storage/);
@@ -151,15 +157,27 @@ test("the published fingerprint recipe has an exact canonical encoding, includin
   const hash = (value) =>
     execFileSync(
       "python3",
-      ["-B", "-c", "import sys, json\nmanifest = json.load(sys.stdin)\n" + recipe],
+      [
+        "-B",
+        "-c",
+        "import sys, json\nmanifest = json.load(sys.stdin)\n" + recipe,
+      ],
       { input: JSON.stringify(value), encoding: "utf8", timeout: 5000 },
     ).trim();
   assert.equal(hash(manifest), expected);
-  assert.equal(hash(Object.fromEntries(Object.entries(manifest).reverse())), expected);
+  assert.equal(
+    hash(Object.fromEntries(Object.entries(manifest).reverse())),
+    expected,
+  );
   const changed = structuredClone(manifest);
   changed.files[0].sha256 = "d".repeat(64);
   assert.notEqual(hash(changed), expected);
-  changed.files[0] = { path: manifest.paths[0], type: "deleted", mode: null, sha256: null };
+  changed.files[0] = {
+    path: manifest.paths[0],
+    type: "deleted",
+    mode: null,
+    sha256: null,
+  };
   assert.notEqual(hash(changed), expected);
 });
 
@@ -193,10 +211,22 @@ test("analysis follows behavior and counterexamples rather than procedural compl
   ]) {
     assert.ok(system.includes(marker), marker);
   }
-  assert.ok(system.indexOf("Analysis comes before") < system.indexOf("When a fingerprint"));
-  assert.match(command, /Do not send the whole command or the parent's recovery ledger/);
-  assert.match(command, /configured reviewer's system prompt owns the analysis/);
-  assert.match(command, /Apply your configured shared analysis\/evidence policy/);
+  assert.ok(
+    system.indexOf("Analysis comes before") <
+      system.indexOf("When a fingerprint"),
+  );
+  assert.match(
+    command,
+    /Do not send the whole command or the parent's recovery ledger/,
+  );
+  assert.match(
+    command,
+    /configured reviewer's system prompt owns the analysis/,
+  );
+  assert.match(
+    command,
+    /Apply your configured shared analysis\/evidence policy/,
+  );
   assert.doesNotMatch(command, /Seek a counterexample to safety claims/);
 });
 
@@ -251,8 +281,8 @@ test("ordinary review stays in the current conversation with no role, model or c
     "context, agent and model unchanged",
     "Do not launch a child, fork the session or",
     "temporarily switch roles merely to perform that review",
-    "read `review-analysis.md` in OpenCode's active global",
-    "respect `XDG_CONFIG_HOME`",
+    "read `~/.config/opencode-local/review-analysis.md`",
+    "directly from the personal layer",
     "Route by intent, not keyword matching",
     "a future or negated request, ordinary implementation/debugging",
     "self-checks do not trigger a separate review workflow",
@@ -263,16 +293,28 @@ test("ordinary review stays in the current conversation with no role, model or c
   ]) {
     assert.ok(globalRules.includes(marker), marker);
   }
-  assert.doesNotMatch(globalRules, /An explicit request to perform a review now/);
-  assert.doesNotMatch(analysis, /The parent owns retry budgets|up to six further|You are a subagent/);
-  assert.doesNotMatch(reviewer, /Before a blocking finding|Calibrate the verdict|Try a concrete counterexample/);
-  assert.match(source("../default.nix"), /"opencode\/review-analysis\.md"\.source = \.\/config\/review-analysis\.md;/);
+  assert.doesNotMatch(
+    globalRules,
+    /An explicit request to perform a review now/,
+  );
+  assert.doesNotMatch(
+    analysis,
+    /The parent owns retry budgets|up to six further|You are a subagent/,
+  );
+  assert.doesNotMatch(
+    reviewer,
+    /Before a blocking finding|Calibrate the verdict|Try a concrete counterexample/,
+  );
+  assert.match(
+    source("../config/personal-layers.nix"),
+    /"review-analysis\.md"\.source = \.\/review-analysis\.md;/,
+  );
 });
 
 test("explicit delegation uses the installed workflow and a fresh configured reviewer", () => {
   for (const marker of [
     "Delegate only on an explicit request for a separate reviewer/delegated review",
-    "applicable installed `commands/delegated-review.md` template",
+    "~/.config/opencode-local/commands/delegated-review.md",
     "without a model/provider/effort override",
     "parent session's agent and model unchanged",
     "If `review` is unavailable or delegation is forbidden",
@@ -286,7 +328,10 @@ test("explicit delegation uses the installed workflow and a fresh configured rev
   assert.match(command, /do not substitute `general`/);
   assert.doesNotMatch(command, /otherwise `general`/);
   assert.match(command, /ordinary review-request routing must not launch/);
-  assert.match(source("../default.nix"), /"opencode\/AGENTS\.md"\.source = \.\/config\/AGENTS\.md;/);
+  assert.match(
+    source("../default.nix"),
+    /"opencode\/AGENTS\.md"\.text = \(import \.\/config\/instructions\.nix\)\.homeBase;/,
+  );
 });
 
 test("delegated defaults and exact handoff remain explicit without a context-clearing layer", () => {
@@ -303,9 +348,16 @@ test("delegated defaults and exact handoff remain explicit without a context-cle
     "no context-clearing step, fork or custom isolation layer is needed",
     "not a security sandbox",
     "Do not retrieve the parent's or unrelated sessions' history",
-  ]) assert.ok(flat.includes(marker), marker);
-  assert.match(reviewer, /Do not retrieve the parent's development conversation or unrelated session history/);
-  assert.match(reviewer, /Read recorded history only when explicitly selected as review evidence/);
+  ])
+    assert.ok(flat.includes(marker), marker);
+  assert.match(
+    reviewer,
+    /Do not retrieve the parent's development conversation or unrelated session history/,
+  );
+  assert.match(
+    reviewer,
+    /Read recorded history only when explicitly selected as review evidence/,
+  );
 });
 
 test("blocking findings and suggested fixes require causal evidence, not compulsory compilation", () => {
@@ -326,6 +378,9 @@ test("blocking findings and suggested fixes require causal evidence, not compuls
   ]) {
     assert.ok(system.includes(marker), marker);
   }
-  assert.match(command, /blocking claim lacks its decisive implementation path/);
+  assert.match(
+    command,
+    /blocking claim lacks its decisive implementation path/,
+  );
   assert.match(command, /request evidence or correction from the same child/);
 });

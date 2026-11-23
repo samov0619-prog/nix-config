@@ -1,0 +1,19 @@
+{
+  "archiveSha256": "c793a32ce23de032e2963e154e7ab8f2f4f88f3f51e00d4f8b514ed03a07ff05",
+  "preserved": {
+    "common/opencode.jsonc": "989653ff5339c5473f2c936a4df9260e5279494b08bb5bf1ce89cab4894c2711",
+    "common/plugins/git-offline/index.ts": "c7c5136bedece18925556501693b33afb40ee76527e1896c0627698ac0dffe7b",
+    "common/plugins/permission-stats/index.ts": "babad901ad8b21f5e734de10a821901b8f715accb2708bcde2cc2a3496bb849a",
+    "common/plugins/permissions/state.ts": "bc5d2e2228caa705aafb5a2260e4e8951ae5506d0ed514e9ef15478287e03c7b",
+    "common/plugins/permissions/tui.ts": "c52fcebb2638d8c4c6296d992e944a23f2d9fecee8c00bb99c8cb1521fd4404e",
+    "common/package.json": "22f536994497c904ea904bbc0ebc2b40e822164c9fa74645db30a5b629a6630e",
+    "common/package-lock.json": "0b24269eaef3626dfccb2b2bdbf314882d5a8faa89f2cb4526462de2b31e0677",
+    "common/scripts/task-report.py": "e4c5c333a052bda6b85aad14bb748b32332af4370c750a2055209c65e95358b3",
+    "common/agent-skills-review-checklist.md": "9e1cf6402625ca92d0e867c66794dddb65f3950e7fa470a5c5f353fee7a07325",
+    "personal-history/update-2026-11-16/INSTALL.md": "382362b45853f96b578adbd5a382a6bc8d23d1fba97668b815a7a86b038378c9",
+    "personal-history/update-2026-11-16/acceptance/goals-and-approach.md": "d0175e82f3c1f7f408ef254e0cb468966df1a61504e9af045da3acf9a3f7c83a",
+    "personal-history/update-2026-11-16/acceptance/requirements/candidate.mjs": "aed66ee782405dbe7aec130c085b5f1e23246497261585ae05911a3f766a56d9",
+    "personal-history/update-2026-11-16/acceptance/requirements/SPEC.md": "34e1c87d617f41bca1444fa9c2dc4fc86c443330cbe1c0b4df96e2e62cf346b0",
+    "personal-history/update-2026-11-16/acceptance/requirements/EVALUATION.md": "5238bede26bd58d7096245aba70833d20d50b7654e09fa846cd4897c86622cad"
+  }
+}

@@ -9,12 +9,22 @@
       "id": "slurp-cursor-shape",
       "kind": "upstream-backport",
       "inputs": ["nixpkgs"],
-      "watch": ["pkgs/slurp-cursor-shape/default.nix", "pkgs/slurp-cursor-shape/tests/test_cursor_shape.py", "pkgs/slurp-cursor-shape/tests/test_install_check.py"],
+      "watch": [
+        "pkgs/slurp-cursor-shape/default.nix",
+        "pkgs/slurp-cursor-shape/tests/test_cursor_shape.py",
+        "pkgs/slurp-cursor-shape/tests/test_install_check.py"
+      ],
       "patches": ["pkgs/slurp-cursor-shape/cursor-shape.patch"],
       "source": "slurp",
       "sourceFiles": ["main.c"],
-      "contract": ["pkgs/slurp-cursor-shape/tests/test_cursor_shape.py", "{source}", "--check-upstream"],
-      "upstream": ["https://github.com/emersion/slurp/commit/0465f03a7949da338d90a0788451815a02b6f1d2"],
+      "contract": [
+        "pkgs/slurp-cursor-shape/tests/test_cursor_shape.py",
+        "{source}",
+        "--check-upstream"
+      ],
+      "upstream": [
+        "https://github.com/emersion/slurp/commit/0465f03a7949da338d90a0788451815a02b6f1d2"
+      ],
       "removeWhen": "Unpatched registry-callback and cleanup/request contracts pass, then native themed/scaled crosshair, cancellation and completion into Swappy pass live; retain regression scenarios and Xcursor fallback.",
       "details": "pkgs/slurp-cursor-shape/README.md"
     },
@@ -25,7 +35,11 @@
       "watch": ["pkgs/blueman-polkit/default.nix"],
       "patches": ["pkgs/blueman-polkit/notification-timeout.patch"],
       "source": "blueman",
-      "contract": ["pkgs/blueman-polkit/tests/test_notification_timeout.py", "{source}", "--check-upstream"],
+      "contract": [
+        "pkgs/blueman-polkit/tests/test_notification_timeout.py",
+        "{source}",
+        "--check-upstream"
+      ],
       "upstream": [],
       "removeWhen": "Unpatched dialog contracts pass: 3s default informational expiry, explicit/zero timeouts, persistent actions and timer cleanup; retain real pairing/status UI acceptance.",
       "details": "pkgs/blueman-polkit/README.md"
@@ -35,9 +49,16 @@
       "kind": "upstream-backport",
       "inputs": ["nixpkgs-kernel"],
       "watch": ["hosts/laptop/bluetooth.nix"],
-      "patches": ["hosts/laptop/btintel-pcie-refresh-dstate.patch", "hosts/laptop/btintel-pcie-pm-flow.patch"],
+      "patches": [
+        "hosts/laptop/btintel-pcie-refresh-dstate.patch",
+        "hosts/laptop/btintel-pcie-pm-flow.patch"
+      ],
       "source": "kernel",
-      "contract": ["hosts/laptop/tests/test_btintel_pm.py", "{source}", "--check-upstream"],
+      "contract": [
+        "hosts/laptop/tests/test_btintel_pm.py",
+        "{source}",
+        "--check-upstream"
+      ],
       "upstream": ["12997a385f71", "2926eb396711"],
       "removeWhen": "All unpatched-source PM/D-state contracts pass; retain harness and verify real Hibernate/Bluetooth separately.",
       "details": "hosts/laptop/bluetooth-pm.md"
@@ -49,7 +70,11 @@
       "watch": ["hosts/laptop/audio.nix"],
       "patches": ["hosts/laptop/pipewire-x11-idempotent.patch"],
       "source": "pipewire",
-      "contract": ["hosts/laptop/tests/test_pipewire_x11.py", "{source}/src/modules/module-x11-bell.c", "--check-upstream"],
+      "contract": [
+        "hosts/laptop/tests/test_pipewire_x11.py",
+        "{source}/src/modules/module-x11-bell.c",
+        "--check-upstream"
+      ],
       "upstream": ["c2fec6c037a1"],
       "removeWhen": "All four idempotent-disconnect contracts pass without the patch; preserve shutdown/audio acceptance checks.",
       "details": "hosts/laptop/boot-errors.md"
@@ -61,8 +86,16 @@
       "watch": ["hosts/laptop/graphics.nix"],
       "patches": ["hosts/laptop/nvidia-init-root.patch"],
       "source": "nvidia",
-      "contract": ["hosts/laptop/tests/test_nvidia_init_root.py", "{source}", "--check-upstream"],
-      "upstream": ["https://github.com/NVIDIA/open-gpu-kernel-modules/issues/1507", "https://github.com/NVIDIA/open-gpu-kernel-modules/pull/1512", "369378dc1552ae46f7f95a598a085c0025e464b3"],
+      "contract": [
+        "hosts/laptop/tests/test_nvidia_init_root.py",
+        "{source}",
+        "--check-upstream"
+      ],
+      "upstream": [
+        "https://github.com/NVIDIA/open-gpu-kernel-modules/issues/1507",
+        "https://github.com/NVIDIA/open-gpu-kernel-modules/pull/1512",
+        "369378dc1552ae46f7f95a598a085c0025e464b3"
+      ],
       "removeWhen": "Unpatched config-open/probe contracts and conftest checks pass; review alternate upstream fixes rather than requiring identical text, then test real idle/wake/Hibernate.",
       "details": "docs/laptop-audit/graphics.md"
     },
@@ -73,7 +106,9 @@
       "watch": ["pkgs/filemanager1-common/default.nix"],
       "patches": ["pkgs/filemanager1-common/localhost-uri.patch"],
       "source": "filemanager",
-      "upstream": ["https://github.com/boydaihungst/org.freedesktop.FileManager1.common"],
+      "upstream": [
+        "https://github.com/boydaihungst/org.freedesktop.FileManager1.common"
+      ],
       "removeWhen": "Run localhost/URI regressions on unpatched source, adapting test_localhost_uri.py; it is not yet an automatic removal harness.",
       "details": "pkgs/filemanager1-common/README.md"
     },
@@ -91,7 +126,10 @@
       "id": "amnezia-routing",
       "kind": "local-bugfix",
       "inputs": ["nixpkgs", "nixpkgs-unstable"],
-      "watch": ["pkgs/amnezia-vpn/default.nix", "pkgs/amnezia-vpn/linux-default-route.h"],
+      "watch": [
+        "pkgs/amnezia-vpn/default.nix",
+        "pkgs/amnezia-vpn/linux-default-route.h"
+      ],
       "patches": ["pkgs/amnezia-vpn/linux-routing.patch"],
       "source": "amnezia",
       "upstream": ["https://github.com/amnezia-vpn/amnezia-client/pull/3231"],
@@ -102,7 +140,10 @@
       "id": "amnezia-readiness",
       "kind": "local-bugfix",
       "inputs": ["nixpkgs", "nixpkgs-unstable"],
-      "watch": ["pkgs/amnezia-vpn/default.nix", "pkgs/amnezia-vpn/linux-connection-state.h"],
+      "watch": [
+        "pkgs/amnezia-vpn/default.nix",
+        "pkgs/amnezia-vpn/linux-connection-state.h"
+      ],
       "patches": ["pkgs/amnezia-vpn/linux-network-readiness.patch"],
       "source": "amnezia",
       "upstream": ["https://github.com/amnezia-vpn/amnezia-client"],
@@ -133,9 +174,17 @@
       "id": "amnezia-awg31-selection",
       "kind": "temporary-selection",
       "inputs": ["nixpkgs", "nixpkgs-unstable"],
-      "watch": ["pkgs/amnezia-vpn/default.nix", "pkgs/amneziawg-3.1/go.nix", "pkgs/amneziawg-3.1/tools.nix", "flake.nix"],
+      "watch": [
+        "pkgs/amnezia-vpn/default.nix",
+        "pkgs/amneziawg-3.1/go.nix",
+        "pkgs/amneziawg-3.1/tools.nix",
+        "flake.nix"
+      ],
       "patches": [],
-      "upstream": ["https://github.com/amnezia-vpn/amnezia-client/pull/2840", "https://github.com/amnezia-vpn/amnezia-client/pull/3231"],
+      "upstream": [
+        "https://github.com/amnezia-vpn/amnezia-client/pull/2840",
+        "https://github.com/amnezia-vpn/amnezia-client/pull/3231"
+      ],
       "removeWhen": "Official client newer than broken 5.0.3.0 includes address/routes fixes, compatible AWG3.1 backend and daemon PATH, and passes live connection/split-routing checks. Installer/server shared backend pins are a separate compatibility obligation.",
       "details": "pkgs/amnezia-vpn/README.md"
     },
@@ -165,7 +214,10 @@
       "id": "onionbell-tests",
       "kind": "test-only",
       "inputs": ["nixpkgs"],
-      "watch": ["pkgs/onionbell/default.nix", "pkgs/onionbell/tests/ipc-tests.rs"],
+      "watch": [
+        "pkgs/onionbell/default.nix",
+        "pkgs/onionbell/tests/ipc-tests.rs"
+      ],
       "patches": ["pkgs/onionbell/tests/ipc-test-harness.patch"],
       "upstream": [],
       "removeWhen": "Retain regression coverage after fixes are removed; adapt harness on upstream API changes rather than deleting tests.",
@@ -213,11 +265,31 @@
       "details": "docs/laptop-audit/archives.md"
     },
     {
+      "id": "opencode-node-modules-hashes",
+      "kind": "packaging-compatibility",
+      "inputs": ["opencode", "opencode/nixpkgs"],
+      "watch": [
+        "home/apps/opencode/package.nix",
+        "home/apps/opencode/tests/test_upstream_package.mjs"
+      ],
+      "patches": [],
+      "upstream": [
+        "https://github.com/anomalyco/opencode/pull/65824",
+        "https://github.com/anomalyco/opencode/commit/7268011db4b9871f74403f4167c5f3f63d9fbb5f"
+      ],
+      "removeWhen": "The pinned upstream provides correct node_modules hashes for both configured platforms with a compatible dependency recipe/toolchain; remove this hash-only override and retain package fixture checks, then verify actual fixed-output and OpenCode builds per platform. A version bump or one platform's success alone is insufficient.",
+      "details": "home/apps/opencode/BENCHMARK.md"
+    },
+    {
       "id": "opencode-routing",
       "kind": "customization",
-      "inputs": ["opencode"],
+      "inputs": ["opencode", "opencode/nixpkgs"],
       "watch": ["home/apps/opencode/package.nix"],
-      "patches": ["home/apps/opencode/patches/session-routing.patch", "home/apps/opencode/patches/manual-model-routing.patch", "home/apps/opencode/patches/model-variants.patch"],
+      "patches": [
+        "home/apps/opencode/patches/session-routing.patch",
+        "home/apps/opencode/patches/manual-model-routing.patch",
+        "home/apps/opencode/patches/model-variants.patch"
+      ],
       "source": "opencode",
       "upstream": [],
       "removeWhen": "Only replace after native session-family/helper/effort routing and legacy alias migration satisfy the documented policy through runtime and real TUI tests; not automatically obsolete on a release bump.",
@@ -226,8 +298,11 @@
     {
       "id": "opencode-attention",
       "kind": "customization",
-      "inputs": ["opencode"],
-      "watch": ["home/apps/opencode/package.nix", "home/apps/opencode/patches/session-attention.ts"],
+      "inputs": ["opencode", "opencode/nixpkgs"],
+      "watch": [
+        "home/apps/opencode/package.nix",
+        "home/apps/opencode/patches/session-attention.ts"
+      ],
       "patches": ["home/apps/opencode/patches/session-attention.patch"],
       "source": "opencode",
       "upstream": [],
@@ -237,7 +312,7 @@
     {
       "id": "opencode-question-location",
       "kind": "local-bugfix",
-      "inputs": ["opencode"],
+      "inputs": ["opencode", "opencode/nixpkgs"],
       "watch": ["home/apps/opencode/package.nix"],
       "patches": ["home/apps/opencode/patches/question-location.patch"],
       "source": "opencode",
@@ -248,10 +323,11 @@
     {
       "id": "opencode-theme-cache",
       "kind": "local-bugfix",
-      "inputs": ["opencode"],
+      "inputs": ["opencode", "opencode/nixpkgs"],
       "watch": ["home/apps/opencode/package.nix"],
       "patches": ["home/apps/opencode/patches/theme-mode-cache.patch"],
       "source": "opencode",
+      "notes": "OpenCode 2.3.0 includes the exact startup priority fix; the original patch is retained but not applied. Source policy and native stale/fresh-cache PTY controls pass on 2.4.0; the user confirmed live theme switching. Retain regression coverage and the reference patch; this does not authorize final removal.",
       "upstream": [],
       "removeWhen": "Unpatched stale-cache/fresh-cache PTY controls follow fresh renderer appearance while explicit theme locks win; retain policy tests and user caches.",
       "details": "home/apps/opencode/BENCHMARK.md"
@@ -260,7 +336,10 @@
       "id": "waybar-profile-tooltip",
       "kind": "customization",
       "inputs": ["nixpkgs"],
-      "watch": ["home/linux/laptop/waybar/package.nix", "home/linux/laptop/waybar/power-profile-cycle.hpp"],
+      "watch": [
+        "home/linux/laptop/waybar/package.nix",
+        "home/linux/laptop/waybar/power-profile-cycle.hpp"
+      ],
       "patches": ["home/linux/laptop/waybar/power-profile-tooltip.patch"],
       "source": "waybar",
       "upstream": [],
@@ -275,7 +354,10 @@
       "patches": [],
       "source": "bluez-stable",
       "sourceFiles": ["src/adapter.c"],
-      "contract": ["hosts/laptop/tests/test_bluez.py", "{source}/src/adapter.c"],
+      "contract": [
+        "hosts/laptop/tests/test_bluez.py",
+        "{source}/src/adapter.c"
+      ],
       "upstream": [],
       "removeWhen": "Stable source passes all seven empty-default/request/cleanup cases in test_bluez.py and real Bluetooth behavior is accepted; former 5.86 backport is already removed.",
       "details": "hosts/laptop/boot-errors.md"

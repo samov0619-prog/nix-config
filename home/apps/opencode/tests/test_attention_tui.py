@@ -75,7 +75,7 @@ def main(binary):
         todo_plugin.parent.mkdir(parents=True)
         if generation:
             todo_plugin.symlink_to(
-                Path(generation) / "home-files/.config/opencode/plugins/agent-todo-v2",
+                Path(generation) / "home-files/.config/opencode-local/plugins/agent-todo",
                 target_is_directory=True,
             )
         else:
@@ -84,6 +84,7 @@ def main(binary):
                 (SOURCE / "plugins/agent-todo.ts").read_text()
             )
             for source, target in [
+                ("agent-todo-instructions.ts", "agent-todo-instructions.ts"),
                 ("agent-todo-review.ts", "agent-todo-review.ts"),
                 ("agent-todo-tui.tsx", "tui.tsx"),
             ]:
@@ -227,6 +228,7 @@ def main(binary):
                 clients[pane] = (process, master)
 
             def prompt(sid, error=False):
+                before = {pane: len(records(pane)) for pane in clients}
                 if error:
                     MockResponses.fail_next = True
                 api(f"session/{sid}/prompt", {"text": "Reply briefly."})
@@ -243,7 +245,7 @@ def main(binary):
                     lambda: all(
                         any(
                             row.get("event") == event and row.get("sessionID") == sid
-                            for row in records(pane)
+                            for row in records(pane)[before[pane]:]
                         )
                         for pane in clients
                     ),
@@ -299,13 +301,17 @@ def main(binary):
                 for target in [background, a]:
                     (root / "state/attention-101.route").write_text(target)
                     wait(
-                        lambda: route("101").get("sessionID") == target,
+                        lambda: (
+                            (state := json.loads((root / "state/attention-101.state").read_text()))["route"].get("sessionID") == target
+                            and state["hydrated"]
+                            and any(tab["sessionID"] == target for tab in state["tabs"])
+                        ),
                         "Did not select background tab and return",
                     )
                 before_a = urgency("101")
                 before_b = urgency("202")
                 prompt(background)
-                assert sounds("101") == ["done", "done"]
+                assert sounds("101") == ["done", "done"], (records("101"), records("202"))
                 assert sounds("202") == ["done"]
                 assert urgency("101") > before_a and urgency("202") == before_b
                 print("PASS: inactive internal tab notifies its owner, not the other global-tab client")
@@ -554,6 +560,7 @@ def main(binary):
                     "replace",
                     "save",
                 ]:
+                    before_events = {pane: len(records(pane)) for pane in clients}
                     MockResponses.next_tool = ("agent_todo_propose", batch)
                     api(f"session/{a}/prompt", {"text": "Проверь пакетный импорт."})
                     wait(
@@ -717,6 +724,14 @@ def main(binary):
                         assert not (root / "agent-todo/.git").exists()
                         os.write(master, b"\r")  # One final decision, no second screen.
                     api(f"experimental/session/{a}/wait", {})
+                    wait(
+                        lambda: all(any(
+                            row.get("event") == "session.execution.succeeded"
+                            and row.get("sessionID") == a
+                            for row in records(pane)[before_events[pane]:]
+                        ) for pane in clients),
+                        "Batch completion was not delivered to both clients",
+                    )
                     if mode != "save":
                         assert not (root / "agent-todo/todo.md").exists()
                         assert not (root / "agent-todo/.git").exists()
@@ -768,14 +783,16 @@ def main(binary):
                     "id"
                 ]
                 before_b = urgency("202")
+                before_sounds = len(sounds("101"))
                 prompt(child)
                 # Lifecycle records precede the asynchronous ancestry lookup used
                 # by native attention. Wait for the notification, not just the event.
                 wait(
-                    lambda: sounds("101")[-1] == "subagent_done",
+                    lambda: sounds("101")[before_sounds:] == ["subagent_done", "done"],
                     "Child completion attention not delivered",
                 )
-                assert sounds("101")[-1] == "subagent_done" and sounds("202") == [
+                # 2.4 reports API-created children, then the parent resumes and completes.
+                assert sounds("101")[before_sounds:] == ["subagent_done", "done"] and sounds("202") == [
                     "done"
                 ], (sounds("101"), sounds("202"))
                 assert urgency("202") == before_b
@@ -902,10 +919,21 @@ def main(binary):
                 )
             except Exception:
                 drain()
-                for pane, output in outputs.items():
-                    Path(f"/tmp/opencode/attention-tui-{pane}-failure.log").write_bytes(
-                        output
-                    )
+                artifacts = os.environ.get("OPENCODE_TEST_ARTIFACT_DIR")
+                if artifacts:
+                    target = Path(artifacts)
+                    target.mkdir(parents=True, exist_ok=True, mode=0o700)
+                    for pane, output in outputs.items():
+                        (target / f"attention-{pane}-failure.log").write_bytes(output)
+                        (target / f"attention-{pane}-records.json").write_text(json.dumps(records(pane)))
+                        state_path = root / f"state/attention-{pane}.state"
+                        if state_path.exists():
+                            (target / f"attention-{pane}-state.json").write_text(state_path.read_text())
+                    (target / "attention-owners.json").write_text(json.dumps([
+                        json.loads(path.read_text()) for path in
+                        (root / "runtime/opencode-attention-v2/clients").glob("*.json")
+                    ]))
+                    (target / "attention-server.log").write_text((root / "server.log").read_text())
                 print(
                     log_path.read_text()[-2000:]
                     if (log_path := root / "server.log").exists()

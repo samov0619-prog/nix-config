@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { instructions } from "./instructions.mjs";
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
-const home = read("config/AGENTS.md");
+const home = instructions.home;
 const personal = read("macos/trf-review/opencode-local/AGENTS-personal.md");
 const section = /^## Goals and Approach\n[\s\S]*?(?=^## )/m;
 const goalPolicy = home.match(section)?.[0];
@@ -14,8 +15,21 @@ const goalPolicy = home.match(section)?.[0];
 test("home and corporate personal rules carry the same bounded approach check", () => {
   assert.ok(goalPolicy);
   assert.equal(personal.match(section)?.[0], goalPolicy);
-  assert.ok(read("default.nix").includes('"opencode/AGENTS.md".source = ./config/AGENTS.md;'));
-  assert.doesNotMatch(read("macos/trf-review/opencode/AGENTS.md"), /## Goals and Approach/);
+  assert.equal(instructions.corporatePersonal.match(section)?.[0], goalPolicy);
+  assert.ok(
+    read("default.nix").includes(
+      '"opencode/AGENTS.md".text = (import ./config/instructions.nix).homeBase;',
+    ),
+  );
+  assert.doesNotMatch(
+    instructions.homeBase + instructions.corporate,
+    /## Goals and Approach/,
+  );
+  assert.match(instructions.homePersonal, /## Goals and Approach/);
+  assert.doesNotMatch(
+    read("macos/trf-review/opencode/AGENTS.md"),
+    /## Goals and Approach/,
+  );
 });
 
 test("the approach check preserves experimentation, informed choice and permissions", () => {
@@ -36,7 +50,9 @@ test("the approach check preserves experimentation, informed choice and permissi
 });
 
 test("corporate personal rules preserve the exact trf baseline outside the two personal additions", () => {
-  const baseline = personal.replace(section, "").replace(/^## Review Workflows\n[\s\S]*?(?=^## )/m, "");
+  const baseline = personal
+    .replace(section, "")
+    .replace(/^## Review Workflows\n[\s\S]*?(?=^## )/m, "");
   assert.notEqual(baseline, personal);
   assert.equal(
     createHash("sha256").update(baseline).digest("hex"),

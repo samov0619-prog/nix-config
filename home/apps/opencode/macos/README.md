@@ -1,6 +1,104 @@
-# OpenCode 2.1.4 — корпоративный Mac
+# OpenCode — корпоративный Mac
 
-## Текущее обновление: R3 поверх применённого R2
+Пользователь подтвердил: на корпоративном Mac уже установлена **2.4.0**.
+Заголовки версий старого seed/R3 ниже — исторические, не текущий target.
+File/symlink types и runtime-приёмка нового пакета на 2.4.0 ещё не проверены.
+
+## Текущий staging-export Common/personal
+
+`export.nix` и `../scripts/export-macos.py` готовят отдельный пакет из свежего `trf`,
+без обновления seed/R3 и без установки. В нём сохранены team settings/policies,
+`git-offline`, семь MCP, shared skills и исторические acceptance artifacts;
+личные роли/четыре команды/manual discussion-map подключаются native personal JSONC.
+Внешний `@safwan-o/opencode-voice`, mutable `cli.json`, credentials, DB и binary
+не экспортируются и должны остаться на Mac. Шесть export/source-проверок прошли,
+включая protected hashes и custom-XDG; это не Mac/runtime-приёмка.
+
+На машине с этим Nix-репозиторием (Fish):
+
+```fish
+set stage /tmp/opencode/opencode-240-mac-(date +%Y%m%d-%H%M%S)
+python3 -B /home/samov/nix-config/home/apps/opencode/scripts/export-macos.py "$stage"
+```
+
+Destination должен быть новым; exporter отказывается обновлять существующий каталог.
+Для custom XDG передать `--personal-directory /Users/<user>/<config-root>/opencode-local`.
+Staging в `/tmp` не является долговременной поставкой: после review сохраните пакет
+в согласованном persistent location. Состав — [COMMON.md](COMMON.md) и
+[PERSONAL.md](PERSONAL.md); порядок сравнения/переноса/приёмки — [INSTALL.md](INSTALL.md).
+
+## Исходники инструкций
+
+Отдельный корпоративный порт и HM на Mac — разные продукты. Для будущего
+самостоятельного порта `../config/instructions.nix` предоставляет два результата:
+
+- `corporate` → `opencode/AGENTS.md`: нейтральное ядро `config/AGENTS.common.md` +
+  корпоративные contracts `config/AGENTS.corporate.md`, без домашних правил и
+  личных агентов/routing, Goals, Fish или reviewer-зависимостей.
+- `corporatePersonal` → `opencode-local/AGENTS-personal.md`: переносимые личные
+  правила из `config/AGENTS.md` + Mac-specific workflow из
+  `config/AGENTS.corporate-personal.md`. Здесь нет `nsh`, Nix/HM, `NSH_FLAKE`,
+  домашнего checkout или домашних policy/scratch-путей.
+
+Выбор делается по **способу установки**, не `isDarwin`. HM всегда устанавливает
+варианты `homeBase` и `homePersonal` раздельно, даже на Mac, и никогда не включает
+корпоративный файл. Decision-support/todo также не входит в корпоративные
+инструкции. Остальные файлы/skills/settings экспортируются явным allowlist
+`export.nix`, а не копированием домашнего конфига.
+
+Подготовить только два instruction-файла на машине с этим Nix-репозиторием
+(Fish; без сборки, установки и изменения живой конфигурации):
+
+```fish
+set rules /home/samov/nix-config/home/apps/opencode/config/instructions.nix
+set stage (mktemp -d /tmp/opencode/opencode-instructions.XXXXXX)
+mkdir -p "$stage/opencode" "$stage/opencode-local"
+nix eval --offline --raw --file "$rules" corporate > "$stage/opencode/AGENTS.md"
+nix eval --offline --raw --file "$rules" corporatePersonal > "$stage/opencode-local/AGENTS-personal.md"
+```
+
+1. Проверить оба результата и diff относительно актуального Mac-снимка, сохраняя
+   последующие командные/личные изменения. Nix на самом корпоративном Mac не нужен.
+2. Включить только согласованные результаты в новый scoped patch/пакет; не
+   переносить весь `config/`, `AGENTS*.md` по маске или установленный HM `AGENTS.md`.
+3. Применять отдельным согласованным обновлением после backup/check. Личный файл
+   подключается штатным `instructions` в personal config; нейтральные правила уже
+   включены в корпоративный результат, дублировать их в personal не нужно.
+
+Это исходники **следующих** обновлений, не переделанный R3. Старые seed,
+`trf-review/` и выпущенный R3-патч сохранены; новый Mac-патч не создан и ничего
+на Mac не применено. Инженерные/evidence/formatting/verification правила находятся
+в Common, личные Goals/Fish/communication/review — в personal; живая проверка
+модельного поведения после будущего переноса остаётся необходимой.
+
+`../config/personal-layers.nix` также готовит личный JSONC, четыре команды,
+review/research и ручной discussion-map; домашний `default.nix` уже подключает свой
+вариант. Полный корпоративный пакет собирает `export.nix`; shared skills/settings
+и семь MCP входят в Common, внешний voice-plugin и mutable CLI остаются live.
+Team policies/`git-offline` сохраняются; менять их можно только после
+согласования с командой. Подробности и ограничения тестов — [PERSONAL-LAYER.md](../PERSONAL-LAYER.md).
+
+### XTracker и ключи задач
+
+Для будущего экспорта корпоративные инструкции используют **XTracker** вместо
+Kaiten. Личный Mac-слой Samov задаёт `FBDC-<number>` для новых веток и коммитов:
+остальной формат берётся из Git history, но старый `KT-…` не возвращает прежний
+префикс. История, существующие ветки и логи не переименовываются.
+
+Источник `../skills/task-summary-log/SKILL.md` подготовлен из свежего Mac-снимка
+для отдельного переноса в `opencode/skills/task-summary-log/SKILL.md`; HM его не
+устанавливает. Ключ необязателен, новые имена — `FBDC-123456_<short-name>.md`;
+существующий лог обновляется на месте после проверки соответствия задачи.
+Перед созданием проверяются и прежние имена, чтобы не дублировать логи.
+
+Это правка инструкций, не удаление `MCP-KAITEN` или его env-переменных.
+Seed/R3 и исходный ZIP не менялись; новый staging-export проверен, живая Mac-приёмка не выполнена.
+
+## История: R3 поверх применённого R2
+
+Ниже сохранён прежний порядок R3/seed, не инструкция установки нового пакета.
+Для текущего обновления использовать только [INSTALL.md](INSTALL.md): свежий `trf`
+уже содержит внешний voice-plugin и семь MCP, которых в старом seed нет.
 
 Пользователь уже применил R2. Файл
 `~/Downloads/opencode-mac-update-2026-11-16-r3.patch` применяется через `git apply`

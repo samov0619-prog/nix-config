@@ -7,27 +7,27 @@ fixes, packaging compatibility, customizations and test-only instrumentation.
 
 ## Inventory
 
-| IDs | Type / scope | Removal evidence |
-| --- | --- | --- |
-| `slurp-cursor-shape` | Upstream cursor-shape binding/cleanup backport, Linux HM GUI profiles | Unpatched registry callback and cleanup/request contracts, then native crosshair/cancel/Swappy acceptance |
-| `btintel-pm` | Two upstream kernel PM backports, Lenovo | Unpatched actual-function/table contracts, then real Bluetooth/Hibernate |
-| `pipewire-x11` | Upstream X11 cleanup backport, Lenovo | Unpatched four-case callback contract, then shutdown/audio |
-| `nvidia-init-root` | **Unmerged** NVIDIA PR #1512, Lenovo open module only | Unpatched config-open/probe contracts and conftests, then idle/offload/resume |
-| `filemanager-localhost`, `filemanager-wrappers` | Local URI bug fix; Nix wrapper compatibility | Unpatched URI/quoting regressions and launcher acceptance |
-| `amnezia-routing`, `amnezia-readiness` | Shared client local routing/readiness fixes | Unpatched netlink/Qt/QtRO scenarios, matching GUI/helper, live routing/boot/resume |
-| `amnezia-inline-address-dns` | Inline dual-stack IPv4 and empty-DNS fixes | Correct IPv4 assignment/AllowedIPs plus live AWG3.1/DNS |
-| `amnezia-packaging-ui`, `amnezia-awg31-selection` | Conan/CMake, paths, metadata, tray/icon/autostart; client/backend pins | Review substitutions independently; official client must satisfy address/routes/backend/PATH and live checks |
-| `onionbell-ogg`, `onionbell-eof` | Local Ogg playback and IPC EOF bugs | Real sound/mixer and Unix-socket tests without each fix separately |
-| `onionbell-tests`, `onionbell-api` | Test-only patch; inline Rust API compatibility | Keep regressions after fix removal; review API changes separately |
-| `onionbell-native-replacement` | Temporary service until native Hyprland bell | Existing libcanberra detection, then native bell acceptance with service stopped |
-| `yazi-password`, `yazi-api` | Archive-password bug fix; three API substitutions | Same Lua/7zz regressions without password patch; separate API review and real Yazi acceptance |
-| `opencode-routing`, `opencode-attention` | Session/helper/effort migration and attention-policy customizations | Native equivalent satisfies documented runtime/TUI policy, not simply a release bump |
-| `opencode-question-location`, `opencode-theme-cache` | Local question and startup-theme bugs | Unpatched real TUI buttons and stale/fresh theme-cache controls |
-| `waybar-profile-tooltip` | Lenovo tooltip/cycle customization | Equivalent native feature, helper regressions and live tooltip/click acceptance |
-| `bluez-selection`, `portal-selection` | Lenovo unstable package selections | Stable source passes retained BlueZ/pidfd tests; real Bluetooth/portal acceptance |
-| `blueman-polkit` | Build-support override on two laptops | Stock Polkit support and unchanged actions/policy; live agent checks |
-| `blueman-dialog-timeout` | Local native-dialog timeout fix/policy on two laptops | Unpatched actual-dialog timer/action/cleanup contracts, then live informational/pairing UI |
-| `mesa-libc-boundary` | Stable Mesa plus isolated released kernel/NVIDIA/firmware | Keep application/Mesa libc compatibility; intentional policy, not a temporary source patch |
+| IDs                                                  | Type / scope                                                           | Removal evidence                                                                                             |
+| ---------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `slurp-cursor-shape`                                 | Upstream cursor-shape binding/cleanup backport, Linux HM GUI profiles  | Unpatched registry callback and cleanup/request contracts, then native crosshair/cancel/Swappy acceptance    |
+| `btintel-pm`                                         | Two upstream kernel PM backports, Lenovo                               | Unpatched actual-function/table contracts, then real Bluetooth/Hibernate                                     |
+| `pipewire-x11`                                       | Upstream X11 cleanup backport, Lenovo                                  | Unpatched four-case callback contract, then shutdown/audio                                                   |
+| `nvidia-init-root`                                   | **Unmerged** NVIDIA PR #1512, Lenovo open module only                  | Unpatched config-open/probe contracts and conftests, then idle/offload/resume                                |
+| `filemanager-localhost`, `filemanager-wrappers`      | Local URI bug fix; Nix wrapper compatibility                           | Unpatched URI/quoting regressions and launcher acceptance                                                    |
+| `amnezia-routing`, `amnezia-readiness`               | Shared client local routing/readiness fixes                            | Unpatched netlink/Qt/QtRO scenarios, matching GUI/helper, live routing/boot/resume                           |
+| `amnezia-inline-address-dns`                         | Inline dual-stack IPv4 and empty-DNS fixes                             | Correct IPv4 assignment/AllowedIPs plus live AWG3.1/DNS                                                      |
+| `amnezia-packaging-ui`, `amnezia-awg31-selection`    | Conan/CMake, paths, metadata, tray/icon/autostart; client/backend pins | Review substitutions independently; official client must satisfy address/routes/backend/PATH and live checks |
+| `onionbell-ogg`, `onionbell-eof`                     | Local Ogg playback and IPC EOF bugs                                    | Real sound/mixer and Unix-socket tests without each fix separately                                           |
+| `onionbell-tests`, `onionbell-api`                   | Test-only patch; inline Rust API compatibility                         | Keep regressions after fix removal; review API changes separately                                            |
+| `onionbell-native-replacement`                       | Temporary service until native Hyprland bell                           | Existing libcanberra detection, then native bell acceptance with service stopped                             |
+| `yazi-password`, `yazi-api`                          | Archive-password bug fix; three API substitutions                      | Same Lua/7zz regressions without password patch; separate API review and real Yazi acceptance                |
+| `opencode-routing`, `opencode-attention`             | Session/helper/effort migration and attention-policy customizations    | Native equivalent satisfies documented runtime/TUI policy, not simply a release bump                         |
+| `opencode-question-location`, `opencode-theme-cache` | Local question and startup-theme bugs                                  | Unpatched real TUI buttons and stale/fresh theme-cache controls                                              |
+| `waybar-profile-tooltip`                             | Lenovo tooltip/cycle customization                                     | Equivalent native feature, helper regressions and live tooltip/click acceptance                              |
+| `bluez-selection`, `portal-selection`                | Lenovo unstable package selections                                     | Stable source passes retained BlueZ/pidfd tests; real Bluetooth/portal acceptance                            |
+| `blueman-polkit`                                     | Build-support override on two laptops                                  | Stock Polkit support and unchanged actions/policy; live agent checks                                         |
+| `blueman-dialog-timeout`                             | Local native-dialog timeout fix/policy on two laptops                  | Unpatched actual-dialog timer/action/cleanup contracts, then live informational/pairing UI                   |
+| `mesa-libc-boundary`                                 | Stable Mesa plus isolated released kernel/NVIDIA/firmware              | Keep application/Mesa libc compatibility; intentional policy, not a temporary source patch                   |
 
 Per-entry references, owning files, audits and removal criteria live in the
 registry. Empty upstream-reference lists mean **no recorded upstream fix**, not
@@ -122,8 +122,16 @@ Coverage scans all active `.patch` files and Nix files containing `overrideAttrs
 `substituteInPlace`, `fetchpatch` or `boot.kernelPatches`. This is a safety net,
 **not** a semantic detector for arbitrary future inline workarounds. Register new
 ones deliberately. Local source pins are covered by owning-file hashes; declared
-root inputs use locked-source fingerprints (including followed aliases), not a
+inputs use locked-source fingerprints (including followed aliases and explicitly
+declared nested paths such as `opencode/nixpkgs`), not a
 live upstream release feed.
+
+OpenCode source lookup now follows its separate upstream v2.4.0 package, not shared
+unstable. Its entries watch both `opencode` and `opencode/nixpkgs`; source/wrapper
+changes do not waive existing removal contracts. The checker has 24 synthetic tests,
+including nested dependency/follows fingerprints. No baseline acknowledgement or
+fix removal is implied; package and runtime acceptance are recorded in
+[`BENCHMARK.md`](../../home/apps/opencode/BENCHMARK.md).
 
 ### Preparation checks
 
@@ -181,8 +189,8 @@ new installation and live hardware/UI regression checks were not performed.
   build/apply/reboot and RTD3 acceptance are in the
   [graphics audit](../laptop-audit/graphics.md).
   Git-backed `.#` excludes untracked files: review/stage the new patch before
-   those commands. Initial preparation did not stage/commit files; the user later
-   authorized final review and a local commit of the accepted work.
+  those commands. Initial preparation did not stage/commit files; the user later
+  authorized final review and a local commit of the accepted work.
 - Automatic helper hook: Home Manager for the relevant profile, e.g.
   `home-manager switch --flake .#samov-laptop`. Until applied, use the checkout
   script directly. `--no-update` also checks repository changes.

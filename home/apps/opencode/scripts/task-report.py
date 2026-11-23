@@ -42,6 +42,11 @@ def recent_sessions(db, limit):
 def load_messages(db, session, v2=False):
     if v2:
         result = []
+        split = {}
+        if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='session_part'").fetchone():
+            for part in db.execute(
+                    "SELECT message_id,data FROM session_part WHERE session_id=? ORDER BY message_id,ordinal", (session,)):
+                split.setdefault(part["message_id"], []).append(json.loads(part["data"]))
         for row in db.execute(
                 "SELECT id,type,time_created,data FROM session_message WHERE session_id=? ORDER BY seq", (session,)):
             info = json.loads(row["data"])
@@ -50,7 +55,9 @@ def load_messages(db, session, v2=False):
             info.update(role="assistant" if kind == "compaction" else kind,
                         providerID=model.get("providerID", "?"), modelID=model.get("id", "?"),
                         variant=model.get("variant"))
-            parts = list(info.get("content", [])) if kind == "assistant" else []
+            # Match native SessionHistory.withParts: split parts precede any
+            # later inline writes; older databases may have no session_part.
+            parts = split.get(row["id"], []) + list(info.get("content", [])) if kind == "assistant" else []
             for part in parts:
                 if part.get("type") == "tool":
                     part["tool"] = part.get("name", "?")

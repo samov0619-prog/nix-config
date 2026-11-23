@@ -84,10 +84,16 @@ test(
         unrelated: "keep",
       };
       let cachedMetadata = { ...metadata };
+      let route = { type: "session", sessionID: "ses_ui" };
+      const messages = new Map();
+      const serverMessages = new Map();
+      let messageSyncs = 0;
+      const messageInvalidations = [];
       const callback = () => listeners.get("rpc.local.limits.updated")?.({});
       const metadataCallback = (event) =>
         listeners.get("session.metadata.updated")?.(event);
       const connected = () => listeners.get("server.connected")?.({});
+      const configUpdated = () => listeners.get("config.updated")?.({});
       let confirmed = false,
         resets = 0,
         statusCalls = 0;
@@ -98,8 +104,26 @@ test(
       let holdStatus = false,
         releaseStatus;
       let statusValue = { available: false, active: 0 };
+      let configValue = [];
+      let configCalls = 0;
+      let failConfig = false;
+      let holdConfig = false,
+        releaseConfig;
       const api = {
         client: {
+          config: {
+            async get(input) {
+              assert.deepEqual(input, { location: { directory: "/no-git" } });
+              configCalls++;
+              const entries = configValue;
+              if (holdConfig)
+                await new Promise((resolve) => {
+                  releaseConfig = resolve;
+                });
+              if (failConfig) throw new Error("Config unavailable");
+              return entries;
+            },
+          },
           rpc() {
             return {
               async status() {
@@ -139,6 +163,16 @@ test(
           location: { default: () => ({ directory: "/no-git" }) },
           session: {
             get: () => ({ metadata: cachedMetadata }),
+            message: {
+              list: (id) => messages.get(id) ?? [],
+              invalidate(id) {
+                messageInvalidations.push(id);
+              },
+              async sync(id) {
+                messageSyncs++;
+                messages.set(id, structuredClone(serverMessages.get(id) ?? []));
+              },
+            },
             invalidate() {},
             async sync() {
               metadataSyncs++;
@@ -157,13 +191,13 @@ test(
           text: {
             muted: "gray",
             feedback: {
-              info: { muted: "blue-muted" },
+              info: { muted: "blue-muted", base: "blue" },
               success: { muted: "green-muted" },
             },
           },
         },
         ui: {
-          router: { current: () => ({ type: "session", sessionID: "ses_ui" }) },
+          router: { current: () => route },
           slot(claim) {
             slots.push(claim);
             return () => {
@@ -198,6 +232,104 @@ test(
         "initial status does not need a user/model request",
       );
       assert.equal(slots.length, 2, "home and session indicator");
+      assert.equal(configCalls, 1);
+      for (const slot of slots)
+        assert.equal(
+          visibleText(slot.render()).split("≋").length - 1,
+          1,
+          "native auto default renders exactly one icon",
+        );
+      const compactionIcon = () =>
+        nodes(slots[1].render()).find(
+          (node) => node.type === "text" && visibleText(node).trim() === "≋",
+        );
+      assert.equal(compactionIcon().props.fg, "gray");
+      for (const status of ["running", "completed", "running", "failed"]) {
+        // Simulate the host's public cache projection, not a second plugin
+        // lifecycle; native event→cache integration is outside this mock.
+        messages.set("ses_ui", [{ type: "compaction", status }]);
+        assert.equal(
+          compactionIcon().props.fg,
+          status === "running" ? "blue" : "gray",
+          `native ${status} state controls the same icon`,
+        );
+        assert.equal(visibleText(slots[1].render()).split("≋").length - 1, 1);
+      }
+      messages.set("ses_ui", [
+        { type: "compaction", status: "running" },
+        { type: "compaction", status: "completed" },
+        { type: "assistant", content: [] },
+      ]);
+      assert.equal(compactionIcon().props.fg, "gray", "latest attempt wins");
+      messages.set("another-session", [
+        { type: "compaction", status: "running" },
+      ]);
+      assert.equal(
+        compactionIcon().props.fg,
+        "gray",
+        "other sessions are ignored",
+      );
+      route = { type: "session", sessionID: "another-session" };
+      assert.equal(
+        compactionIcon().props.fg,
+        "blue",
+        "tab switch follows its cache",
+      );
+      route = { type: "home" };
+      assert.equal(
+        compactionIcon().props.fg,
+        "gray",
+        "home has no active session",
+      );
+      route = { type: "session", sessionID: "ses_ui" };
+      messages.set("ses_ui", []);
+      assert.equal(
+        messageSyncs,
+        0,
+        "normal rendering adds no message requests",
+      );
+      for (const [entries, enabled] of [
+        [
+          [
+            { type: "document", info: { compaction: { auto: false } } },
+            { type: "directory", path: "/project/.opencode" },
+            { type: "document", info: { compaction: { background: true } } },
+            { type: "document", info: { compaction: { buffer: 32000 } } },
+          ],
+          false,
+        ],
+        [
+          [
+            { type: "document", info: { compaction: { auto: false } } },
+            { type: "document", info: { compaction: { auto: true } } },
+          ],
+          true,
+        ],
+        [
+          [{ type: "document", info: { compaction: { background: false } } }],
+          true,
+        ],
+      ]) {
+        configValue = entries;
+        configUpdated();
+        await new Promise((resolve) => setImmediate(resolve));
+        for (const slot of slots)
+          assert.equal(visibleText(slot.render()).includes("≋"), enabled);
+      }
+      failConfig = true;
+      configUpdated();
+      await new Promise((resolve) => setImmediate(resolve));
+      for (const slot of slots)
+        assert.doesNotMatch(
+          visibleText(slot.render()),
+          /≋/,
+          "failed config reads must not claim auto is enabled",
+        );
+      failConfig = false;
+      configValue = [];
+      configUpdated();
+      await new Promise((resolve) => setImmediate(resolve));
+      const configBeforeIdle = configCalls;
       minuteClock();
       await new Promise((resolve) => setImmediate(resolve));
       assert.equal(
@@ -205,27 +337,50 @@ test(
         1,
         "idle countdown does not poll the server/provider",
       );
+      assert.equal(configCalls, configBeforeIdle, "no idle config polling");
+      assert.equal(messageSyncs, 0, "no idle message polling");
       const pending = slots[1].render();
-      assert.match(visibleText(pending), /Limits left: unavailable/);
-      assert.match(JSON.stringify(pending), /Checkpoint/);
+      assert.match(visibleText(pending), /unavailable/);
+      assert.doesNotMatch(visibleText(pending), /Limits|Checkpoint|week/);
       assert.match(JSON.stringify(pending), /blue-muted/);
       assert.match(JSON.stringify(pending), /\+/);
       assert.doesNotMatch(JSON.stringify(pending), /⚠|\/checkpoint/);
       const beforeReconnect = statusCalls;
+      const configBeforeReconnect = configCalls;
       // Simulate a transport gap: no updated/metadata event was delivered.
       // The native host stream reconnects without re-running plugin setup.
       statusValue = { available: false, active: 3 };
+      configValue = [
+        { type: "document", info: { compaction: { auto: false } } },
+      ];
+      configUpdated();
+      await new Promise((resolve) => setImmediate(resolve));
+      messages.set("ses_ui", [
+        { type: "compaction", status: "running", reason: "manual" },
+      ]);
+      assert.equal(
+        compactionIcon().props.fg,
+        "blue",
+        "manual compaction is visible even with auto disabled",
+      );
+      serverMessages.set("ses_ui", [
+        { type: "compaction", status: "completed", reason: "manual" },
+      ]);
       metadata["local.checkpoint"] = { ready: true };
       assert.doesNotMatch(visibleText(slots[1].render()), /✓/);
       connected();
       await new Promise((resolve) => setImmediate(resolve));
       assert.equal(statusCalls, beforeReconnect + 1);
+      assert.equal(configCalls, configBeforeReconnect + 2);
+      assert.equal(messageSyncs, 1);
+      assert.deepEqual(messageInvalidations, ["ses_ui"]);
+      assert.doesNotMatch(visibleText(slots[1].render()), /≋/);
       assert.equal(
         metadataSyncs,
         1,
         "reconnect refreshes missed checkpoint state",
       );
-      assert.match(visibleText(slots[1].render()), /Active: 3.*Checkpoint/);
+      assert.match(visibleText(slots[1].render()), /Active: 3/);
       assert.match(visibleText(slots[1].render()), /✓/);
       statusValue = { available: false, active: 1 };
       callback();
@@ -248,8 +403,9 @@ test(
       await new Promise((resolve) => setImmediate(resolve));
       for (const slot of slots) {
         const sharing = visibleText(slot.render());
-        assert.match(sharing, /Limits: not exposed by token sharing/);
-        assert.match(sharing, /Active: 2.*Checkpoint/);
+        assert.match(sharing, /not exposed by token sharing/);
+        assert.match(sharing, /Active: 2/);
+        assert.doesNotMatch(sharing, /Limits|Checkpoint|week/);
         assert.doesNotMatch(sharing, /unavailable|%|⚠|as of/);
       }
       for (const [primary, weekly] of [
@@ -291,23 +447,22 @@ test(
         await new Promise((resolve) => setImmediate(resolve));
         const rendered = slots[1].render();
         const text = visibleText(rendered);
-        assert.match(text, /Limits left:/);
-        assert.doesNotMatch(text, /token sharing/);
-        assert.match(text, /5h .* · week /);
-        assert.match(text, /Checkpoint/);
+        assert.doesNotMatch(text, /Limits|Checkpoint|week|token sharing/);
+        assert.match(text, /5h .* · \d+% /);
         assert.doesNotMatch(text, /wrap-up|stopping point|\/checkpoint/);
-        for (const [label, mode] of [
+        const groups = nodes(rendered).filter(
+          (node) =>
+            node.type === "span" &&
+            node.children.some(
+              (child) => typeof child === "string" && child.includes("% "),
+            ),
+        );
+        assert.equal(groups.length, 2, "both windows keep independent groups");
+        for (const [index, [label, mode]] of [
           ["5h", primary],
           ["week", weekly],
-        ]) {
-          const group = nodes(rendered).find(
-            (node) =>
-              node.type === "span" &&
-              node.children.some(
-                (child) =>
-                  typeof child === "string" && child.startsWith(`${label} `),
-              ),
-          );
+        ].entries()) {
+          const group = groups[index];
           assert.ok(group, `${label} has its own inline group`);
           const markers = nodes(group).filter(
             (node) =>
@@ -351,7 +506,7 @@ test(
       callback();
       await new Promise((resolve) => setImmediate(resolve));
       const switched = visibleText(slots[1].render());
-      assert.match(switched, /Limits: not exposed by token sharing/);
+      assert.match(switched, /not exposed by token sharing/);
       assert.match(switched, /✓/);
       assert.doesNotMatch(switched, /%|⚠|as of/);
       await commands.get("checkpoint-reset").run();
@@ -400,25 +555,50 @@ test(
         beforeBurst + 2,
         "no idle retry loop after the burst",
       );
+      const configBeforeBurst = configCalls;
+      holdConfig = true;
+      configUpdated();
+      configValue = [];
+      for (let i = 0; i < 1000; i++) configUpdated();
+      assert.equal(configCalls, configBeforeBurst + 1);
+      holdConfig = false;
+      releaseConfig();
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.equal(configCalls, configBeforeBurst + 2);
+      assert.match(
+        visibleText(slots[1].render()),
+        /≋/,
+        "one follow-up sees config changes during an in-flight read",
+      );
       // Dispose with a read pending: its late response must not schedule a
       // queued reconnect follow-up or mutate the last rendered snapshot.
       const beforeDispose = statusCalls;
+      const configBeforeDispose = configCalls;
       const lastText = visibleText(slots[1].render());
       holdStatus = true;
+      holdConfig = true;
+      configValue = [
+        { type: "document", info: { compaction: { auto: false } } },
+      ];
       callback();
       connected();
+      configUpdated();
       cleanup();
       cleanup = undefined;
       statusValue = { available: false, active: 99 };
       holdStatus = false;
+      holdConfig = false;
       releaseStatus();
+      releaseConfig();
       await new Promise((resolve) => setImmediate(resolve));
       callback();
       connected();
+      configUpdated();
       assert.equal(statusCalls, beforeDispose + 1);
+      assert.equal(configCalls, configBeforeDispose + 1);
       assert.equal(visibleText(slots[1].render()), lastText);
       assert.equal(listeners.size, 0);
-      assert.equal(stopped, 3);
+      assert.equal(stopped, 4);
       assert.equal(removed, 2);
     } finally {
       globalThis.setInterval = originalInterval;

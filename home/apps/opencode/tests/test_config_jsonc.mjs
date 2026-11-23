@@ -8,7 +8,7 @@ test("native HM target rename preserves the merged config and leaves only JSONC"
   const module = fileURLToPath(new URL("../default.nix", import.meta.url));
   // Evaluate the actual pinned HM modules; comparing derivation paths does not
   // build/read the generated JSON or run activation. Both opt-in states matter:
-  // decision-support adds settings through programs.opencode, not this leaf.
+  // todo scopes tools in the separately installed personal JSONC.
   const result = JSON.parse(
     execFileSync(
       "nix",
@@ -40,7 +40,7 @@ test("native HM target rename preserves the merged config and leaves only JSONC"
                 home.homeDirectory = "/home/opencode-fixture";
                 home.stateVersion = "26.05";
                 programs.opencode.extraPackages = lib.mkForce [];
-                programs.opencode.decisionSupport.enable = lib.mkForce enabled;
+                programs.opencode.todo.enable = lib.mkForce enabled;
               }) ];
             }).config;
           targets = c: builtins.map (file: file.target)
@@ -64,10 +64,15 @@ test("native HM target rename preserves the merged config and leaves only JSONC"
               toString after.xdg.configFile."opencode/opencode.json".source;
             settingsUnchanged = before.programs.opencode.settings == after.programs.opencode.settings;
             instructions = after.programs.opencode.settings.instructions or [];
-            reviewAnalysisTarget = after.xdg.configFile."opencode/review-analysis.md".target;
-            reviewAnalysisInstalled = builtins.readFile after.xdg.configFile."opencode/review-analysis.md".source;
-            reviewSystem = after.programs.opencode.settings.agents.review.system;
-            hasReviewAnalysisTarget = builtins.elem ".config/opencode/review-analysis.md" afterTargets;
+            reviewAnalysisTarget = after.xdg.configFile."opencode-local/review-analysis.md".target;
+            reviewAnalysisInstalled = builtins.readFile after.xdg.configFile."opencode-local/review-analysis.md".source;
+            reviewSystem = after.xdg.configFile."opencode-local/agents/review.md".text;
+            hasReviewAnalysisTarget = builtins.elem ".config/opencode-local/review-analysis.md" afterTargets;
+            hasTodoPlugin = builtins.elem ".config/opencode-local/plugins/agent-todo" afterTargets;
+            hasOldTodoPlugin = builtins.elem ".config/opencode/plugins/agent-todo-v2" afterTargets;
+            baseHasPersonalAgents = after.programs.opencode.settings ? agents;
+            overlay = after.home.sessionVariables.OPENCODE_CONFIG;
+            hasDecisionSkill = after.programs.opencode.skills ? decision-check;
           }
         ) [ false true ]`,
       ],
@@ -84,16 +89,34 @@ test("native HM target rename preserves the merged config and leaves only JSONC"
     assert.equal(state.otherTargetsUnchanged, true);
     assert.equal(state.sourceUnchanged, true);
     assert.equal(state.settingsUnchanged, true);
-    assert.equal(state.reviewAnalysisTarget, ".config/opencode/review-analysis.md");
+    assert.equal(
+      state.reviewAnalysisTarget,
+      ".config/opencode-local/review-analysis.md",
+    );
     assert.equal(state.hasReviewAnalysisTarget, true);
-    assert.ok(state.reviewAnalysisInstalled.includes("Review policy: evidence-v5."));
-    assert.ok(state.reviewSystem.startsWith(state.reviewAnalysisInstalled + "\n"));
-    assert.equal(state.reviewSystem.split("Review policy: evidence-v5.").length, 2);
+    assert.equal(state.hasTodoPlugin, state.enabled);
+    assert.equal(state.hasOldTodoPlugin, false);
+    assert.equal(state.baseHasPersonalAgents, false);
+    assert.equal(
+      state.overlay,
+      "/home/opencode-fixture/.config/opencode-local/opencode.jsonc",
+    );
+    assert.equal(state.hasDecisionSkill, false);
+    assert.ok(
+      state.reviewAnalysisInstalled.includes("Review policy: evidence-v5."),
+    );
+    assert.ok(
+      state.reviewSystem.startsWith(state.reviewAnalysisInstalled + "\n"),
+    );
+    assert.equal(
+      state.reviewSystem.split("Review policy: evidence-v5.").length,
+      2,
+    );
     assert.equal(
       state.instructions.includes(
         "/home/opencode-fixture/.config/opencode/decision-support.md",
       ),
-      state.enabled,
+      false,
     );
   }
 });

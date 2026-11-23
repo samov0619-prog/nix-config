@@ -1,0 +1,959 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "update": "disable",
+  "share": "disabled",
+  "model": "copilot/x5-airun-code-large",
+  "agents": {
+    "title": {
+      "model": "copilot/x5-airun-small"
+    }
+  },
+  "policies": [
+    {
+      "action": "provider.use",
+      "resource": "*",
+      "effect": "deny"
+    },
+    {
+      "action": "provider.use",
+      "resource": "copilot",
+      "effect": "allow"
+    },
+    {
+      "action": "provider.use",
+      "resource": "openai",
+      "effect": "allow"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git push*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git pull*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git fetch*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git clone*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git ls-remote*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git remote update*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git * push*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git * pull*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git * fetch*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git * clone*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git * ls-remote*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git * remote update*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git remote show*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git remote set-head*--auto*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git * remote show*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git * remote set-head*--auto*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git remote add -f*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git remote add --fetch*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git * remote add -f*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "deny",
+      "resource": "shell:git * remote add --fetch*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "allow",
+      "resource": "shell:git remote show -n*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "allow",
+      "resource": "shell:git remote show * -n*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "allow",
+      "resource": "shell:git * remote show -n*"
+    },
+    {
+      "action": "tool.use",
+      "effect": "allow",
+      "resource": "shell:git * remote show * -n*"
+    }
+  ],
+  "permissions": [
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git commit *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * commit *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git merge *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * merge *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git cherry-pick *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * cherry-pick *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git revert *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * revert *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git am *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * am *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git rebase *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * rebase *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git reset *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * reset *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git checkout *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * checkout *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git switch *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * switch *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git restore *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * restore *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git clean *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * clean *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git stash"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * stash"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git stash -*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * stash -*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git stash push *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * stash push *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git stash save *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * stash save *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git stash apply *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * stash apply *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git stash pop *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * stash pop *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git stash drop *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * stash drop *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git stash clear *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * stash clear *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git stash branch *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * stash branch *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git stash store *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * stash store *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git stash create *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * stash create *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git stash import *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * stash import *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git stash export *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * stash export *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git worktree remove *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * worktree remove *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git worktree move *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * worktree move *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git worktree prune *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * worktree prune *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git worktree repair *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * worktree repair *"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch -d*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch -d*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch * -d*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch * -d*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch -D*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch -D*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch * -D*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch * -D*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch --delete*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch --delete*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch * --delete*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch * --delete*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch -m*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch -m*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch * -m*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch * -m*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch -M*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch -M*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch * -M*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch * -M*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch --move*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch --move*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch * --move*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch * --move*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch -C*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch -C*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch * -C*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch * -C*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch -f*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch -f*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch * -f*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch * -f*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch --force*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch --force*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch * --force*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch * --force*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch -rd*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch -rd*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch * -rd*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch * -rd*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch -rD*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch -rD*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git branch * -rD*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * branch * -rD*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git tag -d*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * tag -d*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git tag * -d*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * tag * -d*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git tag --delete*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * tag --delete*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git tag * --delete*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * tag * --delete*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git tag -f*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * tag -f*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git tag * -f*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * tag * -f*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git tag --force*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * tag --force*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git tag * --force*"
+    },
+    {
+      "action": "shell",
+      "effect": "ask",
+      "resource": "git * tag * --force*"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git status *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git diff *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git diff-tree *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git diff-index *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git diff-files *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git range-diff *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git log *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git show *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git merge-base *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git rev-list *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git rev-parse *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git for-each-ref *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git name-rev *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git describe *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git ls-tree *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git ls-files *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git cat-file *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git blame *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git reflog show *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git stash list *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git stash show *"
+    },
+    {
+      "action": "shell",
+      "effect": "allow",
+      "resource": "git worktree list *"
+    }
+  ],
+  "providers": {
+    "copilot": {
+      "name": "copilot-x5",
+      "package": "@opencode/ai/providers/openai-compatible",
+      "env": [
+        "COPILOT_API_KEY"
+      ],
+      "settings": {
+        "baseURL": "https://api-copilot.x5.ru/v1/"
+      },
+      "models": {
+        "x5-airun-code-large": {
+          "body": {
+            "reasoning_effort": "high"
+          },
+          "limit": {
+            "context": 250000,
+            "output": 16384
+          },
+          "capabilities": {
+            "tools": true,
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "x5-airun-small": {
+          "limit": {
+            "context": 250000,
+            "output": 8192
+          },
+          "capabilities": {
+            "tools": true,
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        }
+      }
+    },
+    "openai": {
+      "settings": {
+        "baseURL": "http://127.0.0.1:8080/v1"
+      }
+    }
+  },
+  "mcp": {
+    "servers": {
+      "MCP-WIKI": {
+        "type": "remote",
+        "url": "{env:MCP_WIKI_URL}",
+        "headers": {
+          "Authorization": "{env:MCP_WIKI_AUTHORIZATION}"
+        }
+      },
+      "MCP-KAITEN": {
+        "type": "remote",
+        "url": "{env:MCP_KAITEN_URL}",
+        "oauth": false,
+        "disabled": true,
+        "headers": {
+          "Authorization": "{env:MCP_KAITEN_AUTHORIZATION}"
+        }
+      },
+      "MCP-XTRACKER": {
+        "type": "remote",
+        "url": "{env:MCP_XTRACKER_URL}",
+        "oauth": false,
+        "headers": {
+          "Authorization": "{env:MCP_XTRACKER_AUTHORIZATION}"
+        }
+      },
+      "MCP-GITLAB": {
+        "type": "remote",
+        "url": "{env:MCP_GITLAB_URL}",
+        "oauth": false,
+        "headers": {
+          "Authorization": "{env:MCP_GITLAB_AUTHORIZATION}"
+        }
+      },
+      "Chrome MCP": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "chrome-devtools-mcp@latest",
+          "--browserUrl",
+          "http://127.0.0.1:9222"
+        ]
+      },
+      "MCP-HUB": {
+        "url": "{env:MCP_HUB_URL}",
+        "type": "remote",
+        "headers": {
+          "Authorization": "{env:MCP_HUB_AUTHORIZATION}"
+        },
+      },
+      "Figma-Framelink": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "figma-developer-mcp",
+          "--stdio"
+        ],
+        "environment": {
+          "FIGMA_API_KEY": "{env:FIGMA_API_KEY}"
+        }
+      },
+    }
+  }
+}

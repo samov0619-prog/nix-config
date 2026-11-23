@@ -18,13 +18,15 @@ diff --git a/packages/tui/src/feature-plugins/system/notifications.ts b/packages
    const session = sessionID ? context.data.session.get(sessionID) : undefined
    const isSubagent = session?.parentID !== undefined
    void context.attention.notify({
-@@ -16,11 +20,16 @@
+@@ -16,6 +20,7 @@
      notification: isSubagent ? false : { when: "blurred" },
      sound: { name: sound, when: "always" },
    })
 +  return true
  }
  
+ // Only direct children: a grandchild reports to its own parent, so waiting on it could mean no sound at all. Running
+@@ -34,6 +39,10 @@
  export default Plugin.define({
    id: "opencode.notifications",
    setup(context) {
@@ -35,7 +37,7 @@ diff --git a/packages/tui/src/feature-plugins/system/notifications.ts b/packages
      const errored = new Set<string>()
      const terminal = new Set<string>()
      const forms = new Set<string>()
-@@ -30,7 +39,7 @@
+@@ -43,7 +52,7 @@
        errored.delete(sessionID)
        terminal.delete(sessionID)
      }
@@ -44,7 +46,7 @@ diff --git a/packages/tui/src/feature-plugins/system/notifications.ts b/packages
        if (terminal.has(sessionID)) return
        terminal.add(sessionID)
        if (errored.has(sessionID)) {
-@@ -38,36 +47,36 @@
+@@ -51,21 +60,21 @@
          return
        }
        const session = context.data.session.get(sessionID)
@@ -69,9 +71,14 @@ diff --git a/packages/tui/src/feature-plugins/system/notifications.ts b/packages
        }),
        context.data.on("permission.replied", (event) => permissions.delete(event.data.requestID)),
        context.data.on("session.execution.started", (event) => started(event.data.sessionID)),
--      context.data.on("session.execution.succeeded", (event) => ended(event.data.sessionID)),
+@@ -73,19 +82,19 @@
+         // A running subagent's report wakes the session again, so it isn't done yet. Subagent sounds stay as they were.
+         const session = context.data.session.get(event.data.sessionID)
+         if (!session?.parentID && hasRunningChild(context, event.data.sessionID)) return
+-        ended(event.data.sessionID)
++        ended(event.data.sessionID, event)
+       }),
 -      context.data.on("session.execution.interrupted", (event) => ended(event.data.sessionID)),
-+      context.data.on("session.execution.succeeded", (event) => ended(event.data.sessionID, event)),
 +      context.data.on("session.execution.interrupted", (event) => ended(event.data.sessionID, event)),
        context.data.on("session.execution.failed", (event) => {
          const sessionID = event.data.sessionID
@@ -82,14 +89,14 @@ diff --git a/packages/tui/src/feature-plugins/system/notifications.ts b/packages
            return
          }
          errored.add(sessionID)
--        if (event.data.error.type !== "provider.free-limit") {
+-        if (event.data.error.type !== "provider.free-limit" && event.data.error.type !== "provider.go-limit") {
 -          notify(context, sessionID, event.data.error.message, "error")
-+        if (event.data.error.type !== "provider.free-limit" &&
++        if (event.data.error.type !== "provider.free-limit" && event.data.error.type !== "provider.go-limit" &&
 +            notify(context, sessionID, event.data.error.message, "error", event)) {
            context.ui.toast.show({
              sessionID,
              title: "Session failed",
-@@ -75,10 +84,14 @@
+@@ -93,10 +102,14 @@
              variant: "error",
            })
          }

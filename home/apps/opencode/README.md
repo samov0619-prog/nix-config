@@ -1,19 +1,100 @@
-# OpenCode 2.1.4
+# OpenCode
 
-Домашний Home Manager module для laptop/desktop. OpenCode закреплён отдельным
-flake input `github:anomalyco/opencode/v2.1.4` (rev `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`),
-без обновления всего nixpkgs-unstable. Официальный LTS-канал не обнаружен.
-`package.nix` сохраняет upstream build и добавляет
+> **Пользователь применил домашний HM target:** `opencode v2.4.0+44aed4f`,
+> service start/status возвращают `http://127.0.0.1:13420` (2026-11-23).
+> Пользователь подтвердил Free/Paid, смену темы, сохранность истории/вложений
+> и подключение MCP. Mac остаётся отдельной приёмкой.
+> Backup/rollback — в [UPGRADE-240.md](UPGRADE-240.md).
+
+Домашний Home Manager module для laptop/desktop и HM на Mac. Пакет берётся из
+отдельного input `opencode`, закреплённого на **v2.4.0**, commit `44aed4f`.
+`package.nix` сохраняет штатную upstream-сборку и добавляет
 `patches/session-routing.patch`, `patches/manual-model-routing.patch`, `patches/model-variants.patch`, `patches/session-attention.patch`,
-`patches/question-location.patch`, `patches/theme-mode-cache.patch`; Linux wrapper сохраняет runtime libraries для watcher
-и native audio. V1-модуль и прежние исследования — в [archive/v1](archive/v1/README.md).
+`patches/question-location.patch`; Linux wrapper добавляет
+libstdc++/ALSA/PulseAudio из собственного nixpkgs input OpenCode; native Wayland/PATH
+wrapper сохраняется. Общий `nixpkgs-unstable` ради OpenCode не обновляется.
+V1-модуль и прежние исследования — в [archive/v1](archive/v1/README.md).
+
+## Переход на upstream 2.4.0
+
+Одобренный lock update изменил только `opencode` и `opencode/nixpkgs`. Ограниченная
+evaluation Linux/Darwin подтвердила **2.4.0+44aed4f**, Bun **1.4.4**, Node **24.22.2**
+и сохранность native env/hooks/completions. Guard принимает только 2.4.0/2.4.0+…;
+новый release требует проверки патчей, а не обновления общего unstable.
+
+Первая пользовательская сборка выявила устаревший upstream `node_modules` hash.
+`package.nix` переносит только исправленные Linux/Darwin hashes из merged
+[PR #65824](https://github.com/anomalyco/opencode/pull/65824) через штатный dependency
+override, без изменения исходников/lock/toolchain или фаз сборки. Linux hash совпал
+с пользовательским `got`; пользователь подтвердил успешную повторную Linux HM-сборку.
+Darwin пока проверен только evaluation, не сборкой.
+
+В 2.3.0 уже есть очистка управляющих символов в заголовках терминала
+([upstream fix](https://github.com/anomalyco/opencode/pull/57523)) и точный
+приоритет свежего режима терминала над кешем темы. `theme-mode-cache.patch`
+сохранён как исходный regression reference, но повторно не накладывается;
+source-policy тест исполняет нативный блок. Обе isolated PTY-проверки нового binary
+прошли: свежий и устаревший кеш, повторные light/dark transitions.
+
+Routing-патчи адаптированы к 2.4.0: общий `select` для tool preflight и запросов
+сохраняет live root policy, scoped overrides, variants и legacy aliases без
+переписи истории. Primary использует своего агента (или native default),
+title/compaction — свои роли, generate — прежнюю summary policy.
+Preflight не запускает hooks/инициализацию модели. Native compaction сохраняет
+модель сессии; текстовый summary при недоступной модели завершается ошибкой,
+без скрытой смены provider/model. Background остаётся default `true`; модели и buffer прежние.
+Они выполняются до нативного model hook, который допускает только замену внутри
+одного провайдера и не заменяет нашу маршрутизацию OpenAI ↔ Big Pickle.
+Attention-патч сохраняет новые upstream-правила: root не завершён при работающем
+прямом ребёнке, внук его не блокирует, free/go quota errors не озвучиваются.
+Question Location fix и пользовательские plugins сохраняются. Самостоятельный
+корпоративный Mac-порт получает отдельный [staging-export](macos/README.md), не этот binary.
+
+Сохраняется build channel **prod**, как у прежнего upstream flake. Штатный
+nixpkgs использует `latest`, а канал входит в пути TUI storage и service config.
+Это предотвращает ненужную смену namespace вкладок/кеша/сервиса при переходе;
+данные не переносятся вручную и не переписываются агентом.
+
+Дальнейшая приёмка пользователем:
+
+1. Проверить diff и включить только относящиеся к задаче новые файлы в Git index:
+   Git-flake не видит untracked. Проверить полный pinned-HM merge своего target.
+2. Успешная сборка и пересборка после accounting-fix уже подтверждены; установленный
+   report проверен на приватной БД. Повторная сборка ради последующих tests/docs не
+   нужна. Для другого хоста выбрать его профиль; Lenovo на Acer не применять.
+3. Перечисленные runtime/personal/theme/attention fixtures прошли на
+   `/home/samov/result/home-path/bin/opencode`, в том числе с built plugin closures.
+   Дополнительно прошли команды/аргументы, delegated inheritance и чтение policies,
+   ручной skill и visual limits compaction marks; точные границы — в
+   [BENCHMARK.md](BENCHMARK.md#built-linux-240-isolated-acceptance-2026-11-23).
+   Реальные model/MCP/browser проверки согласовать отдельно: scripted mock не
+   доказывает соблюдение workflow настоящей моделью.
+4. Остановленный backup и native миграция его отдельной DB-копии прошли:
+   50 → 64 migration IDs, 81 session / 11 809 messages сохранены; повторное
+   открытие и integrity/FK проходят. [UPGRADE-240.md](UPGRADE-240.md) фиксирует
+   снимок, изоляцию и ограничения. Старый 2.1.4 также прочитал все сессии/сообщения
+   на свежей restore-копии; полная активация восстановленной установки ещё не проверена.
+   Generation 65 сохраняем, GC не запускаем. HM rollback без DB/config/state недостаточен.
+5. После review/приёмки применить `home-manager switch --flake /home/samov/nix-config#samov-laptop`
+   в выбранное окно обслуживания. В этом окне запустить новый сервис через
+   `opencode service start`, проверить `opencode service status` и открыть TUI.
+   Проверить Free/Paid, отдельный effort Build/Plan, Question/Always dialogs,
+   фоновые звуки в двух окнах и светлую/тёмную тему. NixOS activation для самого
+   OpenCode не нужна; системные BlueZ/portal этим HM switch не применяются.
+
+Сборку и последующее домашнее применение выполнил пользователь, isolated
+runtime/PTY — агент. Агент живые service/data не менял. `task-report.py` дополнен чтением новых
+`session_part` по нативному порядку; 13 accounting tests и mock runtime прошли,
+включая CLI нового wrapper в result. Более ранние результаты
+ниже относятся к прежней 2.1.4,
+если явно не указано обратное; это не автоматическая приёмка 2.4.0.
 
 ## Структура
 
 ```text
 opencode/
 ├── default.nix              # Home Manager: подключение и установка файлов
-├── package.nix              # pinned binary, patches и Linux runtime libraries
+├── package.nix              # upstream package, patches и Linux native libraries
 ├── config/                  # native V2 settings и устанавливаемые глобальные AGENTS.md
 ├── commands/                # переносимые Markdown-команды, без README внутри
 ├── plugins/                 # server plugins и TUI plugins
@@ -33,7 +114,73 @@ opencode/
 plugin IDs и storage не меняются. Пустой прежний `lib/` удалён; архив не устанавливается.
 Проверки и ограничения покрытия — в [BENCHMARK.md](BENCHMARK.md).
 
-Глобальные правила `config/AGENTS.md` включают **Goals and Approach**: перед
+### Слои инструкций: HM и самостоятельный корпоративный порт
+
+Личный JSONC описан в [PERSONAL-LAYER.md](PERSONAL-LAYER.md). HM wiring и разделение
+инструкций готовы; пользовательская Linux-сборка и isolated регистрация на 2.4.0
+прошли без discovery-симлинков, включая custom-XDG и store-like directory-link case.
+Activation нет. Корпоративный Common/export подготовлен отдельно в `macos/export.nix`;
+минимальный corporate fixture на Linux не заменяет приёмку живого Mac.
+
+`config/instructions.nix` собирает текст по явным спискам, без glob и runtime-hook.
+HM устанавливает базовый `opencode/AGENTS.md` и личный набор `opencode-local/`,
+задаёт `home.sessionVariables.OPENCODE_CONFIG` на личный JSONC и учитывает
+`config.xdg.configHome`. Разделение определяется способом установки, **не ОС**:
+Home Manager на Mac получает те же домашние правила, что и Linux.
+
+| Исходник                              | Назначение                                                                                                                           | Где используется                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
+| `config/AGENTS.common.md`             | Нейтральные engineering/evidence, tools, files, formatting, verification, comments и user-action правила; без личных агентов/routing | База HM и корпоративный Common                     |
+| `config/AGENTS.md`                    | Личные Goals, точность, Fish, взаимодействие, delegation preferences и Git-consent                                                   | Личный слой HM и отдельного корпоративного порта   |
+| `config/AGENTS.home.md`               | Nix/HM и `nsh`, `/tmp/opencode`, `~/.opencode/plan`, условный запрос ticket по Git history                                           | Только база HM, Linux или Mac                      |
+| `config/AGENTS.review.md`             | Личный домашний review-workflow и прямые пути в `opencode-local`                                                                     | Только личный слой HM                              |
+| `config/AGENTS.corporate.md`          | Корпоративные источники ТЗ, Git/ticket и task-log contracts; без личных policies и Fish/Nix                                          | Только отдельный корпоративный порт                |
+| `config/AGENTS.corporate-personal.md` | Личный review-workflow с путями `~/.config/opencode-local/`                                                                          | Только личный слой отдельного корпоративного порта |
+
+Результаты `instructions.nix`: `homeBase` = common + home;
+`homePersonal` = personal + review; `home` = оба для regression-проверок;
+`corporate` = common + corporate; `corporatePersonal` = personal + Mac-specific.
+`default.nix` устанавливает `homeBase` глобально, `homePersonal` через личный JSONC.
+Командный файл не получает Goals/reviewer/personal-зависимости. Домашний не
+получает корпоративные MCP, обязательный ticket/ТЗ или `promptLogs`.
+Todo остаётся отдельным домашним opt-in в `todo.nix`; Decision Support перенесён в
+`archive/decision-support/` и не устанавливается. Policies `review-analysis.md` и
+`review-system.md` переносимы; их подключение/пути различаются по среде.
+
+Guard прежних 68 домашних пунктов восстанавливает только явно изменённые
+path/delegation фрагменты и сверяет исходный хеш остальных правил.
+Общие правила комментариев перенесены из корпоративного личного слоя и теперь
+действуют также дома. Проверки состава, обеих веток HM и отсутствия перекрёстного
+загрязнения: `tests/test_instruction_layers.mjs`. Runtime-fixture также читает
+готовые варианты, а не один частичный source. Это не проверка поведения модели.
+
+Корпоративный экспорт берёт **только** `corporate` и
+`corporatePersonal` по [инструкции](macos/README.md#исходники-инструкций).
+Не копировать установленный домашний `AGENTS.md`, весь `config/` или wildcard
+`AGENTS*.md`. R3 source overlay и уже выпущенный R3-патч остаются исторической
+базой: это разделение само по себе не создаёт и не применяет новый Mac-патч.
+
+В корпоративных исходниках нового экспорта требования/task-log переведены на XTracker,
+а личный Mac-слой Samov задаёт `FBDC-<number>` для новых веток/коммитов, независимо
+от старых `KT-…` в history. `skills/task-summary-log/SKILL.md` — только для
+отдельного корпоративного экспорта; HM его не устанавливает. Существующие логи,
+seed/R3 и MCP-подключения не менялись. Границы переноса — в [Mac README](macos/README.md#xtracker-и-ключи-задач).
+
+Применение домашнего изменения после review:
+
+1. Проверить diff и добавить относящиеся к задаче новые исходники в Git index:
+   Git-flake не видит untracked-файлы. Это не требует коммита; чужие изменения не включать.
+2. Выполнить полную HM evaluation/сборку своего профиля и isolated acceptance
+   собранного 2.4.0 binary. Lock уже обновлён; см. [порядок приёмки](PERSONAL-LAYER.md).
+3. Только после приёмки применить свой HM-профиль, например
+   `home-manager switch --flake /home/samov/nix-config#samov-laptop`.
+   NixOS activation для этих инструкций не нужна.
+4. Проверить, что server получил `OPENCODE_CONFIG`, а личные роли/команды появились
+   без старых discovery-копий. Config перечитывается штатно (`/reload` при необходимости).
+   В глобальном `AGENTS.md` должны быть `nsh` и общие правила, но не Goals/review-routing
+   или корпоративные требования. Личные review-пути находятся в `opencode-local`.
+
+Общие личные правила `config/AGENTS.md` включают **Goals and Approach**: перед
 существенным усложнением отделить цель от реализации и проверить более прямой путь,
 не отвергая эксперимент/обучение и не возвращаясь к уже осознанному выбору без новых
 фактов. Это инструкция модели, не блокирующий hook и не повод согласовывать каждый
@@ -54,6 +201,9 @@ JSONC; комментарии домашней конфигурации оста
 Неуправляемый или заменённый вручную старый файл HM намеренно не удаляет.
 
 ## Автоматическая светлая/тёмная тема
+
+Приёмка ниже относится к прежней 2.1.4. В целевой 2.4.0 приоритет исправлен
+нативно; актуальный порядок обновления и повторных проверок описан выше.
 
 В mutable `~/.config/opencode/cli.json` `theme.name = "flexoki"` выбирает палитру,
 а `theme.mode = "system"` следует **терминалу**, не GTK. Имя `system` — другая,
@@ -77,7 +227,8 @@ overlay и специальные тесты удалены без примен�
 принято до обновления; [проверка после переезда](../../../docs/laptop-audit/lenovo-checklist.md)
 добавлена в существующий Lenovo-чеклист. Фикс кеша OpenCode 2.1.4 остаётся нужен
 независимо от версии Kitty и сохраняется.
-Правка Python-теста сама по себе не требует пересборки OpenCode. После review:
+Правка Python-теста сама по себе не требует пересборки OpenCode. Исторический
+порядок приёмки 2.1.4 ниже не заменяет текущую процедуру 2.4.0/backup выше:
 
 1. Собрать свой HM output: `nix build .#homeConfigurations.samov-laptop-old.activationPackage`.
 2. Проверить binary из собранного профиля:
@@ -153,7 +304,8 @@ OpenTUI/PTY, установленная HM-генерация или удале�
 Локальный `plugins/limits/` использует native V2 server hooks, RPC и TUI slots;
 сторонний npm-плагин и новый binary patch не нужны. Индикатор показывается постоянно,
 без команды и без LLM-запросов: остатки пятичасового/недельного окна, время до сброса,
-число работающих сессий и `Checkpoint`. Проценты — из ChatGPT/Codex usage endpoint,
+число работающих сессий, готовность handoff (`+`/`✓`) и включённую автокомпактацию
+(`≋`). Проценты — из ChatGPT/Codex usage endpoint,
 не оценка по токенам/ценам моделей. Получение процентов поддерживает только
 `Codex browser (legacy)` / headless OAuth (`chatgpt-browser`, `chatgpt-headless`).
 При ошибке этого источника выводится `unavailable`, а не выдуманные 100%.
@@ -163,7 +315,7 @@ OpenTUI/PTY, установленная HM-генерация или удале�
 процентов и времени сброса пока не подтверждён. Вместо общего `unavailable`:
 
 ```text
-Limits: not exposed by token sharing | Active: 1 | Checkpoint +
+not exposed by token sharing | Active: 1 | + ≋
 ```
 
 `Active` и ручные `/checkpoint`, `/checkpoint-reset` работают; процентных
@@ -218,8 +370,10 @@ token-sharing источника: проценты, длительность и 
 перед записью, промежуточные состояния не накапливаются в очереди. TUI объединяет
 параллельные status-запросы с одним повтором, если во время запроса были изменения.
 
-Сигналы видны только пользователю в строке статуса: `⚠` рядом с процентом
-конкретного окна (`5h`, `week`). На раннем пороге знак серый, на основном — жёлтый.
+В строке нет подписей `Limits left`, `Checkpoint` и `week`: пятичасовое окно
+помечено `5h`, недельное показывается вторым, без подписи. Проценты, countdown
+и предупреждения сохраняются. Сигналы видны только пользователю: `⚠` рядом
+с процентом конкретного окна. На раннем пороге знак серый, на основном — жёлтый.
 Если сработали оба окна, у каждого свой знак и цвет; у здорового или явно
 отключённого через `/limits-reset` окна знака нет. Отдельного поля с текстом
 предупреждения или подсказкой команды нет. Плагин не добавляет бюджетных
@@ -255,8 +409,8 @@ token-sharing источника: проценты, длительность и 
 не читаются и исчезнут при следующем сохранении кэша; файл вручную менять не нужно.
 Пороги не гарантируют достаточного остатка для запроса или всех циклов review.
 
-`Checkpoint +` (приглушённый синий) — смысловой handoff ещё не готов;
-`Checkpoint ✓` (спокойный зелёный) — агент явно сообщил готовность через
+`+` (приглушённый синий) — смысловой handoff ещё не готов;
+`✓` (спокойный зелёный) — агент явно сообщил готовность через
 `checkpoint_ready`. Это **не автоматическая независимая проверка** и не Git status.
 Новый пользовательский запрос, продолжение работы инструментами или ручной reset
 снимают готовность. Поле остаётся и без Git. Перед `✓` обязателен цикл
@@ -270,6 +424,28 @@ review → fix → repeat review до отсутствия известных ha
 handoff плана, без edits/commit. Нехватка бюджета или блокер оставляет `+`.
 Ни статусный сигнал, ни ручная команда не разрешают сборки,
 дополнительных агентов, deployment или Git network operations.
+
+Приглушённый `≋` — `compaction.auto` включена (native default — `true`).
+Во время компактации текущей сессии тот же знак подсвечивается синим;
+он виден и при ручном сжатии с `auto = false`. После завершения/ошибки
+возвращается к приглушённому виду, либо скрывается, если auto выключена/неизвестна.
+Признак выполнения читается из последнего native `compaction` message:
+host сам проецирует `session.compaction.started`/`ended`/`failed` в его status.
+Свой lifecycle, таймер, чтение логов и новый binary patch не нужны.
+При смене вкладки читается кеш её сессии; при reconnect сообщения текущей сессии
+перечитываются через public `invalidate/sync`, без idle polling.
+В 2.4.0 предварительная background-подготовка не публикует такую пару start/end;
+её выполнение/готовность не угадываем. Подсветка начинается при самой компактации,
+включая ожидание ещё готовящегося summary, а не при его опережающей подготовке.
+
+Для настройки auto плагин читает ordered config entries текущей location через native client API;
+более поздний явный `auto` имеет приоритет, остальные поля его не сбрасывают.
+Обновление — при загрузке, `config.updated` и reconnect, без idle polling/LLM.
+Без выполняющегося сжатия при `auto = false` или неизвестном состоянии знак скрыт.
+Для переезда на 2.4.0
+пользователь выбрал сохранить штатный background default `true` и наблюдать расход;
+если расход вырастет, отдельно рассмотреть отключение background. Сам знак
+не обещает экономию токенов и остаётся при `background = false`.
 
 Локальные TUI-команды:
 
@@ -535,12 +711,12 @@ route changes без prompt. PID/starttime/Kitty pane и cleanup сохране�
 ## Независимое /delegated-review
 
 Обычное «поревьюй» выполняется в текущем разговоре, с его контекстом и без смены
-роли/модели, fork или ребёнка. Глобальный `config/AGENTS.md` требует прочитать
-установленный `review-analysis.md` из активного глобального config directory.
+роли/модели, fork или ребёнка. Личный `config/AGENTS.review.md` требует прочитать
+`opencode-local/review-analysis.md` (с учётом XDG-пути при HM generation).
 Ревью не разрешает исправления/сборки/коммиты и не отменяет Plan restrictions.
 
-HM устанавливает `commands/delegated-review.md` и общий `review-analysis.md`.
-`agents.review.system` объединяет этот общий исходник с `config/review-system.md`:
+HM устанавливает личные command bodies и `review-analysis.md` в `opencode-local`.
+`agents.review.system` личного JSONC подключает тело из analysis + `config/review-system.md`:
 **один** reviewer для явно делегированных read-only проверок, не второго агента.
 Обсуждение, цитаты, будущие/отрицательные запросы и обычная разработка не запускают
 ребёнка; активная команда не получает второго. Это model instruction, не keyword
@@ -680,17 +856,32 @@ HM устанавливает команду в `~/.config/opencode/commands/pro
 `home-manager switch --flake .#samov-laptop` либо свой desktop/laptop-old профиль.
 NixOS не меняется; сборка/активация и модельный прогон агентом не выполнялись.
 
+## /task-analysis и /browser-verification — подготовленные исходники
+
+Личные команды Samov: первая связывает требования с минимальными изменениями и
+проверками, вторая проводит согласованный живой browser-сценарий через существующий
+Chrome MCP. Обе остаются в текущей сессии, без смены агента/модели, skill-дублей и
+автопубликаций. Пассивный `/delegated-review-chrome` не заменяется живым тестом.
+
+Тексты и отдельные русские пояснения готовы:
+[`task-analysis.README.md`](task-analysis.README.md) и
+[`browser-verification.README.md`](browser-verification.README.md).
+HM подключает личный overlay декларативно; Linux-сборка пользователя и изолированная
+регистрация реальных тел через JSONC на 2.4.0 прошли. Activation нет;
+выполнение команд и модельное/browser-поведение не проверены.
+
 ## Permissions и отчёты
 
 Основные tools используют native V2 baseline. Plan запрещает edit;
 research/review/explore — read-only, без дальнейшего делегирования/todos,
-Explore также не вызывает skills. Подключены штатные discussion-map и
-git-regression-rollback; RLM/governor не устанавливаются.
+Explore также не вызывает skills. Личный discussion-map подключён через JSONC;
+git-regression-rollback остаётся общим. RLM/governor не устанавливаются.
 
-Skill selection follows native V2 discovery: the advertised `description` owns
-the trigger; `config/AGENTS.md` does not force discussion-map for general planning.
-Discussion-map requires established independent threads needing coordination or
-an explicit map request, not a single task, routine status check or topic change.
+Discussion-map is manual-only via `@discussion-map`, with
+`metadata.opencode/autoinvoke: false`; its description is not advertised to models.
+Use it for established independent threads or an explicit map request, not a
+single task, routine status check or topic change. Other auto-invoked skills follow
+native discovery and their advertised descriptions.
 Git-regression-rollback requires a user-authorized temporary commit rollback;
 ordinary investigation and permanent reverts are outside its scope. Already-loaded
 instructions are reused rather than loading the same skill on every follow-up.
@@ -792,7 +983,7 @@ opencode-skill-stats --json
 ## Форматирование: правила проекта
 
 Глобальное автоформатирование и зависимости форматтеров не устанавливаются.
-Короткое правило в `config/AGENTS.md`: применять объявленный проектом formatter
+Короткое правило в `config/AGENTS.common.md`: применять объявленный проектом formatter
 через CLI только к изменённым файлам; без него сохранять существующее оформление,
 не выбирать глобальный fallback и не заменять инструмент переформатированием моделью.
 Lint fixes — отдельная операция. Проектные настройки V2 могут явно включить native
@@ -811,16 +1002,33 @@ API/MCP. Есть [сторонний V2 plugin](https://github.com/christensenj
 и совместимость с pinned 2.1.4 не проверена. Неиспользуемые language-server packages
 в closure не добавлены. CLI lint/typecheck не заменяет navigation/rename/hover LSP.
 
-## Decision support и локальные todo
+## Локальные todo; Decision Support в архиве
 
-Домашний модуль явно включает `programs.opencode.decisionSupport.enable`:
-короткая дополнительная инструкция, узкий навык `decision-check` и инструментальный
-плагин `local.agent-todo`. NixOS/server и самостоятельный Mac-порт не меняются.
-Для отключения задать `programs.opencode.decisionSupport.enable = false;` и применить
-Home Manager. F3 — независимый обычный Hyprland bind, он продолжит открывать заметки.
-На одну беседу можно попросить не предлагать decision-check/todo; это указание модели,
-не механический переключатель. Навык не загружается при каждом выборе. Цитата внутри
-него сохранена по-русски с исправлением только лишней запятой; показывается редко.
+Домашний модуль явно включает `programs.opencode.todo.enable`. Запрос «добавь в todo»
+достаточен для работы через `agent_todo_read`/`agent_todo_propose`, без slash-команды
+или skill. Запись и локальный коммит по-прежнему требуют native подтверждения;
+автосохранение полезных идей без запроса/согласия не добавлено.
+
+Инструменты, их схемы и правила доступны только Build/Plan. У general, explore,
+research и review их нет в модельном запросе; глобальная todo-инструкция отсутствует.
+Plan сохраняет запрет записи. Это scoping контекста/инструментов, не filesystem
+sandbox: целевой анализ исходников по отдельной задаче может читать их как данные.
+
+Decision Support, `decision-check`, исходная цитата и ручные сценарии сохранены в
+[`archive/decision-support/`](archive/decision-support/README.md), но больше не
+устанавливаются. Старый `programs.opencode.decisionSupport.enable` выдаёт пояснение
+миграции; вместо него для заметок используется `programs.opencode.todo.enable`.
+Для отключения todo задать новый option в `false`; F3 останется обычным Hyprland bind.
+NixOS/server и самостоятельный корпоративный Mac не меняются.
+
+На установленной 2.1.4 приватный runtime с локальной заглушкой подтвердил наличие
+todo-tools/правил только у Build/Plan и их отсутствие у четырёх специалистов.
+Это не проверка выбора инструмента настоящей моделью по фразе «добавь в todo».
+После review: добавить новые module/config/plugin-файлы в Git-flake, применить свой
+HM-профиль (например, `home-manager switch --flake /home/samov/nix-config#samov-laptop`)
+и проверить запрос на заметку с отменой/подтверждением. NixOS activation не нужна.
+При смене store-каталога плагина выполнить описанную ниже процедуру обновления
+сервиса; архивирование в исходниках само по себе живую сессию не меняет.
 
 **F3** открывает `~/agent-todo/todo.md` в отдельном Kitty/Neovim на laptop/desktop;
 команда `agent-todo-open` делает то же самое. Каталог создаётся при открытии, файл —
@@ -896,7 +1104,7 @@ Native form остаётся транспортом consent/cancel. Submit-от�
 не может сохранить заметки обычной кнопкой. Это не повод обходить подтверждение.
 Plan явно отклоняется самим todo-инструментом, даже при session-level `edit: allow`.
 
-При включённом decision-support чтение `~/agent-todo/*` явно разрешено без
+При включённом todo чтение `~/agent-todo/*` явно разрешено Build/Plan без
 permission prompt. Это не даёт разрешения на запись: native `edit` permission,
 Plan guard и отдельная форма подтверждения сохраняются. Ограничения самого todo-инструмента
 (обычный UTF-8 файл до 128 KiB, проверки Git) также остаются.

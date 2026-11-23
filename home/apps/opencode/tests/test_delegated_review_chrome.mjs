@@ -12,16 +12,23 @@ import {
   writeFileSync,
 } from "node:fs";
 import { test } from "node:test";
+import { instructions } from "./instructions.mjs";
 
 const source = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 const command = source("../commands/delegated-review-chrome.md");
 const flat = command.replace(/^> ?/gm, "").replace(/\s+/g, " ");
 const shared = (
-  source("../config/review-analysis.md") + "\n" + source("../config/review-system.md")
+  source("../config/review-analysis.md") +
+  "\n" +
+  source("../config/review-system.md")
 ).replace(/\s+/g, " ");
-const routing = source("../config/AGENTS.md").replace(/\s+/g, " ");
-const cases = JSON.parse(source("./fixtures/delegated-review-chrome/cases.json"));
-const writeRecipe = command.match(/### Exclusive history write[\s\S]*?```python\n([\s\S]*?)\n```/)[1];
+const routing = instructions.home.replace(/\s+/g, " ");
+const cases = JSON.parse(
+  source("./fixtures/delegated-review-chrome/cases.json"),
+);
+const writeRecipe = command.match(
+  /### Exclusive history write[\s\S]*?```python\n([\s\S]*?)\n```/,
+)[1];
 
 // Instruction guards, published write/hash recipes and fixture integrity; no model/browser.
 test("Chrome command is self-contained, passive and installed without routing overrides", () => {
@@ -31,29 +38,48 @@ test("Chrome command is self-contained, passive and installed without routing ov
   assert.ok(body.includes("$ARGUMENTS"));
   assert.doesNotMatch(command, /!`|inherited unchanged/);
   assert.match(command, /^Audit policy: chrome-evidence-v3\.$/m);
-  assert.ok(flat.includes("Use configured `review` without a model/provider/effort override"));
-  assert.ok(flat.includes("do not substitute `general` or the parent's own audit"));
+  assert.ok(
+    flat.includes(
+      "Use configured `review` without a model/provider/effort override",
+    ),
+  );
+  assert.ok(
+    flat.includes("do not substitute `general` or the parent's own audit"),
+  );
   assert.doesNotMatch(command, /otherwise `general`/);
   assert.ok(flat.includes("without a model/provider/effort override"));
   assert.ok(flat.includes("any browser interaction"));
   assert.ok(flat.includes("Do not edit, delegate, commit"));
   assert.ok(flat.includes("neither agent drives the browser"));
-  assert.match(source("../default.nix"), /"opencode\/commands\/delegated-review-chrome\.md"\.source = \.\/commands\/delegated-review-chrome\.md;/);
+  assert.match(source("../default.nix"), /personal-layers\.nix/);
+  assert.match(
+    source("../config/personal-layers.nix"),
+    /delegated-review-chrome/,
+  );
 });
 
 test("ordinary audit intent selects the installed Chrome workflow once, not a generic review or live test", () => {
   for (const marker of [
     "Distinguish code review from an explicit request to audit",
-    "parent must first read and follow the applicable installed `commands/delegated-review-chrome.md`",
-    "respecting project overrides",
+    "parent must first read and follow an applicable project override, otherwise `~/.config/opencode-local/commands/delegated-review-chrome.md`",
+    "using the user's evidence/run target as its arguments",
     "Do not launch an ordinary code-review child first",
     "invoke a slash command recursively",
     "If the applicable template is unavailable",
     "Preserve its export/privacy restrictions and native permissions",
     "Mentioning Chrome/MCP in a code task or requesting a live browser test does not select",
-  ]) assert.ok(routing.includes(marker), marker);
-  assert.ok(flat.includes("including when selected by an ordinary-language audit request"));
-  assert.ok(flat.includes("do not launch an additional reviewer through general review routing"));
+  ])
+    assert.ok(routing.includes(marker), marker);
+  assert.ok(
+    flat.includes(
+      "including when selected by an ordinary-language audit request",
+    ),
+  );
+  assert.ok(
+    flat.includes(
+      "do not launch an additional reviewer through general review routing",
+    ),
+  );
 });
 
 test("the single shared reviewer respects the audit object rather than product-readiness criteria", () => {
@@ -68,7 +94,8 @@ test("the single shared reviewer respects the audit object rather than product-r
     "ground every decisive causal link in the scoped evidence, not another model's explanation",
     "establishes a change, not who caused it",
     "do not mark it supported while relegating necessary evidence to optional follow-up",
-  ]) assert.ok(shared.includes(marker), marker);
+  ])
+    assert.ok(shared.includes(marker), marker);
   assert.ok(flat.includes("not code-review or product-readiness criteria"));
 });
 
@@ -84,22 +111,31 @@ test("Chrome audit keeps current-session/latest-run defaults and native fresh-co
     "not a security sandbox",
     "selected recorded history is deliberate audit evidence, not inherited chat",
     "must not fetch parent or unrelated session history beyond that evidence",
-  ]) assert.ok(flat.includes(marker), marker);
+  ])
+    assert.ok(flat.includes(marker), marker);
 });
 
 test("recovery never adopts an old cancelled reviewer as a new task", () => {
-  const ordinary = source("../commands/delegated-review.md").replace(/\s+/g, " ");
+  const ordinary = source("../commands/delegated-review.md").replace(
+    /\s+/g,
+    " ",
+  );
   for (const prompt of [flat, ordinary]) {
     for (const marker of [
       "Recovery applies only after this logical",
       "starts a fresh child without `sessionID`",
       "User cancellation ends automatic recovery",
       "explicit user request",
-    ]) assert.ok(prompt.includes(marker), marker);
+    ])
+      assert.ok(prompt.includes(marker), marker);
   }
   assert.ok(flat.includes("never whole-child CLI exports or probe files"));
-  assert.ok(flat.includes("the agent cannot relabel recovery or reset budgets itself"));
-  assert.ok(ordinary.includes("not whole-session CLI export probes or temporary files"));
+  assert.ok(
+    flat.includes("the agent cannot relabel recovery or reset budgets itself"),
+  );
+  assert.ok(
+    ordinary.includes("not whole-session CLI export probes or temporary files"),
+  );
 });
 
 test("evidence acquisition has a completeness gate and a bounded non-file fallback", () => {
@@ -113,17 +149,25 @@ test("evidence acquisition has a completeness gate and a bounded non-file fallba
     "All acquisition, validation, filtering and secret redaction happen in memory",
     "No scratch/probe exports, including child-session exports for recovery",
     "If the final write fails, stop and disclose any partial artifact",
-  ]) assert.ok(flat.includes(marker), marker);
+  ])
+    assert.ok(flat.includes(marker), marker);
 });
 
 function withHistoryWriter(check) {
   const directory = mkdtempSync("/tmp/opencode/chrome-history-write-");
   const artifact = `${directory}/history.json`;
-  const write = (path, payload) => execFileSync(
-    "python3",
-    ["-B", "-c", "import sys\nartifact = sys.argv[1]\nhistory_bytes = sys.stdin.buffer.read()\n" + writeRecipe, path],
-    { input: payload, stdio: "pipe", timeout: 5000 },
-  );
+  const write = (path, payload) =>
+    execFileSync(
+      "python3",
+      [
+        "-B",
+        "-c",
+        "import sys\nartifact = sys.argv[1]\nhistory_bytes = sys.stdin.buffer.read()\n" +
+          writeRecipe,
+        path,
+      ],
+      { input: payload, stdio: "pipe", timeout: 5000 },
+    );
   try {
     check({ directory, artifact, write });
   } finally {
@@ -134,7 +178,9 @@ function withHistoryWriter(check) {
 
 test("published history-write recipe rejects truncated JSON before creating a file", () => {
   withHistoryWriter(({ artifact, write }) => {
-    assert.throws(() => write(artifact, Buffer.from('{"messages":[{"text":"cut')));
+    assert.throws(() =>
+      write(artifact, Buffer.from('{"messages":[{"text":"cut')),
+    );
     assert.equal(existsSync(artifact), false);
   });
 });
@@ -172,7 +218,8 @@ test("audit blockers require a full recorded path and counterevidence without re
     "Verify that a blocking audit finding has its decisive recorded path",
     "request evidence or correction from the same child within the shared budget",
     "do not silently change its verdict or start live tests",
-  ]) assert.ok(flat.includes(marker), marker);
+  ])
+    assert.ok(flat.includes(marker), marker);
 });
 
 test("export exception is parent-only, private, immutable and bounded", () => {
@@ -188,7 +235,8 @@ test("export exception is parent-only, private, immutable and bounded", () => {
     "not cryptographic proof of honest testing",
     "Do not read or modify the session database or guess API endpoints",
     "do not mistake an opaque wrapper for no calls",
-  ]) assert.ok(flat.includes(marker), marker);
+  ])
+    assert.ok(flat.includes(marker), marker);
 });
 
 test("audit distinguishes effect, legitimacy, evidence status and completeness", () => {
@@ -206,47 +254,112 @@ test("audit distinguishes effect, legitimacy, evidence status and completeness",
     "a correctly documented failing feature test",
     "counts are not an integrity score",
     "property-specific assessments",
-  ]) assert.ok(flat.includes(marker), marker);
-  assert.ok(flat.includes("Never APPROVE/REQUEST_CHANGES/BLOCKER with incomplete coverage"));
+  ])
+    assert.ok(flat.includes(marker), marker);
+  assert.ok(
+    flat.includes(
+      "Never APPROVE/REQUEST_CHANGES/BLOCKER with incomplete coverage",
+    ),
+  );
 });
 
 test("Chrome recovery keeps the shared seven-call budget and native child identity", () => {
   for (const marker of [
-    "sessionID", "up to six further invocations total",
-    "Initialize at 0 only once", "0 used / 6 remaining",
+    "sessionID",
+    "up to six further invocations total",
+    "Initialize at 0 only once",
+    "0 used / 6 remaining",
     "additional_remaining = 6 - additional_used",
-    "1/6 additional used, 5 remaining", "20, 40, 60, 90, 120, 120",
-    "less than 10 minutes", "Never duplicate a prompt/child",
+    "1/6 additional used, 5 remaining",
+    "20, 40, 60, 90, 120, 120",
+    "less than 10 minutes",
+    "Never duplicate a prompt/child",
     "no recoverable child and no running invocation",
     "Do not silently rewrite the child's conclusions",
     "fingerprint clarification and report repair",
-  ]) assert.ok(flat.includes(marker), marker);
+  ])
+    assert.ok(flat.includes(marker), marker);
 });
 
 test("published drc-scope-v2 recipe is canonical and binds supporting evidence and limitations", () => {
   const recipe = command.match(/```python\n([\s\S]*?)\n```/)[1];
   const bytes = Buffer.from('recorded evidence: "снимок"\n');
   const manifest = {
-    schema: "drc-scope-v2", artifact: '/fixture/a"\\\né.json',
-    files: [{ path: '/fixture/a"\\\né.json', kind: "history", bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") }],
+    schema: "drc-scope-v2",
+    artifact: '/fixture/a"\\\né.json',
+    files: [
+      {
+        path: '/fixture/a"\\\né.json',
+        kind: "history",
+        bytes: bytes.length,
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+      },
+    ],
     sources: [{ session: "ses_fixture", from: null, through: "e8" }],
-    export: { method: "supplied synthetic fixture", redactions: [], limitations: [] },
+    export: {
+      method: "supplied synthetic fixture",
+      redactions: [],
+      limitations: [],
+    },
     claims: [{ id: "c1", text: "Баннер показан.", ref: "e8" }],
-    pages: ["https://example.invalid/"], unavailable: [], exclusions: [],
+    pages: ["https://example.invalid/"],
+    unavailable: [],
+    exclusions: [],
   };
-  const sorted = (value) => Array.isArray(value) ? value.map(sorted) : value && typeof value === "object" ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, sorted(value[key])])) : value;
-  const ascii = JSON.stringify(sorted(manifest)).replace(/[\u007f-\uffff]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`);
+  const sorted = (value) =>
+    Array.isArray(value)
+      ? value.map(sorted)
+      : value && typeof value === "object"
+        ? Object.fromEntries(
+            Object.keys(value)
+              .sort()
+              .map((key) => [key, sorted(value[key])]),
+          )
+        : value;
+  const ascii = JSON.stringify(sorted(manifest)).replace(
+    /[\u007f-\uffff]/g,
+    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
   const expected = createHash("sha256").update(ascii, "ascii").digest("hex");
-  const hash = (value) => execFileSync("python3", ["-B", "-c", "import sys, json\nmanifest = json.load(sys.stdin)\n" + recipe], { input: JSON.stringify(value), encoding: "utf8", timeout: 5000 }).trim();
+  const hash = (value) =>
+    execFileSync(
+      "python3",
+      [
+        "-B",
+        "-c",
+        "import sys, json\nmanifest = json.load(sys.stdin)\n" + recipe,
+      ],
+      { input: JSON.stringify(value), encoding: "utf8", timeout: 5000 },
+    ).trim();
   assert.equal(hash(manifest), expected);
-  assert.equal(hash(Object.fromEntries(Object.entries(manifest).reverse())), expected);
+  assert.equal(
+    hash(Object.fromEntries(Object.entries(manifest).reverse())),
+    expected,
+  );
   for (const mutate of [
-    (m) => { m.files[0].sha256 = "0".repeat(64); },
-    (m) => { m.files.push({ path: "/fixture/image.png", kind: "image", bytes: 3, sha256: "1".repeat(64) }); },
-    (m) => { m.export.redactions.push("e2: cookie removed"); },
-    (m) => { m.unavailable.push("missing required video"); },
-    (m) => { m.sources[0].through = "e9"; },
-    (m) => { m.claims[0].text += " All passed."; },
+    (m) => {
+      m.files[0].sha256 = "0".repeat(64);
+    },
+    (m) => {
+      m.files.push({
+        path: "/fixture/image.png",
+        kind: "image",
+        bytes: 3,
+        sha256: "1".repeat(64),
+      });
+    },
+    (m) => {
+      m.export.redactions.push("e2: cookie removed");
+    },
+    (m) => {
+      m.unavailable.push("missing required video");
+    },
+    (m) => {
+      m.sources[0].through = "e9";
+    },
+    (m) => {
+      m.claims[0].text += " All passed.";
+    },
   ]) {
     const changed = structuredClone(manifest);
     mutate(changed);
@@ -262,16 +375,32 @@ test("synthetic oracles have stable event links, complete claim coverage and no 
     assert.ok(["COMPLETE", "INCOMPLETE"].includes(item.oracle.coverage));
     const ids = item.events.map((event) => event.id);
     assert.equal(new Set(ids).size, ids.length);
-    assert.deepEqual(item.oracle.claims.map((claim) => claim.ref), item.events.filter((event) => event.actor === "model").map((event) => event.id));
+    assert.deepEqual(
+      item.oracle.claims.map((claim) => claim.ref),
+      item.events
+        .filter((event) => event.actor === "model")
+        .map((event) => event.id),
+    );
     for (const claim of item.oracle.claims) {
-      assert.ok(["SUPPORTED", "CONTRADICTED", "CONTAMINATED", "UNVERIFIED"].includes(claim.status));
+      assert.ok(
+        ["SUPPORTED", "CONTRADICTED", "CONTAMINATED", "UNVERIFIED"].includes(
+          claim.status,
+        ),
+      );
       statuses.add(claim.status);
       assert.ok(claim.reason.length > 30);
       assert.ok(claim.evidence.length > 0);
-      for (const ref of claim.evidence) assert.ok(ids.indexOf(ref) >= 0 && ids.indexOf(ref) < ids.indexOf(claim.ref));
+      for (const ref of claim.evidence)
+        assert.ok(
+          ids.indexOf(ref) >= 0 && ids.indexOf(ref) < ids.indexOf(claim.ref),
+        );
     }
-    if (item.oracle.coverage === "INCOMPLETE") assert.equal(item.oracle.verdict, null);
-    else if (item.oracle.verdict === "APPROVE") assert.ok(item.oracle.claims.every((claim) => claim.status === "SUPPORTED"));
+    if (item.oracle.coverage === "INCOMPLETE")
+      assert.equal(item.oracle.verdict, null);
+    else if (item.oracle.verdict === "APPROVE")
+      assert.ok(
+        item.oracle.claims.every((claim) => claim.status === "SUPPORTED"),
+      );
     else assert.equal(item.oracle.verdict, "REQUEST_CHANGES");
   }
   assert.equal(statuses.size, 4);

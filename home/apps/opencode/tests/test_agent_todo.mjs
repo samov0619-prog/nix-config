@@ -12,6 +12,7 @@ import {
   access,
 } from "node:fs/promises";
 import { join } from "node:path";
+import { TODO_INSTRUCTIONS } from "../plugins/agent-todo-instructions.ts";
 const {
   todoStore,
   setupTodo,
@@ -1029,13 +1030,10 @@ test("checkbox headings and closed spoilers preserve marks, counters and legacy 
       .join("\n"),
     /Update\n\[x\] Проверить сон/,
   );
-  const rules = await readFile(
-    new URL("../config/decision-support.md", import.meta.url),
-    "utf8",
-  );
+  const rules = TODO_INSTRUCTIONS;
   assert.match(rules, /## \[ \] N\. Short title/);
   assert.match(rules, /<summary>One-sentence task summary<\/summary>/);
-  assert.match(rules, /not a generic label or a repetition of the title/);
+  assert.match(rules, /not a\s+generic label or a repetition of the title/);
   assert.match(
     p.tools.get("agent_todo_propose").input.properties.changes.properties.add
       .items.properties.title.description,
@@ -1374,13 +1372,10 @@ test("sorting uses existing consent, preserves feedback drafts, and never writes
   );
 });
 
-test("language and artifact rules are explicit in instructions and tool contract", async (t) => {
-  const rules = await readFile(
-    new URL("../config/decision-support.md", import.meta.url),
-    "utf8",
-  );
-  assert.match(rules, /English even when the creation request is in Russian/);
-  assert.match(rules, /use Russian content only\n  when explicitly requested/);
+test("language and artifact rules are explicit in the role-scoped tool contract", async (t) => {
+  const rules = TODO_INSTRUCTIONS;
+  assert.match(rules, /English\s+even when the creation request is in Russian/);
+  assert.match(rules, /use Russian content only\nwhen explicitly requested/);
   assert.match(rules, /must retain their original language and wording/);
   assert.match(rules, /explicitly requests translation of that artifact/);
   const f = await fixture(t, false),
@@ -1391,6 +1386,10 @@ test("language and artifact rules are explicit in instructions and tool contract
     /Default to English content even for non-English requests/,
   );
   assert.match(tool.description, /Preserve supplied artifacts/);
+  assert.ok(tool.description.includes(TODO_INSTRUCTIONS));
+  assert.match(tool.description, /do not require a slash command or skill/);
+  assert.match(tool.description, /Do not save ideas automatically/);
+  assert.match(tool.description, /Plan remains read-only/);
   assert.equal(tool.input.properties.sort.type, "boolean");
   assert.match(tool.input.properties.reason.description, /English/);
 });
@@ -1454,7 +1453,10 @@ test("native proposal path applies structured status/priority without model-writ
 
 test("personal reminder remains exact Russian text with only the extra comma removed", async () => {
   const skill = await readFile(
-    new URL("../skills/decision-check/SKILL.md", import.meta.url),
+    new URL(
+      "../archive/decision-support/skills/decision-check/SKILL.md",
+      import.meta.url,
+    ),
     "utf8",
   );
   const quote = [
@@ -1463,10 +1465,7 @@ test("personal reminder remains exact Russian text with only the extra comma rem
     "Мне кажется, именно здесь ты можешь снять с себя больше всего когнитивной нагрузки. Не понижая требований к качеству решений — а перестав требовать доказательства их абсолютной оптимальности.",
   ].join("\n");
   assert.equal(skill.slice(skill.indexOf("Решение существует")).trim(), quote);
-  const rules = await readFile(
-    new URL("../config/decision-support.md", import.meta.url),
-    "utf8",
-  );
+  const rules = TODO_INSTRUCTIONS;
   assert.ok(
     !rules.includes("Решение существует"),
     "quote is on-demand, not ambient",

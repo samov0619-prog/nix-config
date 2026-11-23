@@ -20,6 +20,10 @@ def child():
     }
 
 
+def failure_report():
+    return '<background-result kind="subagent" sessionID="ses_fixture123" state="error">429 fixture unavailable</background-result>'
+
+
 class FixtureTests(unittest.TestCase):
     def test_setup_failure_closes_provider_without_starting_it(self):
         with (
@@ -35,6 +39,8 @@ class FixtureTests(unittest.TestCase):
         RecoveryMock.reset("native", "/fixture.txt")
         RecoveryMock.decide(parent())
         self.assertEqual(RecoveryMock.next_tool[0], "subagent")
+        RecoveryMock.decide(parent("The subagent is working in the background"))
+        self.assertIsNone(RecoveryMock.next_tool)
         RecoveryMock.decide(child())
         self.assertEqual(RecoveryMock.next_tool[0], "read")
         RecoveryMock.decide(child())
@@ -44,7 +50,7 @@ class FixtureTests(unittest.TestCase):
         self.assertIn("DR_CHILD_COMPLETE", RecoveryMock.reply)
         RecoveryMock.decide(parent("DR_CHILD_COMPLETE"))
         self.assertIn("DR_PARENT_COMPLETE", RecoveryMock.reply)
-        self.assertEqual(RecoveryMock.parent_step, 2)
+        self.assertEqual(RecoveryMock.parent_step, 3)
 
     def test_terminal_fixture_waits_then_uses_the_error_child_id(self):
         RecoveryMock.reset("terminal", "/fixture.txt")
@@ -54,10 +60,13 @@ class FixtureTests(unittest.TestCase):
             RecoveryMock.decide(child())
             self.assertTrue(RecoveryMock.fail_next)
         with patch("test_delegated_review_runtime.time.monotonic", return_value=100):
-            RecoveryMock.decide(parent("Subagent failed (sessionID: ses_fixture123): 429"))
+            RecoveryMock.decide(parent(failure_report()))
         self.assertEqual(RecoveryMock.next_tool[1]["command"], "sleep 20")
+        with patch("test_delegated_review_runtime.time.monotonic", return_value=119):
+            with self.assertRaises(AssertionError):
+                RecoveryMock.decide(parent(failure_report()))
         with patch("test_delegated_review_runtime.time.monotonic", return_value=120):
-            RecoveryMock.decide(parent("Subagent failed (sessionID: ses_fixture123): 429"))
+            RecoveryMock.decide(parent(failure_report()))
         self.assertEqual(RecoveryMock.next_tool[1]["sessionID"], "ses_fixture123")
         RecoveryMock.decide(child())
         self.assertIn("DR_CHILD_COMPLETE", RecoveryMock.reply)
@@ -68,8 +77,10 @@ class FixtureTests(unittest.TestCase):
         RecoveryMock.reset("terminal", "/fixture.txt")
         RecoveryMock.decide(parent())
         RecoveryMock.failures = 3
+        RecoveryMock.decide(parent("The subagent is working in the background"))
+        self.assertIsNone(RecoveryMock.next_tool)
         with self.assertRaisesRegex(AssertionError, "native retries exhausted"):
-            RecoveryMock.decide(parent("Subagent failed (sessionID: ses_fixture123): 429"))
+            RecoveryMock.decide(parent(failure_report()))
 
 
 if __name__ == "__main__":

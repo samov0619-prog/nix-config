@@ -14,7 +14,7 @@ let
     amnezia = (stable.callPackage ../pkgs/amnezia-vpn { }).src;
     onionbell = (stable.callPackage ../pkgs/onionbell { }).src;
     yazi-compress = unstable.yaziPlugins.compress.src;
-    opencode = f.inputs.opencode;
+    opencode = f.inputs.opencode.packages.${system}.opencode.src;
     waybar = stable.waybar.src;
     bluez-stable = stable.bluez.src;
     blueman = stable.blueman.src;

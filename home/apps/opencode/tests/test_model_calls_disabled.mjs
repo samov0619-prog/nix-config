@@ -21,8 +21,16 @@ test("home disables the optional model logger but retains its source and task re
               runCommand = name: attrs: script: { inherit name script; };
               writeShellApplication = attrs: attrs.name;
             };
-            lib.optionalAttrs = condition: attrs: if condition then attrs else {};
-            config = {}; opencodePackage = null;
+            lib = {
+              optionalAttrs = condition: attrs: if condition then attrs else {};
+              hasPrefix = prefix: text: builtins.substring 0 (builtins.stringLength prefix) text == prefix;
+            };
+            config = {
+              programs.opencode.todo.enable = true;
+              home.homeDirectory = "/home/fixture";
+              xdg.configHome = "/home/fixture/.config";
+            };
+            opencodePackage = null;
           };
           files = module.xdg.configFile;
         in {
