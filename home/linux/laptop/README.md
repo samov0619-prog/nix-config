@@ -67,6 +67,64 @@ helper: it cannot detect external changes. Manual recovery is
 `lenovo-touchpad enable` from the active Hyprland session. There is no sudo,
 polling, disk-persistent toggle or suspend hook.
 
+### Touchpad pointer acceleration
+
+The Lenovo touchpad alone uses Hyprland's supported libinput `custom` motion
+profile. External mice, the separate `-mouse` interface, Acer and desktop retain
+their existing settings. This is an approximation tuned against the user's
+MacBook Pro A3403 at tracking speed 7/9, not a recovered Apple acceleration curve.
+The user accepted the final live pointer trial; post-activation gesture and
+application checks remain pending.
+
+The sensor reports X = 31 and Y = 28 units/mm. libinput already normalizes Y to
+the X resolution; no extra axis scaling or fake sensor geometry is applied.
+The touchpad aspect ratio is about 1.75 versus the screen's 1.60, so a movement
+toward the touchpad corner can still reach the right screen edge before the
+bottom. Extra pointer travel provides room to reach both edges, not absolute
+touchpad-to-screen mapping.
+
+The 64 motion samples in `hyprland.conf` encode output speed, not gain:
+
+- Input step: `0.062` native units/ms, equivalent to 2 mm/s of finger speed.
+- At finger speeds through 16 mm/s, sample the original libinput 1.31.3
+  touchpad profile at sensitivity 0, including its low-speed deceleration.
+  Linear interpolation between samples is an approximation of that profile.
+- From 16 to 90 mm/s, blend from baseline gain to 1.4 with
+  `t = (speed - 16) / 74` and `gain = baseline + (1.4 - baseline) * t*t*(3 - 2*t)`.
+- Above 90 mm/s, keep gain at 1.4. The last two samples lie on this same line,
+  so libinput's extrapolation preserves the cap instead of accelerating forever.
+- `dpi = int(31 * 25.4) = 787`; `baseline = 0.9 * 0.2968 * 1000 / dpi`.
+  At sample `i`, output speed is `i * 0.062 * gain(i * 2)`.
+
+`scroll_points = 1 0 0.33941550` preserves the original constant two-finger
+scroll gain instead of inheriting the custom profile's identity fallback.
+Pinch scale and rotation angle are calculated separately and are unchanged.
+However, swipe translation and translation during pinch use the motion filter:
+workspace swipes or content panning may feel faster. This is not pointer-only
+isolation from every gesture. Tap/click settings are unchanged.
+
+The calculation follows libinput 1.31.3's
+[`filter-touchpad.c`](https://gitlab.freedesktop.org/libinput/libinput/-/blob/1.31.3/src/filter-touchpad.c)
+and [`filter-custom.c`](https://gitlab.freedesktop.org/libinput/libinput/-/blob/1.31.3/src/filter-custom.c).
+The declaration/math regression check reads the actual configured samples; it
+does not simulate a physical device or establish application gesture behavior:
+
+```fish
+python3 -B home/linux/laptop/tests/test_touchpad_acceleration.py
+```
+
+Apply and verify:
+
+1. Run `home-manager switch --flake /home/samov/nix-config#samov-laptop`.
+2. Run `hyprctl reload`, then `hyprctl configerrors`; expect no errors. Reload
+   also enables the touchpad through the existing helper. No NixOS switch or
+   reboot is needed.
+3. Check slow targeting and center-to-corner screenshot selection, then browser
+   pinch zoom, two-finger scrolling and three-finger workspace switching.
+4. To restore stock pointer behavior, remove only this device's `accel_profile`
+   and `scroll_points` overrides and reapply HM/reload. Reload alone now restores
+   the saved custom curve, not the pre-trial defaults.
+
 ## Mouse resize and local Dwindle reset
 
 Prepared on Lenovo only: **Super+Shift+LMB drag** uses Hyprland's native
