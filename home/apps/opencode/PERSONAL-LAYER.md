@@ -4,19 +4,22 @@
 `home` и `corporate`. Это сборка текстов и штатных settings на этапе Nix evaluation,
 не runtime-загрузчик, installer или новый OpenCode plugin. JSONC получается через
 `builtins.toJSON`. Домашний `default.nix` уже подключает этот результат декларативно;
-Linux HM-сборка пользователя и isolated runtime/PTY 2.4.0 прошли; activation нет,
-живые конфигурации не менялись. Последующий reporting-script fix требует пересборки.
-Корпоративный
-результат включён в отдельный полный staging-export `macos/export.nix`.
+Linux HM-сборка, пересборка reporting-script fix и isolated runtime/PTY 2.4.0 прошли.
+Пользователь применил домашнюю 2.4.0 и подтвердил Free/Paid, тему,
+историю/вложения и MCP connection. Последующий перенос `/problem-brief` в personal
+пока только в исходниках: новый HM switch/приёмка переноса не выполнялись.
+Результат для самостоятельного Mac-конфига включён в staging-export `macos/export.nix`.
 
 ## Состав
 
 - Личные инструкции, review policies и роли. Дома сохранены нынешние модели,
-  ограничения и prompts; корпоративные review/research наследуют модель родителя.
-- Четыре команды: `/delegated-review`, `/delegated-review-chrome`, `/task-analysis`,
-  `/browser-verification`. Metadata — в JSONC, относительные `{file:...}` загружают
+  ограничения и prompts; на Mac review/research наследуют модель родителя.
+- Пять команд: `/delegated-review`, `/delegated-review-chrome`, `/task-analysis`,
+  `/browser-verification`, `/problem-brief`. Metadata — в JSONC, относительные `{file:...}` загружают
   только Markdown-тела. YAML-frontmatter проверяется и снимается при сборке текста.
-- `/problem-brief` остаётся общей командой и здесь не дублируется.
+- `/problem-brief` и его README устанавливаются только в personal, дома и на Mac.
+  Ранее принятая трактовка как общей команды исправлена по уточнению пользователя;
+  прежняя четырёхкомандная runtime-приёмка не проверяла этот перенос.
 - Личный `discussion-map` с `metadata.opencode/autoinvoke: false`; ручной вход —
   `@discussion-map`. Путь skills не зависит от проекта: `~/` в standalone-результате,
   абсолютный `config.xdg.configHome` в HM.
@@ -27,8 +30,8 @@ Linux HM-сборка пользователя и isolated runtime/PTY 2.4.0 п�
   `task-analysis.README.md` и `browser-verification.README.md`.
 
 Личный JSONC не определяет providers, MCP, общие safety policies или CLI-настройки.
-Домашние routing/limits/audio и корпоративный внешний voice-plugin не заменяются.
-Семь корпоративных MCP и `git-offline` остаются в базе. Общая конфигурация не должна
+Домашние routing/limits/audio и отдельно установленные plugins не заменяются.
+Семь MCP и `git-offline` остаются в базе Mac-конфига. Общая конфигурация не должна
 ссылаться на файлы этого дополнения; без него Common должен работать самостоятельно.
 
 ## Подключение
@@ -58,15 +61,24 @@ set -gx OPENCODE_CONFIG "$HOME/.config/opencode-local/opencode.jsonc"
 Общие инженерные правила вынесены в `AGENTS.common.md`. Goals, Fish, collaboration
 и личное routing — в `AGENTS.md`; домашний review-workflow — в `AGENTS.review.md`.
 `instructions.nix` отдельно предоставляет `homeBase`, `homePersonal`, их объединённый
-`home` для проверок, `corporate` и `corporatePersonal`. Корпоративные Git/requirements/
+`home` для проверок, `corporate` и `corporatePersonal`. Git/requirements/
 task-log contracts сохранены, автоматический discussion-map routing удалён.
 
-Это пока **не принятая миграция корпоративной установки**: полный Common/export
-и shared skills подготовлены, но живые file/symlink types и интеграции не проверены. Нельзя просто
+Это пока **не завершённая приёмка Mac-конфига**: полный Common/export
+и shared skills подготовлены; типы затронутых discovery-ссылок сверены по выводу
+пользователя, но runtime-интеграции не проверены. Нельзя просто
 добавить overlay к прежним discovery-копиям и объявить её законченной. Исторические
 Mac acceptance-файлы, seed и R3 не заменяются новым набором.
 
 ## Проверено
+
+После уточнения brief (2026-11-24) прошла **21 source/evaluation-проверка**:
+`test_problem_brief.mjs`, `test_personal_layers.mjs`, `test_home_wiring.mjs`,
+`test_macos_export.mjs`. Они проверяют пять явных personal-команд, неизменённое
+тело brief/README, отсутствие brief в Common, Linux/Darwin wiring и custom XDG.
+Runtime-fixture приведён к новому разделению и проверен только на Python syntax,
+без выполнения. Сборки и live/model/MCP-проверки не запускались.
+Результаты runtime ниже исторические: они не проверяли последующий перенос brief.
 
 `tests/test_personal_layers.mjs` проверяет оба результата Nix evaluation: реальные
 тела команд/policies, сохранность домашних ролей/моделей/ограничений, отсутствие
@@ -116,24 +128,25 @@ Generated home command прошёл также native recovery-fixture на 2.4.
 Не проверены реальный Mac, браузер, reviewer reasoning/полный recovery budget и выбор todo
 настоящей моделью. Пересборка после accounting-fix подтверждена, новый wrapper
 прошёл CLI fixture; покрытие — в [BENCHMARK.md](BENCHMARK.md#built-linux-240-isolated-acceptance-2026-11-23).
-Ни activation, ни коммит не выполнялись; Darwin не собран.
+Домашние activation/приёмка и коммит `03cf63b` выполнены после этих проверок;
+нынешний перенос brief дома ещё не применён. Darwin не собран.
 Изменённые Nix-файлы отформатированы pinned `nix fmt --offline --no-write-lock-file`;
 Последующий проход использует установленный Prettier 3.10.1; Ruff на PATH не найден.
 
 Порядок дальнейшей проверки:
 
-1. Проверить diff: сборка, пересборка accounting-fix и перечисленная isolated
-   acceptance уже прошли. Последующие tests/docs runtime не меняют; общий unstable
-   ради OpenCode не обновляется.
-2. Отдельно согласовать проверки реальных моделей/reviewer workflow/MCP/browser;
-   scripted mock не подтверждает принятие моделью решений по инструкциям.
-3. Выполнить остановленный согласованный backup по [UPGRADE-240.md](UPGRADE-240.md).
-   В согласованное окно применить HM пользователем, убедиться, что server получил
-   `OPENCODE_CONFIG`, проверить отсутствие старых entrypoints, ручной skill и todo
-   consent/Plan guard. Изменённые config-файлы перечитываются штатно; одна новая
-   переменная в терминале ещё не доказывает её наличие у уже работающего server.
-4. До применения Mac-пакета сверить live file/symlink types по `macos/INSTALL.md`
-   и провести приёмку на подтверждённой
-   2.4.0, сохранить семь MCP,
-   voice/CLI, policies/`git-offline` и провести отдельную приёмку. Изменение командной
-   Git-защиты требует согласования с командой. Этот исходник ничего не активирует.
+1. Проверить diff переноса brief: прежняя сборка/приёмка 2.4.0 уже прошла,
+   backup и generation 65 сохранены. Повторять закрытую миграционную приёмку не нужно.
+2. Для домашнего переноса пользователь применяет
+   `home-manager switch --flake /home/samov/nix-config#samov-laptop`
+   (либо свой профиль), затем `/reload`. NixOS activation не нужна.
+3. Проверить одну `/problem-brief` из personal: без аргументов и с явным запросом.
+   Убедиться, что прежних Common command/README больше нет, а personal JSONC
+   содержит регистрацию `{file:commands/problem-brief.md}`. Другие команды/модели
+   перенос не меняет; живые проверки агентом не выполняются.
+4. Mac — отдельно: пользователь подтвердил применение R3, R4 и прежнего README-патча;
+   R4 подготовлен поверх R3,
+   с точным абсолютным target Common brief по пользовательскому выводу.
+   Copy-fixture apply/reverse проходят с архивной update-папкой и без неё;
+   runtime-приёмка ещё не подтверждена. Сохранить MCP,
+   CLI и policies/`git-offline`; voice-plugin отсутствует и не требуется.

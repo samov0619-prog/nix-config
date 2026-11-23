@@ -26,7 +26,7 @@ const originalHome = JSON.parse(
 const body = (text) => text.replace(/^---\n[\s\S]*?\n---\n\n/, "");
 const fileText = (file) => file.text ?? readFileSync(file.source, "utf8");
 
-test("each personal JSONC explicitly registers four current-session commands and real prompt bodies", () => {
+test("each personal JSONC explicitly registers five current-session commands and real prompt bodies", () => {
   for (const layer of Object.values(layers)) {
     const { settings, files } = layer;
     assert.deepEqual(JSON.parse(files["opencode.jsonc"].text), settings);
@@ -35,6 +35,7 @@ test("each personal JSONC explicitly registers four current-session commands and
       "browser-verification",
       "delegated-review",
       "delegated-review-chrome",
+      "problem-brief",
       "task-analysis",
     ]);
     for (const [name, command] of Object.entries(settings.commands)) {
@@ -55,7 +56,7 @@ test("each personal JSONC explicitly registers four current-session commands and
     ]);
     assert.ok(files["task-analysis.README.md"]);
     assert.ok(files["browser-verification.README.md"]);
-    assert.equal("commands/problem-brief.md" in files, false);
+    assert.ok(files["problem-brief.README.md"]);
   }
 });
 

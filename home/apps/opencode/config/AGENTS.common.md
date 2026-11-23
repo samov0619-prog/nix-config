@@ -23,6 +23,24 @@
   requirements and verified project constraints take precedence; preserve accepted
   fixes unless their removal conditions are met.
 
+## Architecture Principles
+
+- Prefer the simplest design that meets current requirements. Do not add speculative
+  abstractions, layers or dependencies for hypothetical future needs.
+- Give modules clear responsibilities: keep closely related behavior together and
+  minimize coupling between independent concerns.
+- Make dependencies explicit. Avoid dependency cycles, hidden shared mutable state
+  and implicit cross-module coordination.
+- Define clear interfaces and contracts, preserve their invariants, and handle
+  failures predictably rather than hiding them.
+- Keep core logic independently testable; separate external I/O and side effects
+  where useful, without forcing extra layers around every small operation.
+- Share code when it represents the same knowledge or rule. Do not merge unrelated
+  behavior merely because its implementation looks similar.
+- Respect the existing architecture and keep changes proportional to the task.
+  A local request does not authorize redesign; these principles mandate no named
+  methodology, folder structure or module size.
+
 ## Tools
 
 - ALWAYS use OpenCode's `grep` and `glob` tools for file searches; they are backed by `rg`.

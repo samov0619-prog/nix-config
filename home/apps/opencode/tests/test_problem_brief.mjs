@@ -90,7 +90,7 @@ test("command remains manual and in-session without model or agent overrides", (
   assert.doesNotMatch(body, /!`/);
 });
 
-test("selected HM declarations install exact sources with guide outside commands", () => {
+test("selected HM declarations install problem-brief only in personal, with an unchanged body and guide", () => {
   // Evaluate only these real module attributes, with no package set or builds.
   // This is not full merged HM evaluation or installed-runtime verification.
   const installed = JSON.parse(
@@ -114,17 +114,32 @@ test("selected HM declarations install exact sources with guide outside commands
             opencodePackage = null;
           }).xdg.configFile;
         in {
-          command = builtins.readFile files."opencode/commands/problem-brief.md".source;
-          guide = builtins.readFile files."opencode/problem-brief.README.md".source;
+          command = files."opencode-local/commands/problem-brief.md".text;
+          guide = builtins.readFile files."opencode-local/problem-brief.README.md".source;
+          settings = builtins.fromJSON files."opencode-local/opencode.jsonc".text;
           commands = builtins.filter
-            (name: builtins.match "opencode/commands/.*problem-brief.*" name != null)
+            (name: builtins.match ".*/commands/.*problem-brief.*" name != null)
+            (builtins.attrNames files);
+          common = builtins.filter
+            (name: builtins.match "opencode/.*problem-brief.*" name != null)
             (builtins.attrNames files);
         }`,
       ],
       { timeout: 10000 },
     ),
   );
-  assert.equal(installed.command, command.toString("utf8"));
+  assert.equal(
+    installed.command,
+    command.toString("utf8").replace(/^---\n[\s\S]*?\n---\n\n/, ""),
+  );
   assert.equal(installed.guide, guide.toString("utf8"));
-  assert.deepEqual(installed.commands, ["opencode/commands/problem-brief.md"]);
+  assert.deepEqual(installed.commands, [
+    "opencode-local/commands/problem-brief.md",
+  ]);
+  assert.deepEqual(installed.common, []);
+  assert.deepEqual(installed.settings.commands["problem-brief"], {
+    description: "Turn technical reports into clear, actionable issue briefs",
+    subagent: false,
+    template: "{file:commands/problem-brief.md}",
+  });
 });

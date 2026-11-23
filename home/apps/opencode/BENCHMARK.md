@@ -19,6 +19,54 @@ Historical model-quality experiments and V1 behavior are retained in
 
 ## Built Linux 2.4.0 isolated acceptance (2026-11-23)
 
+Subsequent correction (2026-11-24): the user clarified that `/problem-brief` belongs
+only to personal, at home and on the corporate Mac. The generator/HM/export now
+register five personal commands and no Common brief. The historical four-command
+runtime results below do not cover this relocation; no new live checks or builds
+were run for it. All 21 focused source/evaluation tests pass (`test_problem_brief`,
+`test_personal_layers`, `test_home_wiring`, `test_macos_export`); Python runtime
+fixture syntax passes, but that fixture was not executed again. The user confirmed
+Mac R3 application and the literal Common brief link target
+`/Users/user/.config/opencode-local/commands/problem-brief.md`.
+Incremental R4 rehearses exact R3 on that link-aware baseline, then passes
+apply/check, whole-fixture corrected-tree comparison and reverse/check with exact
+restoration. Both retained/removed `update-2026-11-16/` cases pass. Only seven
+brief/documentation paths change; the only settings addition is personal
+`commands.problem-brief`. Patch/hash are recorded in the Mac README; the user later
+confirmed live R4 and the earlier README-only patch application. Runtime acceptance
+remains unconfirmed.
+
+Earlier documentation naming follow-up (2026-11-24): a four-guide-only patch over
+R4 passed forward/reverse checks and full-fixture comparisons; all six export
+tests passed again. The user applied it but rejected both the naming and the
+loss of the original installation/resolve guidance. That patch is historical,
+not the final documentation. Current titles use "Общая конфигурация OpenCode".
+The original 208-line `trf.zip` README was read in full and its useful sections
+restored with 2.4.0 corrections. Personal documentation now explains explicit
+agents/commands registration, file resolution, discovery and native registry checks.
+No config, prompt or policy changes, builds, activation or live acceptance.
+
+Documentation restoration checks: all **22** focused source/evaluation tests pass
+(`test_macos_export`, `test_personal_layers`, `test_home_wiring`, `test_problem_brief`),
+including seven export contracts and the restored README sections/local links.
+The static personal README keeps default-path examples plus explicit custom-XDG
+guidance; custom-XDG assertions still cover every deployed runtime file.
+The new two-README-only patch is based on user-confirmed R4 + the earlier README
+patch. Forward/check, exact whole-tree/export comparison and reverse/check pass
+both with and without historical `update-2026-11-16/`. Artifact, hash and application
+instructions are retained in the repository's Mac README. No new runtime/mock
+acceptance, builds, activation or live model/MCP checks were run.
+
+Final documentation follow-up (2026-11-24): the user confirmed README-restore was
+applied, then requested the original concise structure rather than expanded guides.
+The six-README-only final patch restores useful original delegated-review guidance,
+shortens Common/personal and task/browser guides, and leaves the problem-brief guide
+and every runtime file unchanged. All 22 focused source/evaluation tests pass;
+forward/reverse checks match the complete fixture and deployed export with/without
+the historical folder, and all shipped guide links resolve. Patch/hash and user
+application steps are in `macos/README.md`. No builds, activation, new mock
+acceptance or live model/MCP checks.
+
 ### Real-backup working-copy migration (2026-11-23)
 
 After separate approval, native built 2.4.0 migrated only a private DB/WAL/SHM copy
@@ -505,7 +553,8 @@ native `OPENCODE_CONFIG` loading. Metadata lives in JSONC; asserted fixed header
 are removed from the four command sources before `{file:...}` interpolation.
 Home retains all role models/systems/permissions; corporate review/research have
 no model overrides. Policies remain files in the personal directory, problem-brief
-stays common, discussion-map is manual-only, and only home contains the explicit
+stayed common in this historical package (corrected to personal on 2026-11-24),
+discussion-map is manual-only, and only home contains the explicit
 relative todo plugin and its four-file server/TUI source closure. No CLI, voice,
 provider or MCP configuration is copied into the overlay.
 

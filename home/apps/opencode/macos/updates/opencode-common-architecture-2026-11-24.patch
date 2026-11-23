@@ -1,0 +1,53 @@
+diff --git a/AGENTS.md b/AGENTS.md
+index 0623012..f1693a5 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -23,6 +23,24 @@
+   requirements and verified project constraints take precedence; preserve accepted
+   fixes unless their removal conditions are met.
+ 
++## Architecture Principles
++
++- Prefer the simplest design that meets current requirements. Do not add speculative
++  abstractions, layers or dependencies for hypothetical future needs.
++- Give modules clear responsibilities: keep closely related behavior together and
++  minimize coupling between independent concerns.
++- Make dependencies explicit. Avoid dependency cycles, hidden shared mutable state
++  and implicit cross-module coordination.
++- Define clear interfaces and contracts, preserve their invariants, and handle
++  failures predictably rather than hiding them.
++- Keep core logic independently testable; separate external I/O and side effects
++  where useful, without forcing extra layers around every small operation.
++- Share code when it represents the same knowledge or rule. Do not merge unrelated
++  behavior merely because its implementation looks similar.
++- Respect the existing architecture and keep changes proportional to the task.
++  A local request does not authorize redesign; these principles mandate no named
++  methodology, folder structure or module size.
++
+ ## Tools
+ 
+ - ALWAYS use OpenCode's `grep` and `glob` tools for file searches; they are backed by `rg`.
+diff --git a/agents.README.md b/agents.README.md
+index 8ae64d6..0eef4ca 100644
+--- a/agents.README.md
++++ b/agents.README.md
+@@ -15,6 +15,19 @@ OpenCode автоматически загружает `AGENTS.md` как общ
+ ## Основные правила
+ 
+ - **Выбор решений** (`Engineering Choices`). Сначала штатные возможности, поддерживаемые API и принятые в проекте подходы. Собственные обходы нужны только при конкретном ограничении; существенное усложнение согласуется с пользователем.
++
++### Архитектурные принципы (Architecture Principles)
++
++- **Простота:** минимальное решение текущей задачи, без абстракций и слоёв «на будущее».
++- **Ответственность:** связанное поведение держать вместе, независимые задачи не смешивать.
++- **Зависимости:** делать их явными, избегать циклов, скрытого общего состояния и неочевидных связей.
++- **Контракты:** понятные интерфейсы, сохранение инвариантов и предсказуемая обработка ошибок.
++- **Тестируемость:** по возможности отделять основную логику от ввода-вывода и внешних эффектов, без обязательных дополнительных слоёв.
++- **Обобщения:** объединять одно и то же знание или правило, а не просто похожий код.
++- **Масштаб изменений:** учитывать существующую архитектуру; локальная задача не разрешает перепроектирование. SOLID, FSD, конкретные папки и размер модулей не навязываются.
++
++### Поиск, изменения и проверки
++
+ - **Поиск и чтение** (`Tools`, `Source Exploration`). Для поиска используются `glob` и `grep`, в shell — `fd` и `rg`. Агент читает нужные фрагменты, учитывает обрезанный вывод и проверяет источник до существенного вывода, включая комментарии, итог обсуждения и применимость к версии.
+ - **Вывод инструментов** (`Tool Output Selection`). Краткое представление удобно для навигации, но точные значения, код и ошибки проверяются по исходным данным.
+ - **Рабочие файлы** (`Working Files and Artifacts`). Полезные результаты сохраняются в подходящем месте; секреты не попадают в отчёты. Удалять можно только известные временные файлы текущей задачи, не чужую работу.

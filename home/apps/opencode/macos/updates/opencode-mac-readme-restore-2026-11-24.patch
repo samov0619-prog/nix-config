@@ -1,0 +1,621 @@
+diff --git a/opencode/README.md b/opencode/README.md
+index af588bb..8ba6852 100644
+--- a/opencode/README.md
++++ b/opencode/README.md
+@@ -1,39 +1,366 @@
+-# OpenCode Common — инженерный конфиг
+-
+-База сохраняет штатные агенты, командные providers/models, permissions/policies,
+-семь MCP. Она не подключает личные команды (включая `/problem-brief`), роли, routing, Goals,
+-Fish, review policies или discussion-map Samov. Личное дополнение необязательно.
+-
+-## Состав и ограничения
+-
+-- `AGENTS.md` — инженерные правила, работа с требованиями и Git.
+-  Для текущих требований используется XTracker; старый `MCP-KAITEN` сохранён.
+-- `opencode.jsonc`, package manifests, `git-offline`, permissions/permission-stats
+-  и `scripts/task-report.py` сохранены из предоставленного актуального `trf`.
+-  Git-защита — командная: её изменения требуют согласования с командой.
+-  Shell-hook не является sandbox для произвольного кода.
+-- MCP: `MCP-WIKI`, `MCP-KAITEN`, `MCP-XTRACKER`, `MCP-GITLAB`, `Chrome MCP`,
+-  `MCP-HUB`, `Figma-Framelink`. Их transports, enabled flags и переменные окружения
+-  не изменены. Наличие настройки не подтверждает соединение или авторизацию.
+-- Общие skills: `git-regression-rollback`, `task-summary-log`,
+-  `code-patterns-skill-generator`. Лог создаётся только по запросу; rollback skill
+-  сам по себе не разрешает Git-мутации. Checklist публикации skills сохранён.
+-- `cli.json` намеренно отсутствует: это mutable пользовательский файл. Сохраните
+-  существующий `@safwan-o/opencode-voice`, UI/volume/paste/sidebar и стандартные
+-  звуки OpenCode. Домашние звуки, voice-port старого seed и attention patches
+-  в этот пакет не входят.
+-
+-## Личное дополнение
+-
+-`OPENCODE_CONFIG` подключает соседний JSONC; он не меняет global root. Не задавайте
+-`OPENCODE_CONFIG_DIR` на `opencode-local`. В personal JSONC роли/команды описаны
+-явно, Markdown подключается через `{file:...}`, skills — явным путём.
+-Командная база не ссылается на personal-файлы и работает без них.
+-
+-Обычные изменения config/skills/plugins подхватываются штатно; `/reload` — принудительное
+-обновление. Изменение окружения уже работающего server-процесса — отдельная операция
+-обслуживания, не причина перезапускать сервис при каждом изменении Markdown.
+-Не публикуйте resolved config, заголовки авторизации и private service files.
+-
+-Приёмка и порядок переноса — в `../INSTALL.md`. Архивные инструкции
+-`opencode-local/update-2026-11-16/` не являются инструкцией новой установки.
++# Общая конфигурация OpenCode
++
++Глобальные правила (`AGENTS.md`), модели, MCP, разрешения, скиллы и плагины
++для OpenCode V2. Общая база работает самостоятельно; личные настройки подключаются
++отдельно и не должны попадать в этот репозиторий.
++
++## Переход на V2
++
++Если уже используете V1, сначала сохраните config, data, state и сведения о старом
++бинарнике в приватный backup, закрыв клиенты и остановив сервис. Не ограничивайте
++backup одним Git-коммитом: история сессий и credentials находятся вне репозитория.
++V1 и V2 используют те же каталоги; старый бинарник нельзя направлять на уже
++мигрированную БД или native V2-конфиг.
++
++Получите ветку `v2` общей конфигурации и переключитесь на неё. Команды выполняет
++пользователь, не агент; перед переключением проверьте `git status` и сохраните
++свои незакоммиченные изменения:
++
++```fish
++cd "$HOME/.config/opencode"
++git fetch origin v2
++git switch v2
++git pull --ff-only origin v2
++```
++
++Обновите бинарник своим способом установки. Для прежней V1 curl-установки
++исходная команда перехода:
++
++```fish
++opencode upgrade --major --method curl
++```
++
++`--major` относится к V1 CLI. В уже установленной **2.4.0** этого флага нет;
++для явно выбранной версии используется `opencode upgrade 2.4.0 --method curl`.
++Если 2.4.0 уже установлена, повторное обновление не нужно.
++Для пакетного менеджера используйте его штатное обновление, не устанавливайте
++вторую копию поверх первой. После обновления проверьте `opencode --version`.
++
++Поддерживаемые V1 agents/commands/skills не требуют переписывания ради V2.
++Но плагины и внешние интеграции server API требуют порта на V2; TUI-настройки
++теперь находятся в глобальном `cli.json`. Не переносите старые V1 plugin-файлы
++в каталог V2 без адаптации. Подробности: [переход с V1](https://opencode.ai/docs/migrate-v1).
++
++## Установка
++
++1. Если `~/.config/opencode` уже существует, сохраните его вместе с личными
++   настройками в новый приватный backup. Не затирайте прежние копии.
++   Для новой установки освободите целевой каталог только после проверки backup;
++   для обновления существующего checkout не клонируйте репозиторий поверх него.
++2. Клонируйте репозиторий в стандартный каталог OpenCode:
++
++   ```fish
++   git clone git@scm.x5.ru:feedbacktc5/ai/team-agent-configs.git "$HOME/.config/opencode"
++   ```
++
++   При установке с нуля выберите согласованную ветку `v2`. При нестандартном
++   `XDG_CONFIG_HOME` используйте `$XDG_CONFIG_HOME/opencode` вместо `~/.config/opencode`.
++   Личные настройки из backup подключаются отдельно — см. следующий раздел.
++
++3. Установите OpenCode V2 по [официальной инструкции](https://opencode.ai/docs/).
++   Для локальных MCP-команд из этого конфига нужны доступные сервису Node.js и `npx`;
++   `Chrome MCP` также ожидает уже доступный Chrome на `http://127.0.0.1:9222`.
++   Наличие конфигурации само по себе не запускает подготовленный Chrome.
++4. Задайте переменные окружения, затем запустите/перезапустите сервис из настроенной
++   оболочки и проверьте config resolve, модели, плагины и MCP. Эти действия
++   описаны ниже; не включайте отключённые серверы автоматически.
++
++### Переменные окружения
++
++Значения живут вне репозитория. OpenCode подставляет `{env:ИМЯ_ПЕРЕМЕННОЙ}` из
++окружения **server-процесса**; отсутствующая переменная превращается в пустую строку.
++Экспорт в новом терминале не меняет окружение уже работающего сервиса.
++
++Для Fish можно задать универсальные экспортируемые переменные:
++
++```fish
++set -Ux MCP_WIKI_URL "<wiki-mcp-url>"
++set -Ux MCP_WIKI_AUTHORIZATION "Bearer <wiki-token>"
++set -Ux MCP_KAITEN_URL "<kaiten-mcp-url>"
++set -Ux MCP_KAITEN_AUTHORIZATION "Bearer <kaiten-token>"
++set -Ux MCP_XTRACKER_URL "<xtracker-mcp-url>"
++set -Ux MCP_XTRACKER_AUTHORIZATION "Bearer <xtracker-token>"
++set -Ux MCP_GITLAB_URL "<gitlab-mcp-url>"
++set -Ux MCP_GITLAB_AUTHORIZATION "Bearer <gitlab-token>"
++```
++
++`set -Ux` действует сразу и в новых Fish-сессиях; значения сохраняются в
++`~/.config/fish/fish_variables`. Не коммитьте этот файл. Уже существующие
++глобальные/shell-переменные с тем же именем могут затенять universal-значение.
++Вместо universal-переменных можно использовать свой приватный файл окружения,
++подключаемый из shell profile.
++
++Для пользователей Zsh эквивалентные строки в `~/.zshrc`:
++
++```zsh
++export MCP_WIKI_URL="<wiki-mcp-url>"
++export MCP_WIKI_AUTHORIZATION="Bearer <wiki-token>"
++export MCP_KAITEN_URL="<kaiten-mcp-url>"
++export MCP_KAITEN_AUTHORIZATION="Bearer <kaiten-token>"
++export MCP_XTRACKER_URL="<xtracker-mcp-url>"
++export MCP_XTRACKER_AUTHORIZATION="Bearer <xtracker-token>"
++export MCP_GITLAB_URL="<gitlab-mcp-url>"
++export MCP_GITLAB_AUTHORIZATION="Bearer <gitlab-token>"
++```
++
++В Zsh примените profile через `source ~/.zshrc`.
++Не публикуйте shell history или profile с токенами; используйте принятый у вас
++способ приватного хранения/загрузки секретов.
++
++Переменные MCP-HUB (`MCP_HUB_URL`, `MCP_HUB_AUTHORIZATION`) задаёт однострочник
++из карточки на [дашборде стенда](https://feedbacktc5-test.fb-dc.x5.ru/ai/):
++URL `<домен стенда>/mcp` и ваш `user-token` для авторизации.
++Для `Figma-Framelink` нужен `FIGMA_API_KEY`; provider `copilot` использует
++`COPILOT_API_KEY`. Локальный `openai` ожидает ваш `ai-proxy` на `127.0.0.1:8080`.
++Не меняйте эти endpoints/credentials при переносе README.
++
++### Перезапуск сервиса OpenCode
++
++OpenCode 2 использует общий фоновый сервис. После первоначального добавления или
++изменения env, `OPENCODE_CONFIG` либо бинарника завершите активные задачи и
++выполните из настроенной оболочки:
++
++```fish
++opencode service restart
++opencode service status
++opencode api get /api/info
++```
++
++При старом/пустом окружении URL MCP могут остаться пустыми. Проверьте
++`opencode debug config` и раздел resolve ниже. `debug config` и `api` могут
++автоматически запустить сервис: не вызывайте их во время остановленного backup.
++
++Сервис умеет хранить отдельные env overrides. Не выводите весь `service get env`
++в публичный лог: он может содержать секреты. Для проверки только personal-пути:
++
++```fish
++opencode service get env OPENCODE_CONFIG
++```
++
++При необходимости закрепите **только этот несекретный путь** для последующих
++запусков сервиса:
++
++```fish
++opencode service set env OPENCODE_CONFIG "$HOME/.config/opencode-local/opencode.jsonc"
++opencode service start
++```
++
++`service set env` останавливает текущий сервис; выполняйте его в согласованное
++окно. Сохранённое значение может затенять shell env; при смене пути согласованно
++обновите его или удалите через `opencode service unset env OPENCODE_CONFIG`.
++Изменение JSONC/agents/commands/skills обычно подхватывается штатно, принудительно —
++`/reload` в TUI. Перезапуск после каждого изменения Markdown не требуется.
++
++### Совмещение с личной конфигурацией
++
++Общий репозиторий занимает `~/.config/opencode`. Личные settings храните отдельно,
++например в `~/.config/opencode-local/opencode.jsonc`, и подключите через
++`OPENCODE_CONFIG`.
++
++Для Fish добавьте в `~/.config/fish/config.fish`:
++
++```fish
++set -gx OPENCODE_CONFIG "$HOME/.config/opencode-local/opencode.jsonc"
++```
++
++Для Zsh добавьте в `~/.zshrc`:
++
++```zsh
++export OPENCODE_CONFIG="$HOME/.config/opencode-local/opencode.jsonc"
++```
++
++Перенесите только нужные личные настройки из backup. Переменную должен получить
++сервер, не только клиент. `OPENCODE_CONFIG_DIR` на `opencode-local` не направляйте:
++это меняет глобальный config root, а не подключает один личный файл.
++`cli.json` остаётся глобальным пользовательским файлом в `opencode/`, не в personal.
++
++**`OPENCODE_CONFIG` загружает JSONC, но не открывает discovery соседних папок
++`agents/` и `commands/`.** Личные роли и команды регистрируются явно в JSONC,
++тексты подключаются через `{file:...}`, skills — через массив путей.
++Симлинки в общий репозиторий для этого не нужны.
++Полный пример и проверки — в [README личного слоя](../opencode-local/README.md).
++Runtime-конфиг Common не ссылается на personal-файлы и работает без них; `/problem-brief`,
++review-команды и `discussion-map` относятся только к личному слою.
++
++#### Как объединяются конфиги и правила
++
++Для обычных settings порядок приоритетов в 2.4.0 выглядит так:
++
++```text
++          ↑ Приоритет выше
++Системная конфигурация / managed preferences (если есть)
++OPENCODE_CONFIG_CONTENT (если задан)
++Личный project overlay OpenCode (если включён)
++Проектные .opencode/opencode.json(c): от дальних каталогов к ближним
++Прямые opencode.json(c): от дальних каталогов к ближним
++Личный файл: OPENCODE_CONFIG
++Глобальный каталог: ~/.config/opencode/
++          ↓ Приоритет ниже
++```
++
++Это не обещание, что любой личный параметр победит: проектные и managed-настройки
++могут его переопределить. Поиск проектных JSONC идёт от текущей location вверх
++до корня файловой системы, включая каталоги выше Git-root.
++Все найденные `.opencode`-конфиги выше прямых JSONC, а не чередуются с ними.
++Внутри одного каталога `opencode.jsonc` читается после `opencode.json`.
++Интеграции/Console добавляют собственные источники; полный список смотрите в resolve.
++
++Объекты/поля объединяются по правилам соответствующего раздела; permissions
++дополняются, policies имеют отдельный порядок применения и не должны трактоваться
++как обычное «последнее значение победило». Нынешняя Git-защита остаётся общей.
++`AGENTS.md` и `instructions` добавляют инструкции, а не заменяют весь предыдущий
++набор. Глобальные и проектные правила продолжают действовать вместе с личными.
++Глобальный `AGENTS.md` загружается из config root, проектные — по пути от рабочего
++каталога вверх до домашнего (для проектов внутри него) либо до project root
++(для остальных). Правила вложенных каталогов подключаются при работе с ними.
++Если инструкции противоречат друг другу, их приоритет формулируется в самих
++правилах: подключение personal не является техническим отключением общей инструкции.
++У `instructions` относительные пути имеют свой поиск от workspace, поэтому для
++личного файла используйте `~/...` или абсолютный путь. У `{file:...}` внутри JSONC
++относительный путь разрешается от каталога **этого JSONC**.
++
++`OPENCODE_CLI_CONFIG_CONTENT` — отдельный JSON override поверх глобального
++`cli.json` для терминального клиента; это не способ подключить server agents/MCP.
++
++#### Проверка resolve
++
++Из целевого проекта выполните локально:
++
++```fish
++opencode --version
++opencode debug paths
++opencode service status
++opencode debug config
++opencode api agent.list --param directory="$PWD"
++opencode api command.list --param directory="$PWD"
++opencode api skill.list --param directory="$PWD"
++opencode api plugin.list --param directory="$PWD"
++```
++
++`debug config` в 2.4.0 показывает загруженные config entries с путями и содержимым,
++а не только один плоский «итоговый файл». Проверьте:
++
++- присутствует глобальный `opencode/opencode.jsonc` и ожидаемые проектные entries;
++- при подключённом personal есть entry `opencode-local/opencode.jsonc`;
++- env-подстановки MCP дали непустые ожидаемые URL;
++- личные `{file:...}` разрешились в текст, а не остались строкой пути или YAML;
++- нужные роли/команды/skills есть в native registries один раз, без discovery-дублей;
++- plugins загружены, enabled/disabled MCP соответствуют вашему конфигу.
++
++`debug config` передаёт текущий каталог сам; для `api` он указан явно через
++`--param directory="$PWD"`, чтобы проверить тот же проект, а не location сервера
++по умолчанию. При TUI на отдельном/удалённом сервере используйте его подключение
++и путь проекта на той машине.
++
++Не публикуйте полный вывод: даже с редакцией секретов он может содержать закрытые
++пути, endpoints и инструкции. Проверка регистрации не доказывает model reasoning,
++авторизацию MCP или работу tools: соединения отдельно смотрите в `/mcps`,
++нужные реальные обращения выполняйте только с разрешения.
++
++## Структура
++
++Пути указаны относительно `~/.config/opencode/` (либо `$XDG_CONFIG_HOME/opencode/`).
++
++| Путь                                 | Назначение                                                                                                                               |
++| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
++| `AGENTS.md`                          | Глобальные правила: инструменты, исследование исходников, источники требований, Git и создание лога по запросу через `task-summary-log`. |
++| `opencode.jsonc`                     | Модели/providers `copilot` (отображаемое имя `copilot-x5`) и `openai` через `ai-proxy`, permissions/policies и семь MCP.                 |
++| `cli.json`                           | Глобальные пользовательские TUI-настройки. Mutable, не входит в этот пакет и не заменяется обновлением общей базы.                       |
++| `plugins/`                           | Локальные server/TUI-плагины OpenCode 2; не переносить сюда V1 plugins без порта API.                                                    |
++| `plugins/git-offline/index.ts`       | Дополнительный shell guard сетевых Git-операций.                                                                                         |
++| `plugins/permission-stats/index.ts`  | Учёт запросов/ответов системы разрешений.                                                                                                |
++| `plugins/permissions/{state,tui}.ts` | Управление сохранёнными грантами «Always».                                                                                               |
++| `scripts/task-report.py`             | Существующий скрипт отчёта задач.                                                                                                        |
++| `skills/`                            | Общие skills: `git-regression-rollback`, `task-summary-log`, `code-patterns-skill-generator`.                                            |
++| `agent-skills-review-checklist.md`   | Человеческий checklist перед добавлением/публикацией skill.                                                                              |
++| `package.json`, `package-lock.json`  | Сохранённые manifests общей конфигурации.                                                                                                |
++| `../opencode-local/`                 | Необязательный личный слой вне общего Git-checkout: JSONC, инструкции, agents, commands и skills.                                        |
++
++### MCP-серверы
++
++Сохранены `MCP-WIKI`, `MCP-KAITEN`, `MCP-XTRACKER`, `MCP-GITLAB`, `Chrome MCP`,
++`MCP-HUB`, `Figma-Framelink`. Transports, env и disabled flags не меняются.
++`MCP-KAITEN` остаётся в конфиге отключённым; текущие задачи читаются из XTracker.
++Не включайте отключённые MCP, не меняйте авторизацию и endpoints ради установки.
++
++### Разрешения и политики
++
++`opencode.jsonc` задаёт ограничения на двух уровнях:
++
++- `policies` — разрешены только providers `copilot` и `openai`. Shell-командам
++  запрещены сетевые Git-операции: `push`, `pull`, `fetch`, `clone`, `ls-remote`,
++  `remote update`, `remote show`, `remote set-head --auto` и `remote add -f/--fetch`,
++  включая варианты с опциями. Исключение — `git remote show ... -n`, чтение без сети.
++- `permissions` — операции изменения истории/локального состояния требуют `ask`:
++  `commit`, `merge`, `cherry-pick`, `revert`, `am`, `rebase`, `reset`, `checkout`,
++  `switch`, `clean`, `restore`, мутирующие `branch`, `tag`, `stash` и `worktree`.
++  Чтение истории и статуса не требует такого подтверждения.
++
++Добавление новых policies и изменения `git-offline` согласуются с командой.
++Shell-hook — не sandbox для произвольного кода. Сохранённые гранты «Always»
++просматриваются и удаляются через плагин `permissions/`, не изменением этих policies.
++
++### Источники требований при ревью
++
++Секция `Requirements Sources` в `AGENTS.md` требует установить внешние требования
++именно выбранной задачи до оценки соответствия. Используются явный документ/задача
++либо metadata выбранного MR/локального диапазона и доступные read-only
++XTracker/Wiki/GitLab MCP tools. Число в ветке или похожее название — только зацепка;
++нужны связь задачи, применимая ревизия, критерии приёмки и контракты.
++Если источник неоднозначен, агент уточняет его; отказ доступа не доказывает,
++что ТЗ нет. Непокрытые требования — пробел проверки, не доказанный баг кода.
++Техническое ревью без оценки task conformance возможно по явной договорённости.
++
++### Плагины
++
++- `git-offline/` дополняет Git-защиту общей базы.
++- `permission-stats/` пишет запросы и ответы разрешений в
++  `$XDG_STATE_HOME/opencode/permission-history.jsonl` (по умолчанию
++  `~/.local/state/opencode/permission-history.jsonl`).
++- `permissions/` — TUI-команда `/allowed-permissions`, также доступная в палитре
++  как «Allowed permissions»: показывает гранты «Always» текущего проекта и
++  позволяет удалять их с подтверждением. Policies из JSONC там не редактируются.
++- `@safwan-o/opencode-voice` — **необязательный внешний** voice-plugin, не часть
++  этой поставки. На текущем Mac пользователя он отсутствует и для работы конфига
++  не нужен. Если нужен голосовой ввод, установка отдельная:
++
++  ```fish
++  opencode plugin add @safwan-o/opencode-voice
++  ```
++
++  Он подключается в список `plugins` глобального `cli.json`, не server JSONC.
++  Сохраните существующие plugins/UI/sounds; не заменяйте весь `cli.json` примером.
++  Старый seed voice-port и домашние sound/attention patches сюда не переносятся.
++
++## Чеклист по добавлению скиллов (проверка человеком)
++
++Перед созданием или публикацией skill проверьте его вручную по
++[чеклисту ревью агентского скилла](agent-skills-review-checklist.md):
++назначение и границы, инструкции, инструменты, надёжность и проверка на модели.
++Checklist входит в общую поставку и не заменяет проверку на реальной модели.
++
++### Скиллы
++
++- `task-summary-log` — только по явному «создай/обнови лог» создаёт либо обновляет
++  английский лог в `./promptLogs/` целевого проекта. Ключ XTracker спрашивается,
++  но необязателен; новое имя — `<task-key>_<short-name>.md` либо
++  `YYYY-MM-DD_<short-name>.md`. Старые имена/логи не переименовываются и не дублируются.
++- `git-regression-rollback` — согласованный временный rollback последних коммитов
++  с сохранением кандидатных изменений в stash до проверки. Наличие skill не даёт
++  самостоятельного разрешения на Git-мутации.
++- `code-patterns-skill-generator` — исследует код и готовит проектный skill
++  принятых паттернов в `.opencode/skills/<name>/SKILL.md`, показывает черновик
++  перед записью. Явный запрос: «Загрузи скил code-patterns-skill-generator и создай
++  скил: <тема>».
++- `discussion-map` перенесён в personal: ручной `@discussion-map`, не навязывается
++  пользователям Common и не вызывается моделью автоматически.
++
++## Документация
++
++- [Личный слой: agents/commands без симлинков](../opencode-local/README.md)
++- [Чеклист добавления skills](agent-skills-review-checklist.md)
++- [Конфигурация OpenCode 2](https://opencode.ai/docs/config)
++- [Инструкции и AGENTS.md](https://opencode.ai/docs/instructions)
++- [Agents](https://opencode.ai/docs/agents) и [commands](https://opencode.ai/docs/commands)
++- [Сервис и диагностика](https://opencode.ai/docs/troubleshooting)
++- [Переход с V1](https://opencode.ai/docs/migrate-v1)
+diff --git a/opencode-local/README.md b/opencode-local/README.md
+index 6bb3b80..7c46985 100644
+--- a/opencode-local/README.md
++++ b/opencode-local/README.md
+@@ -1,21 +1,187 @@
+ # Личное дополнение Samov
+ 
+-Подключается через `OPENCODE_CONFIG` к `opencode.jsonc` этой папки. Nix на Mac
+-не нужен. При нестандартном XDG-пути экспортируйте пакет с соответствующим
+-`personalDirectory`; не копируйте личную папку в global root.
+-
+-- Goals, Fish, общение, review workflow и новые Git keys `FBDC-<number>` — личные.
+-- `review` и `research` не закрепляют provider/model и наследуют модель родителя.
+-- `/delegated-review`, `/delegated-review-chrome`, `/task-analysis`,
+-  `/browser-verification` работают через явные JSONC definitions; последние две —
+-  в текущей сессии, без отдельного агента. Пассивный Chrome audit не запускает браузер.
+-- `discussion-map` вызывается вручную через `@discussion-map`, не рекламируется
+-  модели для автоматического вызова.
+-- `/problem-brief` — пятая личная команда, явно зарегистрированная в этом JSONC.
+-  Common её не устанавливает; discovery-симлинк не нужен.
+-- Decision Support, `decision-check`, домашний todo/routing, секреты
+-  и настройки CLI сюда не экспортируются.
+-
+-`task-analysis.README.md` и `browser-verification.README.md` описывают новые команды.
+-Исторические acceptance artifacts `update-2026-11-16/` сохранены без изменений;
+-новая конфигурация не делает их автоматически прошедшими на 2.4.0.
++Личный слой хранится в `opencode-local/`, отдельно от общего Git-checkout
++`opencode/`. Он добавляет инструкции, роли, команды и ручной skill; не заменяет
++providers, MCP, Git-защиту и mutable `cli.json`. Nix на Mac не нужен.
++
++## Подключение
++
++Укажите **JSONC-файл**, не каталог. Для Fish добавьте в
++`~/.config/fish/config.fish`:
++
++```fish
++set -gx OPENCODE_CONFIG "$HOME/.config/opencode-local/opencode.jsonc"
++```
++
++Для Zsh (`~/.zshrc`):
++
++```zsh
++export OPENCODE_CONFIG="$HOME/.config/opencode-local/opencode.jsonc"
++```
++
++При нестандартном `XDG_CONFIG_HOME` используйте свой абсолютный путь и экспорт
++с соответствующим `personalDirectory`. Не копируйте personal в global root
++и не направляйте `OPENCODE_CONFIG_DIR` на него.
++
++Переменную должен получить **server-процесс**. Если он уже запущен без неё,
++после завершения активных задач выполните из настроенной оболочки
++`opencode service restart`, затем `opencode service status`.
++Если сервер хранит отдельный env override, проверьте только нужное значение:
++`opencode service get env OPENCODE_CONFIG`. Установка/удаление service env —
++отдельная операция, останавливающая сервис; подробности в
++[общем README](../opencode/README.md#перезапуск-сервиса-opencode).
++Редактирование JSONC или Markdown обычно подхватывается автоматически;
++`/reload` принудительно перечитывает конфиг без перезапуска.
++
++## Почему agents и commands не требуют симлинков
++
++`OPENCODE_CONFIG` подключает один JSONC-документ. Он **не объявляет соседние
++`agents/` и `commands/` discovery-каталогами**.
++
++| Источник                                           | Как загружается                                                                                                |
++| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
++| `~/.config/opencode/agents/*.md`, `commands/*.md`  | Глобальный discovery. Markdown с metadata/frontmatter и телом.                                                 |
++| Проектные `.opencode/agents/*.md`, `commands/*.md` | Проектный discovery; определения с тем же ID могут переопределить глобальные.                                  |
++| `opencode-local/agents/*.md`, `commands/*.md`      | Только явная регистрация в personal JSONC: `agents.<id>.system` и `commands.<id>.template` через `{file:...}`. |
++| `opencode-local/skills/*/SKILL.md`                 | Явный путь в `skills`; файл skill сохраняет свой YAML-frontmatter.                                             |
++| `AGENTS-personal.md`                               | Явный абсолютный/`~/` путь в `instructions`; имя само по себе не включает автозагрузку.                        |
++
++Оставлять ссылки в Common не нужно: они загрязняют общий Git и могут повторно
++зарегистрировать личные определения. В этом пакете старые ссылки заменены явными
++definitions, а не другим discovery-hook.
++
++### Пример добавления своей роли и команды
++
++Это **пример новых записей**, не замена готового `opencode.jsonc`. Сохраните
++имеющиеся `review`/`research`, пять команд, instructions, skills и permissions.
++Дополните существующие объекты `agents` и `commands`, не создавая повторных ключей.
++
++```jsonc
++{
++  "$schema": "https://opencode.ai/config.json",
++  "agents": {
++    "my-review": {
++      "description": "Review a bounded change without edits or delegation",
++      "mode": "subagent",
++      "system": "{file:agents/my-review.md}",
++      "permissions": [
++        { "action": "edit", "resource": "*", "effect": "deny" },
++        { "action": "subagent", "resource": "*", "effect": "deny" },
++      ],
++    },
++  },
++  "commands": {
++    "review-note": {
++      "description": "Summarize the requested review evidence",
++      "subagent": false,
++      "template": "{file:commands/review-note.md}",
++    },
++  },
++}
++```
++
++Создайте `agents/my-review.md` рядом с этим JSONC:
++
++```markdown
++Review only the requested changes. Report concrete findings with evidence.
++Do not edit files, run builds or delegate work.
++```
++
++И `commands/review-note.md`:
++
++```markdown
++Summarize the review evidence for: $ARGUMENTS
++Distinguish confirmed findings, unresolved questions and unverified behavior.
++```
++
++У этих **подставляемых тел** нет YAML-frontmatter: metadata уже в JSONC.
++`{file:agents/my-review.md}` разрешается от каталога personal JSONC, а не от
++текущего проекта. OpenCode вставляет содержимое файла как текст; YAML здесь
++не становится metadata и попал бы прямо в prompt.
++Отдельный `SKILL.md`, напротив, остаётся обычным skill с frontmatter.
++В 2.4.0 отсутствующий/нечитаемый `{file:...}` даёт предупреждение и пустой текст,
++поэтому наличия роли в списке недостаточно: проверьте, что её prompt непустой.
++Запрет `edit` в примере не является sandbox для shell/MCP; для строгой read-only
++роли отдельно ограничьте все изменяющие инструменты, как у готового `review`.
++
++У примера нет model override: subagent наследует модель родителя. Команда
++с `subagent: false` работает в текущей сессии и не выбирает отдельного агента.
++Название slash-команды берётся из ключа `commands.review-note`, а ID роли —
++из `agents.my-review`; само имя Markdown-файла не регистрирует их автоматически.
++
++## Как разрешаются слои
++
++Common загружается из глобального `opencode/`, personal — через `OPENCODE_CONFIG`.
++Проектные JSONC/.opencode и системные managed-настройки могут переопределять
++обычные settings. Поэтому personal — дополнение, а не гарантированно самый
++приоритетный слой. Полная схема — в
++[общем README](../opencode/README.md#как-объединяются-конфиги-и-правила).
++
++`AGENTS.md` общей базы и проектные инструкции не исчезают после подключения
++personal. `instructions` добавляет личные правила; для них используются `~/...`
++или абсолютные пути. Относительный путь в `instructions` не следует путать
++с относительным `{file:...}`: у этих механизмов разное разрешение.
++
++## Проверка resolve
++
++Из нужного проекта:
++
++```fish
++opencode debug config
++opencode api agent.list --param directory="$PWD"
++opencode api command.list --param directory="$PWD"
++opencode api skill.list --param directory="$PWD"
++```
++
++Проверьте именно тот сервер, к которому подключён TUI:
++`directory="$PWD"` явно выбирает текущий проект для API-запросов.
++
++1. В config entries видны и общий JSONC, и ваш personal JSONC.
++2. `agents.review.system`/`agents.research.system` разрешились в непустые Markdown-тела;
++   личная инструкция и skills используют правильный config-путь.
++3. В registry есть `review`/`research` и ровно одна каждая из пяти личных команд;
++   у команд `subagent: false`, без незапрошенных agent/model overrides.
++4. Тексты не начинаются с YAML metadata; `$ARGUMENTS` остаётся placeholder в
++   шаблоне и подставляется при вызове.
++5. `discussion-map` виден для ручного `@discussion-map`, но имеет
++   `opencode/autoinvoke: false`.
++6. Сохранены providers/MCP/Git policies общей базы. Затем вручную проверьте
++   нужные slash-команды; регистрация сама по себе не доказывает качество ответа.
++
++Если personal entry отсутствует — проверьте путь/env сервера, а не добавляйте
++симлинки. Если entry есть, но роли/команды нет — проверьте ключи JSONC,
++существование `{file:...}` и проектные определения с тем же ID.
++Не публикуйте полный `debug config`: он может содержать закрытые пути и тексты.
++Эти команды могут запустить сервис; во время остановленного backup их не вызывают.
++
++## Структура
++
++Пути относительно `~/.config/opencode-local/`:
++
++| Путь                                     | Назначение                                                                                      |
++| ---------------------------------------- | ----------------------------------------------------------------------------------------------- |
++| `opencode.jsonc`                         | Регистрация личных agents/commands, instructions и skills.                                      |
++| `AGENTS-personal.md`                     | Goals, Fish, общение, review workflow и текущий `FBDC-<number>` для новых веток/коммитов Samov. |
++| `agents/review.md`, `agents/research.md` | Тела ролей; модель не закреплена, наследуется от родителя.                                      |
++| `review-analysis.md`, `review-system.md` | Общие criteria/evidence и ограничения отдельного reviewer.                                      |
++| `commands/*.md`                          | Тела пяти зарегистрированных slash-команд без frontmatter.                                      |
++| `skills/discussion-map/SKILL.md`         | Только ручной skill `@discussion-map`.                                                          |
++| `*.README.md`                            | Пояснения команд; не кладутся в `commands/` и не становятся slash-командами.                    |
++
++## Команды и ограничения
++
++- `/delegated-review`, `/delegated-review-chrome` — явное делегированное ревью
++  и пассивный аудит записанного Chrome evidence; аудит не запускает браузер.
++- `/task-analysis`, `/browser-verification` — процедуры текущей сессии,
++  без дополнительной роли. [Task analysis](task-analysis.README.md),
++  [browser verification](browser-verification.README.md).
++- `/problem-brief` — личная команда, не часть Common:
++  [описание и аргументы](problem-brief.README.md).
++- [Delegated review](delegated-review.README.md) и
++  [Chrome review](delegated-review-chrome.README.md) описывают границы/evidence.
++- Decision Support, `decision-check`, домашний todo/routing, секреты и CLI сюда
++  не экспортируются. У Common нет зависимости от этого personal-слоя.
++
++Историческая папка `update-2026-11-16/`, если сохранена, содержит прежние acceptance
++fixtures, а не runtime-зависимости. Её наличие не подтверждает приёмку на 2.4.0;
++удаление не меняет работу этого конфига.

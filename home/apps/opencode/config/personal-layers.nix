@@ -16,6 +16,7 @@ let
     assert result != text;
     result;
   commandDescriptions = {
+    problem-brief = "Turn technical reports into clear, actionable issue briefs";
     delegated-review = "Delegate an independent read-only review with bounded native session recovery";
     delegated-review-chrome = "Independently audit Chrome-MCP test claims against recorded evidence and interventions";
     task-analysis = "Map task requirements to a minimal change plan and concrete checks";
@@ -60,6 +61,7 @@ let
     "skills/discussion-map/SKILL.md".text = manualDiscussion;
     "task-analysis.README.md".source = ../task-analysis.README.md;
     "browser-verification.README.md".source = ../browser-verification.README.md;
+    "problem-brief.README.md".source = ../problem-brief.README.md;
   };
   sharedSettings = {
     "$schema" = "https://opencode.ai/config.json";

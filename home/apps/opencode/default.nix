@@ -136,8 +136,6 @@ in
     "opencode/opencode.json".target = "opencode/opencode.jsonc";
     # Personal rules/commands/policies are registered only by the adjacent JSONC.
     "opencode/AGENTS.md".text = (import ./config/instructions.nix).homeBase;
-    "opencode/commands/problem-brief.md".source = ./commands/problem-brief.md;
-    "opencode/problem-brief.README.md".source = ./problem-brief.README.md;
     "opencode/plugins/model-routing" = {
       source = modelRoutingPlugin;
       # Preserve the existing managed leaf paths during upgrades. Each link

@@ -9,7 +9,7 @@ import {
   readFileSync,
   rmSync,
 } from "node:fs";
-import { join } from "node:path";
+import { join, posix } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -92,10 +92,11 @@ test("Common has seven unchanged MCPs and no Samov role/workflow dependency", ()
     Object.keys(files)
       .filter((name) => name.startsWith("opencode/"))
       .join("\n"),
-    /agents\/review|delegated-review|discussion-map/,
+    /agents\/review|delegated-review|discussion-map|problem-brief/,
   );
-  assert.ok(files["opencode/commands/problem-brief.md"]);
-  assert.equal(files["opencode-local/commands/problem-brief.md"], undefined);
+  assert.equal(common.commands?.["problem-brief"], undefined);
+  assert.ok(files["opencode-local/commands/problem-brief.md"]);
+  assert.ok(files["opencode-local/problem-brief.README.md"]);
 });
 
 test("personal commands/roles are explicit, frontmatter-free, parent-model inheriting and manual-map only", () => {
@@ -111,7 +112,13 @@ test("personal commands/roles are explicit, frontmatter-free, parent-model inher
       !text(files[`opencode-local/commands/${name}.md`]).startsWith("---"),
     );
   }
-  assert.equal(Object.keys(personal.commands).length, 4);
+  assert.deepEqual(Object.keys(personal.commands).sort(), [
+    "browser-verification",
+    "delegated-review",
+    "delegated-review-chrome",
+    "problem-brief",
+    "task-analysis",
+  ]);
   assert.match(
     text(files["opencode-local/skills/discussion-map/SKILL.md"]),
     /opencode\/autoinvoke: false/,
@@ -133,6 +140,9 @@ test("custom-XDG export rewrites personal policy/instruction/skill paths without
   for (const [name, entry] of Object.entries(exported)) {
     if (!name.startsWith("opencode-local/")) continue;
     if (name.includes("/update-2026-11-16/")) continue; // historical artifacts remain verbatim
+    // The static guide documents the default install and how to select custom XDG;
+    // its examples are not runtime paths generated for this deployment.
+    if (name === "opencode-local/README.md") continue;
     assert.doesNotMatch(text(entry), /~\/\.config\/opencode-local/);
   }
   const settings = JSON.parse(text(exported["opencode-local/opencode.jsonc"]));
@@ -142,6 +152,8 @@ test("custom-XDG export rewrites personal policy/instruction/skill paths without
   assert.deepEqual(settings.skills, [
     "/Users/example/custom-config/opencode-local/skills",
   ]);
+  assert.match(text(exported["opencode-local/README.md"]), /XDG_CONFIG_HOME/);
+  assert.match(text(exported["opencode-local/README.md"]), /personalDirectory/);
 });
 
 test("export excludes mutable/private state, external voice installation, binaries and home sound patches", () => {
@@ -160,6 +172,83 @@ test("export excludes mutable/private state, external voice installation, binari
     text(files["opencode/skills/task-summary-log/SKILL.md"]),
     /XTracker/,
   );
+});
+
+test("exported READMEs retain installation, V2, resolve, structure and skill-publication guidance", () => {
+  const commonReadme = text(files["opencode/README.md"]);
+  const personalReadme = text(files["opencode-local/README.md"]);
+  assert.ok(commonReadme.startsWith("# Общая конфигурация OpenCode\n"));
+  for (const heading of [
+    "## Переход на V2",
+    "## Установка",
+    "### Перезапуск сервиса OpenCode",
+    "### Совмещение с личной конфигурацией",
+    "#### Как объединяются конфиги и правила",
+    "#### Проверка resolve",
+    "## Структура",
+    "### Разрешения и политики",
+    "### Источники требований при ревью",
+    "### Плагины",
+    "## Чеклист по добавлению скиллов (проверка человеком)",
+    "### Скиллы",
+    "## Документация",
+  ]) {
+    assert.ok(commonReadme.includes(heading + "\n"), heading);
+  }
+  for (const variable of [
+    "MCP_WIKI_URL",
+    "MCP_WIKI_AUTHORIZATION",
+    "MCP_KAITEN_URL",
+    "MCP_KAITEN_AUTHORIZATION",
+    "MCP_XTRACKER_URL",
+    "MCP_XTRACKER_AUTHORIZATION",
+    "MCP_GITLAB_URL",
+    "MCP_GITLAB_AUTHORIZATION",
+    "MCP_HUB_URL",
+    "MCP_HUB_AUTHORIZATION",
+    "FIGMA_API_KEY",
+    "COPILOT_API_KEY",
+  ]) {
+    assert.ok(commonReadme.includes(variable), variable);
+  }
+  assert.match(commonReadme, /opencode service restart/);
+  assert.match(commonReadme, /opencode debug config/);
+  assert.match(commonReadme, /\| `AGENTS\.md`\s+\|/);
+  assert.match(commonReadme, /\| `cli\.json`\s+\|/);
+  assert.match(commonReadme, /\]\(agent-skills-review-checklist\.md\)/);
+  for (const name of ["agents", "commands"]) {
+    assert.ok(personalReadme.includes(`{file:${name}/`), name);
+  }
+  assert.match(personalReadme, /## Роли и команды/);
+  assert.match(personalReadme, /Симлинки в Common не нужны/);
+  assert.match(personalReadme, /## Проверка resolve/);
+  assert.match(personalReadme, /## Структура/);
+  for (const name of ["opencode/README.md", "opencode-local/README.md"]) {
+    const body = text(files[name]);
+    assert.doesNotMatch(body, /корпоративн|инженерный конфиг/i);
+    for (const [, target] of body.matchAll(/\]\(([^)#]+)(?:#[^)]*)?\)/g)) {
+      if (/^https?:/.test(target)) continue;
+      const resolved = posix.normalize(posix.join(posix.dirname(name), target));
+      assert.ok(files[resolved], `${name} links to missing export ${resolved}`);
+    }
+  }
+});
+
+test("human AGENTS explanation is documentation, not an automatically loaded definition", () => {
+  const name = "opencode/agents.README.md";
+  const guide = text(files[name]);
+  assert.ok(guide.startsWith("# Правила Common: пояснение AGENTS.md\n"));
+  assert.ok(!guide.startsWith("---"), "no role/command/skill frontmatter");
+  assert.match(guide, /не подхватывает его автоматически/);
+  assert.match(guide, /не скрыт от файловых инструментов/);
+  for (const [path, entry] of Object.entries(files)) {
+    if (path === name || path.endsWith("README.md")) continue;
+    assert.doesNotMatch(
+      text(entry),
+      /agents\.README\.md/,
+      `${path} must not inject the human guide into model instructions`,
+    );
+  }
 });
 
 test("exporter writes ordinary staging files, manifests hashes and refuses overwrite/live-config destinations", () => {

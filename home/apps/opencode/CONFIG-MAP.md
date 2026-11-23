@@ -1,11 +1,14 @@
 # Карта разделения конфигураций OpenCode
 
-Статус: **домашнее разделение/upstream 2.4.0 и полный корпоративный staging-export
-реализованы в исходниках; сборка и целевая приёмка впереди**.
-Составлена 2026-11-20; границы исправлены 2026-11-23.
+Статус: **домашнее разделение/upstream 2.4.0 и полный Mac staging-export
+реализованы; домашние сборка/activation и базовая живая приёмка подтверждены
+пользователем, Mac принимается отдельно**.
+Составлена 2026-11-20; границы исправлены 2026-11-24: brief только личный.
+Последующий перенос brief в исходниках ещё не применён дома; прежняя
+четырёхкомандная runtime-приёмка не покрывает это изменение.
 
 Реализуем три сущности: домашнюю HM-конфигурацию, общую командную конфигурацию
-и личное дополнение Samov на корпоративном Mac. Пакет Даши — **EXAMPLE ONLY**:
+и личное дополнение Samov на Mac. Пакет Даши — **EXAMPLE ONLY**:
 справочный пример совместимости и источник идей, не четвёртая поставка этой задачи.
 Создание карты не разрешает перенос файлов, изменение permissions, установку,
 сборку, применение конфигурации или коммит. Существующие правки не перезаписываются.
@@ -28,6 +31,9 @@
   только Samov; совместимость обеспечиваем границами Common, не переделкой примера.
 - Существующие имена агентов, skills, команд и MCP — отправная точка. Новые имена
   нужны только для новых сущностей или доказанного конфликта.
+- Публичное описание Common — «Общая конфигурация OpenCode», без акцента на среде работы.
+  Исторические технические имена `corporate`/`corporatePersonal` и пути исходников
+  сохраняются; это не переименование API и не изменение Git/MCP policies.
 - Общая командная поставка работает без обоих личных дополнений. Она не требует
   `dev`, личного `review`, отдельных review-команд или личных policy-файлов.
 - Локальное дополнение подключается штатным `OPENCODE_CONFIG`, без собственного
@@ -179,7 +185,9 @@ frontAgents в папку Samov или переименовывать роли �
 из постороннего CWD без симлинков. Common-only не загрузил личные команды/роль.
 Первоначальные markers двух процедур заменены реальными телами и регистрация
 повторно прошла; system reviewer пока fixture marker. Выполнение/аргументы,
-модельное поведение, runtime 2.4.0 и живой Mac не проверены. Подробности — в чек-листе.
+модельное поведение, runtime 2.4.0 и живой Mac этим прогоном не проверены.
+Последующий перенос пятой команды `/problem-brief` он также не покрывает.
+Подробности дальнейшей приёмки — в чек-листе.
 
 ## 4. Куда распределяются инструкции
 
@@ -247,7 +255,7 @@ acceptance artifacts сверяются побайтно с `macos/sources/basel
 | `opencode/agents/review.md`                              | После проверки регистрации в личном JSONC убрать только общую точку входа; сохранить личного `review`                                                                                               |
 | `opencode/commands/delegated-review.md`                  | Аналогично: регистрация из локального JSONC, личный шаблон не удаляется                                                                                                                             |
 | `opencode/commands/delegated-review-chrome.md`           | Аналогично; пассивный audit не заменяется live browser-test                                                                                                                                         |
-| `opencode/commands/problem-brief.md`                     | Предложение: оставить единственную общую команду здесь; она не запускает личный workflow. Личная копия ниже избыточна                                                                               |
+| `opencode/commands/problem-brief.md`                     | Убрать из Common: по уточнению пользователя команда только личная, регистрируется в personal JSONC                                                                                                  |
 
 ### Личная папка: 16 файлов
 
@@ -260,8 +268,8 @@ acceptance artifacts сверяются побайтно с `macos/sources/basel
 | `opencode-local/review-system.md`                                        | Личное Mac-дополнение: сохранить delegated read-only, fingerprint и continuity                                                       |
 | `opencode-local/commands/delegated-review.md`                            | Личная команда: сохранить scope defaults, fingerprint, handoff, bounded recovery и routing                                           |
 | `opencode-local/commands/delegated-review-chrome.md`                     | Личная команда: сохранить historical evidence boundary, export/privacy, запрет browser/retest                                        |
-| `opencode-local/commands/problem-brief.md`                               | Побайтный дубль общей команды; не регистрировать второй раз. Исходная копия остаётся в baseline до проверки миграции                 |
-| `opencode-local/problem-brief.README.md`                                 | Сохранить документацию; при согласовании общей команды перенести её описание в Common, не теряя сценарии                             |
+| `opencode-local/commands/problem-brief.md`                               | Единственная активная копия; тело без frontmatter подключается из personal JSONC                                                     |
+| `opencode-local/problem-brief.README.md`                                 | Личная документация; сохранить здесь, не переносить в Common                                                                         |
 | `opencode-local/delegated-review.README.md`                              | Личная документация Samov                                                                                                            |
 | `opencode-local/delegated-review-chrome.README.md`                       | Личная документация Samov                                                                                                            |
 | `opencode-local/update-2026-11-16/INSTALL.md`                            | Историческая документация R3, не инструкция применения новой версии                                                                  |
@@ -290,7 +298,7 @@ acceptance artifacts сверяются побайтно с `macos/sources/basel
 | `config/instructions.nix`, `config/AGENTS*.md`                                                                                              | Реализованы homeBase/homePersonal и corporate/corporatePersonal; общий regression-view home сохраняет прежние правила с явными path/delegation migrations; Mac export использует только corporate-варианты |
 | `config/review-analysis.md`, `config/review-system.md`                                                                                      | Домашнее личное дополнение, с согласованными путями consumers; не корпоративный Common                                                                                                                     |
 | `commands/delegated-review.md`, `commands/delegated-review-chrome.md`                                                                       | Домашнее личное дополнение; команды и routing сохраняются                                                                                                                                                  |
-| `commands/problem-brief.md`, `problem-brief.README.md`                                                                                      | Переносимая общая команда, доступна дома и в Common                                                                                                                                                        |
+| `commands/problem-brief.md`, `problem-brief.README.md`                                                                                      | Личная команда Samov, доступна дома и в корпоративном personal, не в Common                                                                                                                                |
 | `DELEGATED-REVIEW.md`, `DELEGATED-REVIEW-CHROME.md`                                                                                         | Документация личного workflow, обновить только затронутые пути                                                                                                                                             |
 | Прежние `decision-support.nix`, `config/decision-support.md`, `skills/decision-check/SKILL.md`                                              | Перенесены побайтно в `archive/decision-support/`, без активного подключения                                                                                                                               |
 | `todo.nix`, `config/todo-settings.nix`, `plugins/agent-todo.ts`, `agent-todo-instructions.ts`, `agent-todo-review.ts`, `agent-todo-tui.tsx` | Todo только Build/Plan, без global instruction; сохранить native consent, весь batch, feedback, visits, dates, manual edits, Git-local commit; не переносить на корпоративный Mac                          |
@@ -625,7 +633,7 @@ activation, formatter с установкой зависимостей или re
 `config/personal-layers.nix` возвращает `home`/`corporate`, каждый с `.settings`
 и `.files`. Личные команды явно зарегистрированы в JSONC, `{file:...}` содержит
 только тела. Все домашние роли/модели и permissions сохранены; Mac получает только
-review/research без model overrides. `/problem-brief` остаётся общим. `discussion-map`
+review/research без model overrides. `/problem-brief` только личный. `discussion-map`
 личный с `autoinvoke: false`. Todo включён только дома, явно через относительный
 `./plugins/agent-todo`; четыре исходных plugin-файла входят в набор. Интерфейсные
 настройки, providers, MCP, team policies/`git-offline` не переносятся в личный JSONC.

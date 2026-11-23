@@ -107,10 +107,6 @@ def run(binary, root, label, layer, enabled, mock_url):
         "$schema": "https://opencode.ai/config.json",
         "update": "disable", "share": "disabled", "formatter": False,
         "model": "openai/gpt-6.1-sol", "compaction": {"auto": False},
-        "commands": {"problem-brief": {
-            "template": (SOURCE / "commands/problem-brief.md").read_text().split("---", 2)[2].strip(),
-            "subagent": False,
-        }},
         "permissions": [{"action": "shell", "resource": "fixture-deny *", "effect": "deny"}],
         "policies": [{"action": "provider.use", "resource": "openai", "effect": "allow"}],
         "providers": {"openai": {
@@ -214,7 +210,7 @@ def run(binary, root, label, layer, enabled, mock_url):
                     assert_wire_identity(LayerResponses.requests[start:])
                     assert_identity(sid, name)
                     assert children(sid) == [], (label, name, command, "unintended child")
-        print(f"PASS: {label}: all four commands × Build/Plan/Review × exact/empty arguments; agent/model/variant retained, no child")
+        print(f"PASS: {label}: all {len(expected_commands)} commands × Build/Plan/Review × exact/empty arguments; agent/model/variant retained, no child")
 
     def corporate_inheritance():
         evidence = work / "evidence.txt"
@@ -280,7 +276,7 @@ def run(binary, root, label, layer, enabled, mock_url):
                     commands = {command["name"]: command for command in api("command")["data"]}
                     plugins = {plugin["id"]: plugin for plugin in api("plugin")["data"]}
                     skills = {skill["id"]: skill for skill in api("skill")["data"]}
-                    if (expected_commands | {"problem-brief"} <= commands.keys()
+                    if (expected_commands <= commands.keys()
                             and expected_agents <= agents.keys()
                             and expected_plugins <= plugins.keys()
                             and (not enabled or "discussion-map" in skills)):

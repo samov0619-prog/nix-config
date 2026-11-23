@@ -50,8 +50,7 @@ in
     // {
       "opencode/AGENTS.md".text = instructions.corporate;
       "opencode/README.md".source = ./COMMON.md;
-      "opencode/commands/problem-brief.md".source = ../commands/problem-brief.md;
-      "opencode/problem-brief.README.md".source = ../problem-brief.README.md;
+      "opencode/agents.README.md".source = ./agents.README.md;
       "opencode/skills/task-summary-log/SKILL.md".source = ../skills/task-summary-log/SKILL.md;
       "opencode-local/README.md".source = ./PERSONAL.md;
       "opencode-local/delegated-review.README.md".source = ./DELEGATED-REVIEW.md;

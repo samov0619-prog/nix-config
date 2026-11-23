@@ -96,11 +96,54 @@ test("shared engineering rules are environment-neutral and do not require person
   assert.match(personal, /Goals and Approach|Personal Delegation Preferences/);
 });
 
-test("home retains the 68-bullet baseline apart from explicit path/delegation migrations", () => {
+test("shared architecture principles are near the top in Common and home, not personal overlays", () => {
+  const section = common.match(
+    /^## Architecture Principles\n[\s\S]*?(?=^## )/m,
+  )?.[0];
+  assert.ok(section);
+  assert.equal((section.match(/^- /gm) ?? []).length, 7);
+  for (const text of [
+    instructions.corporate,
+    instructions.homeBase,
+    instructions.home,
+  ]) {
+    assert.equal(text.split(section).length, 2);
+    assert.ok(text.indexOf("## Engineering Choices") < text.indexOf(section));
+    assert.ok(text.indexOf(section) < text.indexOf("## Tools"));
+  }
+  for (const text of [
+    instructions.homePersonal,
+    instructions.corporatePersonal,
+  ]) {
+    assert.doesNotMatch(text, /^## Architecture Principles$/m);
+  }
+  for (const principle of [
+    /simplest design/,
+    /clear responsibilities/,
+    /dependencies explicit/,
+    /interfaces and contracts/,
+    /independently testable/,
+    /same knowledge or rule/,
+    /does not authorize redesign/,
+  ]) {
+    assert.match(section, principle);
+  }
+  assert.match(
+    read("../macos/agents.README.md"),
+    /### Архитектурные принципы \(Architecture Principles\)/,
+  );
+});
+
+test("home retains the 68-bullet baseline apart from explicit additions and path/delegation migrations", () => {
   // Reconstruct only the agreed changed fragments, then retain the original
   // immutable count/hash guard for every other pre-split home instruction.
   let withoutComments = instructions.home.replace(
     /^## Code Comments\n[\s\S]*?(?=^## )/m,
+    "",
+  );
+  // The separately checked architecture section is an approved addition.
+  withoutComments = withoutComments.replace(
+    /^## Architecture Principles\n[\s\S]*?(?=^## )/m,
     "",
   );
   withoutComments = withoutComments.replace(

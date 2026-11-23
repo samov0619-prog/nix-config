@@ -1,16 +1,40 @@
-# Пассивный аудит Chrome-MCP evidence
+# /delegated-review-chrome — аудит записанного теста
 
-`/delegated-review-chrome [run/evidence]` просит отдельный read-only `review`
-оценить, подтверждают ли сохранённые Chrome-MCP evidence заявленные результаты.
-Это не новое browser-тестирование: браузер не открывается, действия не повторяются,
-live-продукт не меняется. Модель роли наследуется от родителя.
+```text
+/delegated-review-chrome [run/evidence]
+```
 
-Source of truth — `commands/delegated-review-chrome.md`: export/privacy boundary,
-fingerprint, минимальный factual handoff, interventions и ограничения покрытия.
-Секреты и лишняя переписка в пакет reviewer не попадают; недоступность механизма
-не обходится самодельным экспортом или обычным code-review child.
+Актуальная policy: `chrome-evidence-v3`; fingerprint: `drc-scope-v2`.
 
-Для живой проверки используйте отдельную current-session команду
-`/browser-verification` через существующий `Chrome MCP`. Она не даёт права
-автоматически запускать последующий независимый audit. Source/mock checks
-не заменяют real browser/model acceptance на целевом Mac.
+Это пассивный аудит того, подтверждает ли **записанная** Chrome-MCP история
+заявленные результаты. Не code review и не разрешение повторить браузерный тест.
+
+- Явный запрос такого аудита сначала читает применимый
+  `commands/delegated-review-chrome.md`, без предварительного обычного reviewer.
+- Без аргументов выбирается последний записанный run текущей сессии до момента
+  вызова команды; явный evidence/run target имеет приоритет. Неоднозначность
+  уточняется. Другие сессии не подбираются по похожему названию или давности.
+- Команда использует одного настроенного `review`, без model override или fallback
+  на `general`. Требуется решающая recorded requirement/action/observation/claim
+  цепочка, включая контрдоказательства и ограничения fixtures.
+- Разрешённый parent-only export ограничен выбранным evidence, с минимизацией
+  приватных данных. Рецепт exclusive write и правила целостности заданы в команде;
+  это не разрешение на другие временные файлы или запись reviewer-ом.
+- Браузер, live re-test и новый поиск ТЗ вне исторической evidence boundary
+  запрещены. Не передавать приватную историю публичным сервисам.
+- Новый аудит создаёт свежего reviewer; recovery относится только к той же
+  активной задаче и общему ledger. Отмена или `/reload` не разрешают возобновление.
+- Итог относится к подтверждённости claims, не к готовности продукта. Честно
+  описанный провал функции сам по себе не означает провал аудита. При неполном
+  evidence/покрытии — `INCOMPLETE`, без итогового вердикта.
+
+Workflow принадлежит личному `AGENTS-personal.md`. Template и reviewer
+подключены в personal JSONC через `{file:...}`, без YAML и Common-симлинков.
+Reviewer читает личные analysis/wrapper и наследует модель родителя.
+Статические fixtures не подтверждают модельную классификацию, полноту/redaction
+настоящего экспорта или поведение Mac runtime.
+Запрос аудита не разрешает сборки, коммиты или установку.
+
+Для нового живого теста используйте отдельную команду
+[`/browser-verification`](browser-verification.README.md). Она не запускает аудит
+автоматически. Подключение — в [README личного слоя](README.md).

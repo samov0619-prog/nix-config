@@ -5,6 +5,15 @@
 > Пользователь подтвердил Free/Paid, смену темы, сохранность истории/вложений
 > и подключение MCP. Mac остаётся отдельной приёмкой.
 > Backup/rollback — в [UPGRADE-240.md](UPGRADE-240.md).
+>
+> **Последующая правка 2026-11-24:** `/problem-brief` перенесён из Common в personal
+> в исходниках HM и Mac export. Перенос ещё не применён дома; после review —
+> пользовательский HM switch и проверка `/problem-brief`. Симлинк команды не нужен.
+>
+> **Архитектурные принципы:** в `config/AGENTS.common.md` добавлен общий блок
+> сразу после `Engineering Choices`; он входит и в домашний `homeBase`, и в Common.
+> Дома ещё требуется пользовательский HM switch; Mac получает отдельный
+> [патч AGENTS и русского пояснения](macos/README.md#архитектурные-принципы-common-и-дом).
 
 Домашний Home Manager module для laptop/desktop и HM на Mac. Пакет берётся из
 отдельного input `opencode`, закреплённого на **v2.4.0**, commit `44aed4f`.
@@ -48,7 +57,7 @@ Preflight не запускает hooks/инициализацию модели.
 Attention-патч сохраняет новые upstream-правила: root не завершён при работающем
 прямом ребёнке, внук его не блокирует, free/go quota errors не озвучиваются.
 Question Location fix и пользовательские plugins сохраняются. Самостоятельный
-корпоративный Mac-порт получает отдельный [staging-export](macos/README.md), не этот binary.
+Mac-конфиг получает отдельный [staging-export](macos/README.md), не этот binary.
 
 Сохраняется build channel **prod**, как у прежнего upstream flake. Штатный
 nixpkgs использует `latest`, а канал входит в пути TUI storage и service config.
@@ -104,7 +113,7 @@ opencode/
 ├── skills/                  # <skill>/SKILL.md
 ├── sounds/                  # домашние аудиофайлы (wow — запасной вариант, не установлен)
 ├── tests/                   # unit, isolated runtime и PTY checks
-├── macos/                   # независимый корпоративный source overlay
+├── macos/                   # самостоятельный Mac-конфиг
 └── archive/                 # неиспользуемые V1 и RLM reference
 ```
 
@@ -114,12 +123,13 @@ opencode/
 plugin IDs и storage не меняются. Пустой прежний `lib/` удалён; архив не устанавливается.
 Проверки и ограничения покрытия — в [BENCHMARK.md](BENCHMARK.md).
 
-### Слои инструкций: HM и самостоятельный корпоративный порт
+### Слои инструкций: HM и самостоятельный Mac-конфиг
 
 Личный JSONC описан в [PERSONAL-LAYER.md](PERSONAL-LAYER.md). HM wiring и разделение
 инструкций готовы; пользовательская Linux-сборка и isolated регистрация на 2.4.0
 прошли без discovery-симлинков, включая custom-XDG и store-like directory-link case.
-Activation нет. Корпоративный Common/export подготовлен отдельно в `macos/export.nix`;
+Домашняя activation и базовая живая приёмка подтверждены пользователем выше;
+последующий перенос brief ещё не применён. Mac Common/export подготовлен отдельно в `macos/export.nix`;
 минимальный corporate fixture на Linux не заменяет приёмку живого Mac.
 
 `config/instructions.nix` собирает текст по явным спискам, без glob и runtime-hook.
@@ -128,42 +138,42 @@ HM устанавливает базовый `opencode/AGENTS.md` и личны�
 `config.xdg.configHome`. Разделение определяется способом установки, **не ОС**:
 Home Manager на Mac получает те же домашние правила, что и Linux.
 
-| Исходник                              | Назначение                                                                                                                           | Где используется                                   |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
-| `config/AGENTS.common.md`             | Нейтральные engineering/evidence, tools, files, formatting, verification, comments и user-action правила; без личных агентов/routing | База HM и корпоративный Common                     |
-| `config/AGENTS.md`                    | Личные Goals, точность, Fish, взаимодействие, delegation preferences и Git-consent                                                   | Личный слой HM и отдельного корпоративного порта   |
-| `config/AGENTS.home.md`               | Nix/HM и `nsh`, `/tmp/opencode`, `~/.opencode/plan`, условный запрос ticket по Git history                                           | Только база HM, Linux или Mac                      |
-| `config/AGENTS.review.md`             | Личный домашний review-workflow и прямые пути в `opencode-local`                                                                     | Только личный слой HM                              |
-| `config/AGENTS.corporate.md`          | Корпоративные источники ТЗ, Git/ticket и task-log contracts; без личных policies и Fish/Nix                                          | Только отдельный корпоративный порт                |
-| `config/AGENTS.corporate-personal.md` | Личный review-workflow с путями `~/.config/opencode-local/`                                                                          | Только личный слой отдельного корпоративного порта |
+| Исходник                              | Назначение                                                                                                                           | Где используется                                |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| `config/AGENTS.common.md`             | Нейтральные engineering/evidence, tools, files, formatting, verification, comments и user-action правила; без личных агентов/routing | База HM и Mac Common                            |
+| `config/AGENTS.md`                    | Личные Goals, точность, Fish, взаимодействие, delegation preferences и Git-consent                                                   | Личный слой HM и самостоятельного Mac-конфига   |
+| `config/AGENTS.home.md`               | Nix/HM и `nsh`, `/tmp/opencode`, `~/.opencode/plan`, условный запрос ticket по Git history                                           | Только база HM, Linux или Mac                   |
+| `config/AGENTS.review.md`             | Личный домашний review-workflow и прямые пути в `opencode-local`                                                                     | Только личный слой HM                           |
+| `config/AGENTS.corporate.md`          | Источники ТЗ, Git/ticket и task-log contracts; без личных policies и Fish/Nix                                                        | Только самостоятельный Mac-конфиг               |
+| `config/AGENTS.corporate-personal.md` | Личный review-workflow с путями `~/.config/opencode-local/`                                                                          | Только личный слой самостоятельного Mac-конфига |
 
 Результаты `instructions.nix`: `homeBase` = common + home;
 `homePersonal` = personal + review; `home` = оба для regression-проверок;
 `corporate` = common + corporate; `corporatePersonal` = personal + Mac-specific.
 `default.nix` устанавливает `homeBase` глобально, `homePersonal` через личный JSONC.
 Командный файл не получает Goals/reviewer/personal-зависимости. Домашний не
-получает корпоративные MCP, обязательный ticket/ТЗ или `promptLogs`.
+получает MCP самостоятельного Mac-конфига, обязательный ticket/ТЗ или `promptLogs`.
 Todo остаётся отдельным домашним opt-in в `todo.nix`; Decision Support перенесён в
 `archive/decision-support/` и не устанавливается. Policies `review-analysis.md` и
 `review-system.md` переносимы; их подключение/пути различаются по среде.
 
 Guard прежних 68 домашних пунктов восстанавливает только явно изменённые
 path/delegation фрагменты и сверяет исходный хеш остальных правил.
-Общие правила комментариев перенесены из корпоративного личного слоя и теперь
+Общие правила комментариев перенесены из личного Mac-слоя и теперь
 действуют также дома. Проверки состава, обеих веток HM и отсутствия перекрёстного
 загрязнения: `tests/test_instruction_layers.mjs`. Runtime-fixture также читает
 готовые варианты, а не один частичный source. Это не проверка поведения модели.
 
-Корпоративный экспорт берёт **только** `corporate` и
+Mac-экспорт берёт **только** `corporate` и
 `corporatePersonal` по [инструкции](macos/README.md#исходники-инструкций).
 Не копировать установленный домашний `AGENTS.md`, весь `config/` или wildcard
 `AGENTS*.md`. R3 source overlay и уже выпущенный R3-патч остаются исторической
 базой: это разделение само по себе не создаёт и не применяет новый Mac-патч.
 
-В корпоративных исходниках нового экспорта требования/task-log переведены на XTracker,
+В Mac-исходниках нового экспорта требования/task-log переведены на XTracker,
 а личный Mac-слой Samov задаёт `FBDC-<number>` для новых веток/коммитов, независимо
 от старых `KT-…` в history. `skills/task-summary-log/SKILL.md` — только для
-отдельного корпоративного экспорта; HM его не устанавливает. Существующие логи,
+самостоятельного Mac-экспорта; HM его не устанавливает. Существующие логи,
 seed/R3 и MCP-подключения не менялись. Границы переноса — в [Mac README](macos/README.md#xtracker-и-ключи-задач).
 
 Применение домашнего изменения после review:
@@ -178,13 +188,13 @@ seed/R3 и MCP-подключения не менялись. Границы пе
 4. Проверить, что server получил `OPENCODE_CONFIG`, а личные роли/команды появились
    без старых discovery-копий. Config перечитывается штатно (`/reload` при необходимости).
    В глобальном `AGENTS.md` должны быть `nsh` и общие правила, но не Goals/review-routing
-   или корпоративные требования. Личные review-пути находятся в `opencode-local`.
+   или требования Mac-конфига. Личные review-пути находятся в `opencode-local`.
 
 Общие личные правила `config/AGENTS.md` включают **Goals and Approach**: перед
 существенным усложнением отделить цель от реализации и проверить более прямой путь,
 не отвергая эксперимент/обучение и не возвращаясь к уже осознанному выбору без новых
 фактов. Это инструкция модели, не блокирующий hook и не повод согласовывать каждый
-шаг. На корпоративном Mac она переносится только в личный слой, независимо от
+шаг. На Mac она переносится только в личный слой, независимо от
 домашнего decision-support/todo. Исходники и Git-патч — в
 [`macos/trf-review/`](macos/trf-review/README.md); старый seed не обновляется.
 
@@ -192,7 +202,7 @@ seed/R3 и MCP-подключения не менялись. Границы пе
 приёмки. Лёгкие source/fixture-проверки не подтверждают поведение модели или Mac/MCP.
 
 Основной домашний конфиг устанавливается как `~/.config/opencode/opencode.jsonc`,
-как и на текущем корпоративном Mac. Home Manager по-прежнему генерирует его из
+как и на текущем Mac. Home Manager по-прежнему генерирует его из
 `programs.opencode.settings`: изменён только native `xdg.configFile.target`, не
 содержимое и не механизм объединения настроек. JSON без комментариев — валидный
 JSONC; комментарии домашней конфигурации остаются в Nix-исходниках.
@@ -674,9 +684,9 @@ V1 sound state machine, её фильтрация дочерних/остано�
 `/mute`/`/unmute` не подключены. Используются native semantics, включая события
 подагентов/остановки. Старые TS-файлы/tests — только V1 reference.
 
-### Дом и корпоративный Mac — разные настройки
+### Дом и самостоятельный Mac-конфиг — разные настройки
 
-|               | Домашний laptop/desktop                         | Корпоративный Mac                                                    |
+|               | Домашний laptop/desktop                         | Самостоятельный Mac-конфиг                                           |
 | ------------- | ----------------------------------------------- | -------------------------------------------------------------------- |
 | Звуки         | Личные anime done/error, freedesktop permission | Только стандартные встроенные OpenCode                               |
 | Обработчик    | Native plugin с `session-attention.patch`       | Штатный `opencode.notifications`, без нашего `session-notifications` |
@@ -759,7 +769,7 @@ handoff передаёт JSON целиком, без угадывания shell/
 изменений — сообщение без запуска reviewer.
 
 `review` по-прежнему подходит для других независимых проверок changes/claims.
-Встроенная `/review` не заменяется, корпоративный конфиг не меняется. Лёгкие тесты
+Встроенная `/review` не заменяется, Mac-конфиг не меняется. Лёгкие тесты
 вычисляют реальные Nix settings, исполняют hash-рецепт и статически проверяют
 command/wiring. Пользовательский тест подтвердил same-child INCOMPLETE → COMPLETE
 на Big Pickle, не provider recovery. Отдельный согласованный opt-in native mock
@@ -827,7 +837,7 @@ incomplete при нерешённом пробеле, без probe-файлов
 читает metadata/messages, не выгружает child. 38 review-related checks проходят, включая
 три теста самого write recipe; модельная маршрутизация/completeness/redaction и
 качество этой редакции не проверены. Это не sandbox для произвольного shell.
-Прежний Mac-пакет v1 и корпоративные файлы не обновлялись.
+Прежний Mac-пакет v1 и его файлы не обновлялись.
 
 ## /problem-brief
 
@@ -848,10 +858,12 @@ reviewer. Автозапуска, отдельного агента, модел�
 реальные HM file declarations, не качество генерации. Дальнейшие правки — только
 по отдельному согласованию.
 
-HM устанавливает команду в `~/.config/opencode/commands/problem-brief.md`, guide —
-в `~/.config/opencode/problem-brief.README.md` (с учётом `XDG_CONFIG_HOME`). Для Mac
-достаточно тех же двух файлов в соответствующем активном слое; corporate config
-и существующие симлинки не заменять вслепую. После применения достаточно `/reload`.
+HM устанавливает тело команды в `~/.config/opencode-local/commands/problem-brief.md`,
+guide — в `~/.config/opencode-local/problem-brief.README.md` (с учётом `XDG_CONFIG_HOME`).
+Домашний и Mac personal JSONC явно регистрируют команду через `{file:...}`.
+Common её не устанавливает; симлинки для discovery не нужны. По уточнению пользователя
+прежнее размещение в Common исправлено; runtime-приёмка этого переноса ещё не выполнена.
+После применения достаточно `/reload`.
 Домашнее применение: добавить новые source-файлы в Git flake и выполнить
 `home-manager switch --flake .#samov-laptop` либо свой desktop/laptop-old профиль.
 NixOS не меняется; сборка/активация и модельный прогон агентом не выполнялись.
@@ -924,8 +936,8 @@ runtime registry; сервис доступен. Агент не применя�
 `opencode-task-report` остаётся установленным и работает по данным сессий без
 плагина. Старые журналы не удаляются и по-прежнему доступны отчёту; без нового
 журналирования сведения о будущих transport attempts будут отсутствовать.
-На корпоративный Mac плагин и обновление отчёта в текущем переносе не добавлять;
-существующую корпоративную диагностику оставить без изменений.
+На Mac плагин и обновление отчёта в текущем переносе не добавлять;
+существующую диагностику оставить без изменений.
 
 При включении плагин дописывает приватный XDG state
 `opencode/model-calls/<session>.jsonl`.
@@ -1019,7 +1031,7 @@ Decision Support, `decision-check`, исходная цитата и ручны�
 устанавливаются. Старый `programs.opencode.decisionSupport.enable` выдаёт пояснение
 миграции; вместо него для заметок используется `programs.opencode.todo.enable`.
 Для отключения todo задать новый option в `false`; F3 останется обычным Hyprland bind.
-NixOS/server и самостоятельный корпоративный Mac не меняются.
+NixOS/server и самостоятельный Mac-конфиг не меняются.
 
 На установленной 2.1.4 приватный runtime с локальной заглушкой подтвердил наличие
 todo-tools/правил только у Build/Plan и их отсутствие у четырёх специалистов.
@@ -1278,6 +1290,6 @@ Native clipboard-service PNG/text support не заменяет этот termina
    один звук либо тишина, но подсветка Kitty/Waybar в обоих случаях. Для нового
    Kitty socket/OpenCode plugin открыть новый процесс, reload недостаточно.
 
-Самостоятельный корпоративный Mac-порт: [macos/README.md](macos/README.md).
-Он сохраняет командный/личный layers, X5/proxy/MCP и local voice; домашняя HM
-activation его не устанавливает. Полный архив лежит вне Git.
+Самостоятельный Mac-конфиг: [macos/README.md](macos/README.md).
+Он сохраняет общий/личный layers и X5/proxy/MCP; voice-plugin не входит в поставку
+и не требуется. Домашняя HM activation его не устанавливает. Полный архив лежит вне Git.

@@ -1,7 +1,7 @@
 # Common и личные слои Samov: чек-лист согласования
 
 Обновлено: 2026-11-23. Статус: домашнее разделение и upstream 2.4.0 реализованы
-в исходниках; отдельный корпоративный staging-export готов. Живой runtime не изменён.
+в исходниках; отдельный Mac staging-export готов. Последующая живая приёмка — ниже.
 Карта файлов: [CONFIG-MAP.md](CONFIG-MAP.md).
 Выбранное направление пакета — **отдельный upstream flake v2.4.0**;
 input/lock обновлены. Пользователь подтвердил успешную Linux HM-сборку; isolated
@@ -15,7 +15,10 @@ runtime/PTY 2.4.0 прошли. Пересборка accounting-fix подтве
 
 ## Зафиксированные требования
 
-- [x] Сейчас личные слои реализуются только для Samov: дома и на корпоративном Mac.
+- [x] Сейчас личные слои реализуются только для Samov: дома и на Mac.
+- [x] Публичное описание — общая конфигурация и личный слой.
+      Технические имена `corporate`/`corporatePersonal` и исторические записи
+      сохраняются; существующие Git-защита, MCP и правила требований не меняются.
 - [x] frontAgents Даши — EXAMPLE ONLY, оба архива остаются нетронутыми.
 - [x] Common не должен принуждать её к permissions, FSD/SOLID или workflow Samov.
 - [x] Нынешние permissions — база с возможностью намеренного локального override.
@@ -466,10 +469,23 @@ task-log, его README и guards. Последующий пакет подкл�
 
 ## Личный JSONC и домашний HM wiring — текущий итог
 
+Уточнение пользователя 2026-11-24: `/problem-brief` — личный, не Common.
+Генератор, HM и Mac export исправлены: теперь пять personal-команд; body/README
+brief только в `opencode-local`, регистрация в JSONC без discovery-симлинка.
+Ранее выполненные четырёхкомандные runtime-проверки ниже — историческая приёмка,
+не проверка этого переноса. После исправления прошла 21 source/evaluation-проверка
+brief/personal/HM/export; сборки и runtime не запускались. Дома перенос ещё не
+применён. На Mac пользователь подтвердил применение R3 и абсолютную brief-ссылку;
+подготовлен R4 поверх R3. Copy-fixture apply/check и reverse/check проходят с
+`update-2026-11-16/` и без неё; остальные settings и файлы не меняются.
+Пользователь затем подтвердил применение R4 и прежнего README-патча; runtime-приёмка
+не подтверждена. Восстановление полной инструкции — отдельный docs-only патч поверх
+обоих. Артефакты и порядок применения — в Mac README.
+
 - [x] Генератор `config/personal-layers.nix`: home/corporate `.settings` и `.files`,
       без нового runtime loader и без замены CLI/voice/providers/MCP.
-- [x] Четыре личные команды без model/agent overrides; frontmatter не попадает в
-      prompts. `/problem-brief` не дублируется. Отдельные русские README сохранены.
+- [x] Пять личных команд без model/agent overrides; frontmatter не попадает в
+      prompts. `/problem-brief` только в personal. Отдельные русские README сохранены.
 - [x] Домашние роли/модели сохранены; Mac review/research без model overrides.
       Policy-файлы и reviewer systems включены; сохранены read-only denials.
 - [x] Ручной discussion-map и домашний todo с полной source closure;

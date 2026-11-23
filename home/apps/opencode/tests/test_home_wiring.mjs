@@ -42,7 +42,7 @@ test("HM installs one explicit personal JSONC on Linux/Darwin, respecting custom
         actual.personalFiles["AGENTS-personal.md"].text,
         new RegExp(`${configHome}/opencode-local/review-analysis.md`),
       );
-      assert.equal(Object.keys(personal.commands).length, 4);
+      assert.equal(Object.keys(personal.commands).length, 5);
       assert.deepEqual(personal.plugins, ["./plugins/agent-todo"]);
       assert.deepEqual(actual.skills, ["git-regression-rollback"]);
       assert.doesNotMatch(
@@ -54,10 +54,17 @@ test("HM installs one explicit personal JSONC on Linux/Darwin, respecting custom
         "opencode/commands/delegated-review.md",
         "opencode/commands/delegated-review-chrome.md",
         "opencode/plugins/agent-todo-v2",
+        "opencode/commands/problem-brief.md",
+        "opencode/problem-brief.README.md",
       ]) {
         assert.equal(actual.names.includes(old), false, old);
       }
-      assert.ok(actual.names.includes("opencode/commands/problem-brief.md"));
+      assert.ok(
+        actual.names.includes("opencode-local/commands/problem-brief.md"),
+      );
+      assert.ok(
+        actual.names.includes("opencode-local/problem-brief.README.md"),
+      );
       assert.equal(
         actual.names.some((name) =>
           name.startsWith("opencode-local/plugins/agent-todo/"),
@@ -90,7 +97,7 @@ test("disabling notes removes their configuration and leaves review/commands/saf
   const personal = JSON.parse(actual.personalFiles["opencode.jsonc"].text);
   assert.equal("plugins" in personal || "permissions" in personal, false);
   assert.ok(personal.agents.review && personal.agents.research);
-  assert.equal(Object.keys(personal.commands).length, 4);
+  assert.equal(Object.keys(personal.commands).length, 5);
   assert.ok(actual.names.includes("opencode/plugins/git-offline-v2"));
   assert.ok(
     personal.agents.plan.permissions.some(
