@@ -18,12 +18,51 @@ native tray/audio feedback and CLI cancellation, not this helper's Mako actions.
 | Transcribed and copied to clipboard | 3 seconds |
 | Dictation errors | 15 seconds |
 | Hyprland theme switch | Unchanged: 3 seconds |
+| NixOS switch success | Mako default: 15 seconds |
+| NixOS switch error | Critical notice; Mako default: 15 seconds |
 
 Applications retain their explicit timeout, including persistent notices. Internal
 application popups are not controlled by Mako. Lenovo retains battery thresholds
 15%/2%; Acer retains 30%/15%. Desktop has no battery module. Battery warning/critical
 also play one standard short `dialog-warning.oga`, without changing volume/mute.
 UPower/Hibernate, audio/input selection, recognizer options and GPU policy are unchanged.
+
+## NixOS switch completion
+
+An interactive Fish `fish_postexec` handler sends a desktop notification after
+the ordinary `sudo nixos-rebuild switch ...` or `nixos-rebuild switch ...` command
+finishes. There is no separate wrapper command, sudo replacement, activation hook
+or background service. The handler is defined during interactive shell startup
+so its event registration does not depend on function autoloading.
+
+Success means the command returned zero; nonzero status produces a critical
+notice directing you to the terminal. Notifications run as the ordinary user,
+outside sudo. The command's exit status is preserved if notification delivery fails.
+
+After reviewing the changes:
+
+1. Apply HM: `home-manager switch --flake /home/samov/nix-config#samov-laptop`.
+2. Open a new Fish terminal and, when ready to apply NixOS, run
+   `sudo nixos-rebuild switch --flake /home/samov/nix-config#laptop -L` as usual.
+3. Expect a **NixOS** completion notice. On errors, inspect the terminal output;
+   a failed switch does not imply that every activation change was rolled back.
+
+Use the corresponding flake output on Acer/desktop. Matching is deliberately
+limited to a single foreground command starting with `nixos-rebuild switch` or
+`sudo nixos-rebuild switch` (allowing leading whitespace). Pipelines, background
+jobs, compound/multiline commands, and lines containing `;`, `&` or `|` even inside
+quotes are skipped rather than attributing another command's status to the switch.
+Help and `--dry-run` are also skipped. Extra sudo options, other command prefixes,
+scripts, other shells and switches launched inside a root shell are not covered.
+Delivery requires the graphical user's notification bus/Mako; SSH/TTY delivery is
+not guaranteed. Home Manager's unread-news notification is unrelated and unchanged.
+The earlier `nixos-switch` helper is replaced by this automatic handler.
+
+The lightweight test runs the actual Nix-declared initialization in isolated
+interactive Fish with mock rebuild/notification commands, never invoking real
+sudo, building or activating:
+`python3 home/linux/modules/notifications/tests/test_nixos_switch.py`.
+Real NixOS activation and Mako delivery need manual verification.
 
 ## Lifecycle and limitations
 
